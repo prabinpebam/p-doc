@@ -20,6 +20,7 @@ import {
   resolveThread,
   review,
   reviewItems,
+  reviewersOf,
   saveEdit,
   selectItem,
   step,
@@ -126,6 +127,35 @@ function Who({ author, time, edited }: { author: string; time: string; edited?: 
         {edited ? " (edited)" : ""}
       </span>
     </span>
+  );
+}
+
+/** Reviewer check items share the app menu's keyboard model; comments are not hidden (U65).
+ * @tier compound @a11y Everyone restores all reviewers; checked items expose each selection.
+ */
+function ReviewerMenu({ authors, selected }: { authors: string[]; selected: string[] | null }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useOutside(ref, open, () => setOpen(false));
+  const choose = (author: string) => {
+    const now = selected ?? authors;
+    review.set({ reviewers: now.includes(author) ? now.filter((a) => a !== author) : [...now, author], active: null });
+  };
+  return (
+    <div ref={ref} className="row-menu">
+      <button type="button" className="btn small" aria-label="Reviewers" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+        {selected === null ? "Everyone" : "Reviewers"} <ChevronDown20Regular aria-hidden />
+      </button>
+      {open ? <MenuList
+        label="Reviewers"
+        className="row-dropdown"
+        items={[
+          { key: "everyone", label: "Everyone", checked: selected === null, run: () => review.set({ reviewers: null, active: null }) },
+          ...authors.map((author) => ({ key: `author:${author}`, label: author || "Someone", checked: selected === null || selected.includes(author), run: () => choose(author) })),
+        ]}
+        onClose={(restore) => { setOpen(false); if (restore) ref.current?.querySelector("button")?.focus(); }}
+      /> : null}
+    </div>
   );
 }
 
@@ -244,11 +274,14 @@ export function ReviewPanel() {
   const current = app.use((s) => s.current);
   app.use((s) => s.mode);
   const filter = review.use((s) => s.filter);
+  const reviewers = review.use((s) => s.reviewers);
   const draft = review.use((s) => s.draft);
   const active = review.use((s) => s.active);
   const editor = getEditor();
   const threads = comments ?? [];
-  const items = editor ? reviewItems(editor.state.doc, threads, filter, draftKey.getState(editor.state) ?? null) : [];
+  const items = editor ? reviewItems(editor.state.doc, threads, filter, draftKey.getState(editor.state) ?? null, reviewers) : [];
+  const shownChanges = items.filter((it) => it.kind === "change").length;
+  const authors = editor ? reviewersOf(editor.state.doc) : [];
   const counts = editor ? openCounts(editor.state.doc, threads) : { changes: 0, comments: 0 };
   const resolved = threads.filter((t) => t.resolved).length;
   const can = canDecide();
@@ -295,15 +328,16 @@ export function ReviewPanel() {
         </button>
       </div>
       <div className="review-bar">
-        <button type="button" className="btn small" disabled={!can || !counts.changes} onClick={() => decideAll("accept")}>
-          Accept all
+        <button type="button" className="btn small" disabled={!can || !shownChanges} onClick={() => decideAll("accept")}>
+          {reviewers === null ? "Accept all" : `Accept ${shownChanges} shown`}
         </button>
-        <button type="button" className="btn small" disabled={!can || !counts.changes} onClick={() => decideAll("reject")}>
-          Reject all
+        <button type="button" className="btn small" disabled={!can || !shownChanges} onClick={() => decideAll("reject")}>
+          {reviewers === null ? "Reject all" : `Reject ${shownChanges} shown`}
         </button>
       </div>
       {!can && counts.changes ? <p className="muted small panel-note">Switch to Editing or Suggesting to accept or reject changes.</p> : null}
       <div className="review-filter" role="group" aria-label="Show">
+        <ReviewerMenu authors={authors} selected={reviewers} />
         <button type="button" className={`chip${filter === "open" ? " on" : ""}`} aria-pressed={filter === "open"} onClick={() => review.set({ filter: "open", active: null })}>
           Open
         </button>
@@ -326,7 +360,7 @@ export function ReviewPanel() {
             )}
           </ul>
         ) : (
-          <p className="empty">{filter === "open" ? "No suggestions or comments. Switch to Suggesting to suggest changes, or select text and press Ctrl+Alt+M to comment." : "No resolved comments."}</p>
+          <p className="empty">{filter === "open" ? reviewers !== null ? "No changes from these reviewers. Choose Everyone to see all changes." : "No suggestions or comments. Switch to Suggesting to suggest changes, or select text and press Ctrl+Alt+M to comment." : "No resolved comments."}</p>
         )}
       </div>
     </aside>

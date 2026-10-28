@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { JSONContent } from "@tiptap/core";
 import { EditorState, TextSelection } from "@tiptap/pm/state";
 import { history, undo } from "@tiptap/pm/history";
-import { acceptAll, changesOf, describeBlockFormat, describeFormat, listChanges, rejectAll, resolveJSON, schema, suggestKey, suggestPlugin, nodeText } from "../src/index.ts";
+import { acceptAll, changesByReviewer, changesOf, describeBlockFormat, describeFormat, listChanges, rejectAll, resolveJSON, schema, suggestKey, suggestPlugin, nodeText } from "../src/index.ts";
 
 const suggestKeyMeta = () => suggestKey;
 
@@ -37,6 +37,31 @@ const backspace = (s: EditorState, pos: number, times: number) => {
 };
 
 describe("suggestions", () => {
+  it("13.3 filters exact reviewer names; resolving shown ids leaves other suggestions untouched", () => {
+    const s = schema();
+    const info = (id: string, author: string) => ({ id, author, time: "2026-10-29T00:00:00Z" });
+    const content = { type: "doc", content: [{
+      type: "paragraph",
+      content: [
+        { type: "text", text: "Ann", marks: [{ type: "insertion", attrs: info("ann", "Ann") }] },
+        { type: "text", text: "Bob", marks: [{ type: "insertion", attrs: info("bob", "Bob") }] },
+        { type: "text", text: "lowercase", marks: [{ type: "deletion", attrs: info("lower", "ann") }] },
+      ],
+    }] };
+    const changes = changesOf(s.nodeFromJSON(content));
+    expect(changesByReviewer(changes, null)).toEqual(changes);
+    expect(changesByReviewer(changes, [])).toEqual([]);
+    const shown = changesByReviewer(changes, ["Ann", "Bob"]);
+    expect(shown.map((c) => c.id)).toEqual(["ann", "bob"]);
+    expect(changesByReviewer(changes, ["missing"])).toEqual([]);
+    const ids = new Set(shown.map((c) => c.id));
+    const accepted = resolveJSON(content, ids, "accept");
+    const rejected = resolveJSON(content, ids, "reject");
+    expect(listChanges(accepted).map((c) => c.id)).toEqual(["lower"]);
+    expect(listChanges(rejected).map((c) => c.id)).toEqual(["lower"]);
+    expect(nodeText(rejected.content?.[0])).toBe("lowercase");
+  });
+
   it("records typed text as one insertion with author and time", () => {
     let s = start("Hello world");
     s = type(s, at(s, 0, 5), " big");

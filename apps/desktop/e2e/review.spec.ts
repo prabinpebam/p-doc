@@ -1,5 +1,6 @@
 import type { Page } from "@playwright/test";
 import { editor, expect, launch, quit, test } from "./helpers.ts";
+import { load } from "./fixtures.ts";
 
 const text = (page: Page) => editor(page).evaluate((el) => (el as HTMLElement).innerText.trim());
 const items = (page: Page) => page.getByTestId("review-item");
@@ -105,6 +106,14 @@ test("13.2 Commenting blocks typing and formatting but keeps comments; Always su
   await expect(ed.locator(".pd-comment")).toHaveText("Words");
   expect(await text(page)).toBe("Words stay unchanged.");
   await page.screenshot({ path: test.info().outputPath("commenting.png") });
+  await page.getByRole("menuitem", { name: "File", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Settings", exact: true }).click();
+  const settings = page.getByRole("dialog", { name: "Settings" });
+  await settings.getByRole("radio", { name: "Dark", exact: true }).check();
+  await settings.getByRole("button", { name: "Close", exact: true }).click();
+  await page.setViewportSize({ width: 800, height: 700 });
+  await expect(page.getByRole("button", { name: "Mode: Commenting" })).toBeVisible();
+  await page.screenshot({ path: test.info().outputPath("commenting-dark-narrow.png") });
 
   await page.getByRole("menuitem", { name: "Tools", exact: true }).click();
   await page.getByRole("menuitem", { name: "Review", exact: true }).click();
@@ -134,6 +143,64 @@ test("13.2 Commenting blocks typing and formatting but keeps comments; Always su
   const off = await launch({ dirs: l.dirs });
   await expect(off.page.getByTestId("mode-badge")).toHaveCount(0);
   await quit(off);
+});
+
+test("13.3 reviewer filter and bulk decisions act only on shown changes", async () => {
+  const l = await launch();
+  const { page } = l;
+  const mark = (id: string, author: string) => ({ type: "insertion", attrs: { id, author, time: "2026-10-29T00:00:00Z" } });
+  await load(page, { type: "doc", content: [{
+    type: "paragraph",
+    content: [
+      { type: "text", text: "Base" },
+      { type: "text", text: " Ann", marks: [mark("a", "Ann")] },
+      { type: "text", text: " Bob", marks: [mark("b", "Bob")] },
+    ],
+  }] });
+  await page.getByTestId("review-button").click();
+  const reviewers = panel(page).getByRole("button", { name: "Reviewers", exact: true });
+  const toggle = async (name: string) => {
+    await reviewers.click();
+    await page.getByRole("menuitemcheckbox", { name, exact: true }).click();
+  };
+  await expect(items(page)).toHaveCount(2);
+  await toggle("Ann");
+  await expect(items(page)).toHaveCount(1);
+  await expect(items(page)).toContainText("Bob");
+  await toggle("Bob");
+  await expect(items(page)).toHaveCount(0);
+  await expect(panel(page).getByRole("button", { name: "Accept 0 shown" })).toBeDisabled();
+  await toggle("Ann");
+  await expect(items(page)).toHaveCount(1);
+  await expect(items(page)).toContainText("Ann");
+  await reviewers.click();
+  await page.screenshot({ path: test.info().outputPath("reviewer-filter.png") });
+  await page.keyboard.press("Escape");
+  await panel(page).getByRole("button", { name: "Accept 1 shown" }).click();
+  await expect(editor(page).locator("ins")).toHaveText(" Bob");
+  expect(await text(page)).toBe("Base Ann Bob");
+  await toggle("Everyone");
+  await expect(items(page)).toHaveCount(1);
+  // Resolved comments show no suggestions, so bulk decisions must not touch hidden changes.
+  await panel(page).getByRole("button", { name: "Resolved", exact: true }).click();
+  await expect(panel(page).getByRole("button", { name: "Reject all", exact: true })).toBeDisabled();
+  await panel(page).getByRole("button", { name: "Open", exact: true }).click();
+  await panel(page).getByRole("button", { name: "Reject all", exact: true }).click();
+  expect(await text(page)).toBe("Base Ann");
+  await expect(editor(page).locator("ins")).toHaveCount(0);
+  await load(page, { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Old document suggestion", marks: [mark("old", "Ann")] }] }] });
+  await toggle("Ann");
+  await panel(page).getByRole("button", { name: "Close review", exact: true }).click();
+  await page.keyboard.press("Control+N");
+  await expect(editor(page)).toHaveText("");
+  await load(page, { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "New document suggestion", marks: [mark("new", "Ann")] }] }] });
+  // Filters from a closed panel in another document must not hide this one's suggestions.
+  await page.getByRole("menuitem", { name: "Tools", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Changes", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Accept all changes", exact: true }).click();
+  await expect(editor(page).locator("ins")).toHaveCount(0);
+  expect(await text(page)).toBe("New document suggestion");
+  await quit(l);
 });
 
 test("4.2–4.6 suggest, see markup views, review in order, accept and reject", async () => {

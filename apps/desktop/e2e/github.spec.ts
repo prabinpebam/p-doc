@@ -109,9 +109,17 @@ test("5.1–5.3 first run: Connect GitHub signs in with a token, sets up both re
   const saveState = page.getByTestId("save-state");
   await expect(saveState).toHaveText("Saved · synced");
   await page.keyboard.type(" more");
+  await expect(editor(page)).toContainText("Words for GitHub more");
+  await expect.poll(() => diskText(dirs), PROMPTLY).toContain("Words for GitHub more");
   await expect(saveState).toHaveText("Saved to this computer");
-  await page.keyboard.press("Control+Alt+s");
-  await expect(saveState).toHaveText("Saved · synced", SYNCED);
+  // An automatic sync may have started; the menu waits until Sync now is available again.
+  await page.getByRole("menuitem", { name: "File", exact: true }).click();
+  await page.getByRole("menuitem", { name: /^Sync now/ }).click();
+  await expect.poll(async () => ({
+    remoteHasEdit: (fake.file("ada", "p-doc-private", `docs/${name}`) ?? "").includes("Words for GitHub more"),
+    label: await saveState.textContent(),
+    sync: await page.evaluate(() => (window as unknown as { __pdoc: { app: { get(): { sync: unknown } } } }).__pdoc.app.get().sync),
+  }), SYNCED).toMatchObject({ remoteHasEdit: true, label: "Saved · synced", sync: { state: { kind: "synced" }, pending: [] } });
   expect(fake.files("ada", "p-doc-public").filter((f) => f.startsWith("docs/"))).toEqual([]);
 
   // Another computer renames the document; Sync now brings it in and the open page follows.

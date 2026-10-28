@@ -471,6 +471,12 @@ const NUMBER_FORMAT: Record<NumFormat, (typeof NumberFormat)[keyof typeof Number
 
 /** A .docx file of a document, with suggestions as tracked changes. */
 export async function toDocx(doc: PDocFile): Promise<Uint8Array> {
+  const pending = [doc.content];
+  while (pending.length) {
+    const node = pending.pop()!;
+    if (node.attrs?.blockChange) throw new Error("Accept or reject whole-block comparison changes before exporting to Word. They stay in the P-Doc document.");
+    pending.push(...(node.content ?? []));
+  }
   const p = doc.page;
   const paper = PAPER[p.size];
   const landscape = p.orientation === "landscape";

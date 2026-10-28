@@ -5,6 +5,7 @@ import { fromDocx, toDocx } from "../src/docx.ts";
 import { createDocument } from "../src/format.ts";
 import { nodeText } from "../src/outline.ts";
 import { acceptAll, listChanges, rejectAll } from "../src/suggestions.ts";
+import { compareDocuments } from "../src/compare.ts";
 
 const W = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml"';
 const D = 'w:date="2026-10-01T09:00:00Z"';
@@ -44,6 +45,21 @@ const texts = (c: JSONContent) => (c.content ?? []).map(nodeText);
 const allText = (c: JSONContent) => JSON.stringify(c);
 
 describe("import-docx review (13.5)", () => {
+  it("refuses unresolved whole-block comparisons instead of exporting deleted blocks as ordinary text", async () => {
+    const p = (text: string): JSONContent => ({ type: "paragraph", content: [{ type: "text", text }] });
+    const original: JSONContent = { type: "doc", content: [p("Removed paragraph"), p("Keep")] };
+    const revised: JSONContent = { type: "doc", content: [p("Keep"), p("Added paragraph")] };
+    const content = compareDocuments(original, revised, { author: "Comparison", time: "2026-10-29T00:00:00Z" });
+    const doc = createDocument({ content });
+    await expect(toDocx(doc)).rejects.toThrow("Accept or reject whole-block comparison changes before exporting to Word");
+    const afterAccept = await fromDocx(await toDocx({ ...doc, content: acceptAll(content) }));
+    const afterReject = await fromDocx(await toDocx({ ...doc, content: rejectAll(content) }));
+    expect(texts(afterAccept.content)).toEqual(["Keep", "Added paragraph"]);
+    expect(texts(afterReject.content)).toEqual(["Removed paragraph", "Keep"]);
+    const nested = createDocument({ content: { type: "doc", content: [{ type: "blockquote", content: [{ ...p("Pending"), attrs: { blockChange: { kind: "deletion", id: "s-nested", author: "A", time: "2026-10-29T00:00:00Z" } } }] }] } });
+    await expect(toDocx(nested)).rejects.toThrow("whole-block comparison changes");
+  });
+
   it("brings Word's tracked changes in as suggestions, with their authors and times", async () => {
     const { content } = await fromDocx(await wordFile());
     expect(allText(content)).not.toMatch(/[\uE000-\uE008]/);

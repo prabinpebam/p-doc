@@ -1,4 +1,4 @@
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Page } from "@playwright/test";
@@ -38,7 +38,8 @@ async function openCompare(page: Page) {
 }
 
 test("13.4 Compare documents makes a new private document whose accept all gives the revised text and reject all the original", async () => {
-  const l = await launch();
+  const saveDir = mkdtempSync(join(tmpdir(), "pdoc-compare-export-"));
+  const l = await launch({ env: { PDOC_SAVE_DIR: saveDir } });
   const { page } = l;
   const ed = editor(page);
   await page.keyboard.type("The quick brown fox.");
@@ -93,10 +94,22 @@ test("13.4 Compare documents makes a new private document whose accept all gives
   await expect(items(page).first()).toContainText("Comparison");
   await page.screenshot({ path: test.info().outputPath("compare-result.png") });
 
+  const word = async () => {
+    await page.getByRole("menuitem", { name: "File", exact: true }).click();
+    await page.getByRole("menuitem", { name: /^Download/ }).click();
+    await page.getByRole("menuitem", { name: /^Microsoft Word/ }).click();
+  };
+  await word();
+  await expect(page.getByText(/Couldn't export:.*Accept or reject whole-block comparison changes/)).toBeVisible();
+  expect(readdirSync(saveDir)).toEqual([]);
+  await expect(ed.locator(".pd-block-deletion")).toHaveText("This paragraph goes.");
+
   await panel(page).getByRole("button", { name: "Accept all" }).click();
   await expect(ed.locator("ins, del, .pd-block-insertion, .pd-block-deletion, .pd-format-block")).toHaveCount(0);
   expect(await text(page)).toBe(revisedText);
   await expect(ed.locator("h1")).toHaveText("Last line.");
+  await word();
+  await expect.poll(() => readdirSync(saveDir).filter((f) => f.endsWith(".docx")).length).toBe(1);
 
   await ed.focus();
   await page.keyboard.press("Control+Z");

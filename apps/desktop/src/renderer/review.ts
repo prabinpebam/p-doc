@@ -5,7 +5,7 @@
 import type { Editor } from "@tiptap/core";
 import type { Node as PMNode } from "@tiptap/pm/model";
 import { TextSelection } from "@tiptap/pm/state";
-import { addReply, changesOf, commentAnchors, commentId, editComment, newThread, removeComment, setResolved, type Change, type CommentAnchor, type CommentThread, type Decision } from "@p-doc/core";
+import { addReply, changesByReviewer, changesOf, commentAnchors, commentId, editComment, newThread, removeComment, setResolved, type Change, type CommentAnchor, type CommentThread, type Decision } from "@p-doc/core";
 import { createStore } from "./lib/store.ts";
 import { draftKey, type DraftRange } from "./editor/review.ts";
 import { schedule } from "./editor/pages.ts";
@@ -17,6 +17,8 @@ export type Filter = "open" | "resolved";
 
 export interface ReviewState {
   filter: Filter;
+  /** null is Everyone; otherwise only these reviewers' suggestions appear. Comments remain visible. */
+  reviewers: string[] | null;
   /** The new comment's card is open, quoting its text. */
   draft: { quote: string } | null;
   /** The item last picked in the panel. */
@@ -25,7 +27,7 @@ export interface ReviewState {
   editing: string | null;
 }
 
-export const review = createStore<ReviewState>({ filter: "open", draft: null, active: null, editing: null });
+export const review = createStore<ReviewState>({ filter: "open", reviewers: null, draft: null, active: null, editing: null });
 
 export type ReviewItem =
   | { kind: "change"; key: string; change: Change; from: number; to: number }
@@ -44,11 +46,11 @@ function scan(doc: PMNode) {
 }
 
 /** The panel's list in document order: changes and open threads, or resolved threads. Threads whose text is gone come last. */
-export function reviewItems(doc: PMNode, threads: CommentThread[], filter: Filter, draft: DraftRange | null): ReviewItem[] {
+export function reviewItems(doc: PMNode, threads: CommentThread[], filter: Filter, draft: DraftRange | null, reviewers: readonly string[] | null = null): ReviewItem[] {
   const { changes, anchors } = scan(doc);
   const out: ReviewItem[] = [];
   if (filter === "open") {
-    for (const c of changes) out.push({ kind: "change", key: `${c.kind}:${c.id}`, change: c, from: c.from, to: c.to });
+    for (const c of changesByReviewer(changes, reviewers)) out.push({ kind: "change", key: `${c.kind}:${c.id}`, change: c, from: c.from, to: c.to });
     if (draft) out.push({ kind: "draft", key: "draft", from: draft.from, to: draft.to });
   }
   for (const t of threads) {
@@ -58,6 +60,8 @@ export function reviewItems(doc: PMNode, threads: CommentThread[], filter: Filte
   }
   return out.sort((a, b) => a.from - b.from);
 }
+
+export const reviewersOf = (doc: PMNode): string[] => [...new Set(scan(doc).changes.map((c) => c.author))].sort((a, b) => a.localeCompare(b));
 
 /** Open changes and comment threads, for the title bar and the panel's header. */
 export function openCounts(doc: PMNode, threads: CommentThread[]): { changes: number; comments: number } {
@@ -140,7 +144,7 @@ export const toggleReview = () => (app.get().review ? closeReview() : openReview
 
 function itemsNow(): ReviewItem[] {
   const e = getEditor();
-  return e ? reviewItems(e.state.doc, threads(), review.get().filter, draftKey.getState(e.state) ?? null) : [];
+  return e ? reviewItems(e.state.doc, threads(), review.get().filter, draftKey.getState(e.state) ?? null, review.get().reviewers) : [];
 }
 
 const focusCard = (key: string) =>
@@ -209,12 +213,13 @@ export function decide(it: Extract<ReviewItem, { kind: "change" }>, decision: De
 export function decideAll(decision: Decision): void {
   const e = getEditor();
   if (!e || !canDecide()) return;
-  const n = scan(e.state.doc).changes.length;
+  const shown = itemsNow().filter((it) => it.kind === "change");
+  const n = shown.length;
   if (!n) {
-    toast("There are no suggestions.");
+    toast("There are no suggestions shown.");
     return;
   }
-  e.commands.resolveChanges(null, decision);
+  e.commands.resolveChanges(shown.map((it) => it.change.id), decision);
   review.set({ active: null });
   toast(`${decision === "accept" ? "Accepted" : "Rejected"} ${n === 1 ? "1 change" : `${n.toLocaleString()} changes`}.`);
 }

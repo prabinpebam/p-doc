@@ -9,7 +9,7 @@ import { importKind } from "@p-doc/core";
 import { printDocument } from "./editor/print.ts";
 import { app, shownPanel, toast } from "./state.ts";
 import { backToCurrent, history, loadHistory } from "./versions.ts";
-import { reviewItems } from "./review.ts";
+import { review, reviewItems } from "./review.ts";
 import { compareInto } from "./compare.ts";
 import { applySync, loadSync } from "./sync.ts";
 import { sameRef } from "../shared/api.ts";
@@ -157,7 +157,12 @@ export function App() {
   const hasDoc = app.use((s) => !!s.current);
   const historyOpen = app.use((s) => s.history);
   const reviewOpen = app.use((s) => s.review);
+  const session = app.use((s) => s.session);
   useTheme();
+
+  useEffect(() => {
+    review.set({ reviewers: null, filter: "open", active: null });
+  }, [session]);
 
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 999.98px)");

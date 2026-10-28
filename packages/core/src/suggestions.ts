@@ -29,6 +29,13 @@ export interface Change extends SuggestionInfo {
   to: number;
 }
 
+/** null means Everyone; an empty selection shows no suggestions (U65). */
+export function changesByReviewer(changes: readonly Change[], reviewers: readonly string[] | null): Change[] {
+  if (reviewers === null) return [...changes];
+  const selected = new Set(reviewers);
+  return changes.filter((c) => selected.has(c.author));
+}
+
 const suggestionId = () => `s-${globalThis.crypto.randomUUID().replace(/-/g, "").slice(0, 10)}`;
 
 /** A formatting suggestion on a paragraph: the type and attributes it had. */
