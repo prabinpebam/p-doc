@@ -6,7 +6,7 @@
 
 <aside class="slate-tldr">
   <p class="slate-tldr__label">TL;DR</p>
-  <p>Research is done (Google Docs observed with Stagehand, Word from its documentation). The <a href="product/spec.md">spec</a> and <a href="product/definition-of-done.md">Definitions of Done</a> are written. Stages 1, Write offline, 2, Pages and print, and 3, Versions, are built and pass every DoD row (20 end-to-end journeys, 93 unit tests, performance within budget). Pages on screen match the PDF page for page, which confirms the riskiest assumption (A1). Every document now has a version history: compare, name, restore and copy. Stage 4, Review, is next. This page shows where each stage stands.</p>
+  <p>Research is done (Google Docs observed with Stagehand, Word from its documentation). The <a href="product/spec.md">spec</a> and <a href="product/definition-of-done.md">Definitions of Done</a> are written. Stages 1, Write offline, 2, Pages and print, 3, Versions, and 4, Review, are built and pass every DoD row (24 end-to-end journeys, 99 unit tests, performance within budget). Pages on screen match the PDF page for page, which confirms the riskiest assumption (A1). Every document has a version history (compare, name, restore, copy) and can be reviewed: suggest changes, comment, accept or reject. Stage 5, GitHub and first run, is next. This page shows where each stage stands.</p>
 </aside>
 
 <h2>Build status</h2>
@@ -19,8 +19,8 @@
     <tr><td>1 Write offline</td><td>U1–U8, U10–U12, U19, U20, U33, U34</td><td><span class="slate-badge slate-badge--success">Done</span></td><td>DoD 1.1–1.11 pass; 12 e2e, 73 unit</td></tr>
     <tr><td>2 Pages and print</td><td>U9, U13–U16</td><td><span class="slate-badge slate-badge--success">Done</span></td><td>DoD 2.1–2.6 pass; 5 e2e journeys; screen and PDF page counts match (A1); <code>pnpm perf</code> within budget</td></tr>
     <tr><td>3 Versions</td><td>U28–U32</td><td><span class="slate-badge slate-badge--success">Done</span></td><td>DoD 3.1–3.6 pass; e2e <code>versions</code> (3 journeys); 500-version history opens in 0.2 s</td></tr>
-    <tr><td>4 Review</td><td>U21–U27</td><td><span class="slate-badge slate-badge--info">In progress</span></td><td>—</td></tr>
-    <tr><td>5 GitHub and first run</td><td>U34–U37</td><td><span class="slate-badge">Not started</span></td><td>—</td></tr>
+    <tr><td>4 Review</td><td>U21–U27</td><td><span class="slate-badge slate-badge--success">Done</span></td><td>DoD 4.1–4.6 and PD5 pass; e2e <code>review</code> and <code>comments</code>; accept-all and reject-all exact</td></tr>
+    <tr><td>5 GitHub and first run</td><td>U34–U37</td><td><span class="slate-badge slate-badge--info">In progress</span></td><td>—</td></tr>
     <tr><td>6 Import and export</td><td>U16–U18, U38</td><td><span class="slate-badge">Not started</span></td><td>—</td></tr>
     <tr><td>7 Install</td><td>Packaged app</td><td><span class="slate-badge">Not started</span></td><td>—</td></tr>
   </tbody>

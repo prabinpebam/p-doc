@@ -1026,6 +1026,219 @@ kbd {
   color: var(--color-accent);
 }
 
+/* Review (U23–U26): the mode switch, the title bar's badge and button, and the Review panel */
+
+.toolbar > .tb-fixed {
+  margin-inline-start: auto;
+}
+
+.tb-mode .tb-btn {
+  gap: var(--space-1);
+  padding: 0 var(--space-2);
+}
+
+.tb-mode-name {
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+
+.mode-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--color-selected);
+  font-size: var(--text-sm);
+  color: var(--color-accent);
+  white-space: nowrap;
+}
+
+.mode-badge.viewing {
+  color: var(--color-text-muted);
+}
+
+.review-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: var(--size-control-dense);
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+}
+
+.review-button[aria-pressed="true"] {
+  background: var(--color-selected);
+  color: var(--color-accent);
+}
+
+@media (hover: hover) {
+  .review-button:hover {
+    background: var(--color-hover);
+  }
+}
+
+.review-count {
+  min-width: var(--size-icon);
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-pill);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-size: var(--text-sm);
+  line-height: var(--leading-tight);
+  text-align: center;
+}
+
+.review-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0 var(--space-2) var(--space-1) var(--space-3);
+}
+
+.review-counts {
+  flex: 1;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.review-filter {
+  display: flex;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3) var(--space-2);
+}
+
+.review-filter .chip {
+  padding: 0 var(--space-2);
+}
+
+.review-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0 var(--space-3) var(--space-3);
+  list-style: none;
+}
+
+.review-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  border: var(--border-hairline) solid var(--color-rule);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-raised);
+}
+
+.review-card.active {
+  border-color: var(--color-accent);
+  box-shadow: var(--shadow-popup);
+}
+
+.review-card.resolved {
+  opacity: var(--opacity-disabled);
+}
+
+.review-card.resolved:focus-within,
+.review-card.resolved.active {
+  opacity: 1;
+}
+
+.review-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.review-open {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-1);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  text-align: start;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .review-open:hover {
+    background: var(--color-hover);
+  }
+}
+
+.review-who {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.review-author {
+  font-weight: var(--weight-semibold);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.review-body,
+.review-quote,
+.review-gone {
+  margin: 0;
+  padding: 0 var(--space-1);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.review-quote {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.review-gone {
+  font-size: var(--text-sm);
+  color: var(--color-negative);
+}
+
+.review-reply {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-inline-start: var(--space-2);
+  padding-inline-start: var(--space-2);
+  border-inline-start: var(--border-hairline) solid var(--color-rule);
+}
+
+.comment-box {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.comment-field {
+  width: 100%;
+  height: auto;
+  min-height: var(--size-control);
+  padding: var(--space-1) var(--space-2);
+  resize: vertical;
+  font: inherit;
+}
+
+.comment-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-1);
+}
+
+.markup-note {
+  color: var(--color-accent);
+}
+
 /* Status bar */
 
 .statusbar {

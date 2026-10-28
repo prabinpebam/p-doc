@@ -8,6 +8,7 @@ import { downloadPdf } from "./output.ts";
 import { printDocument } from "./editor/print.ts";
 import { app, shownPanel, toast } from "./state.ts";
 import { backToCurrent, history, loadHistory } from "./versions.ts";
+import { reviewItems } from "./review.ts";
 import { sameRef } from "../shared/api.ts";
 import { CommandSearch } from "./ui/CommandSearch.tsx";
 import { Dialogs } from "./ui/Dialogs.tsx";
@@ -16,6 +17,7 @@ import { HistoryPanel } from "./ui/HistoryPanel.tsx";
 import { LeftPanel } from "./ui/LeftPanel.tsx";
 import { MenuBar } from "./ui/MenuBar.tsx";
 import { PageArea } from "./ui/PageArea.tsx";
+import { ReviewPanel } from "./ui/ReviewPanel.tsx";
 import { StatusBar } from "./ui/StatusBar.tsx";
 import { TitleBar } from "./ui/TitleBar.tsx";
 import { Toasts } from "./ui/Toasts.tsx";
@@ -36,7 +38,19 @@ async function start(): Promise<void> {
           return e && d ? printDocument(d, e.view).request : null;
         },
         // The pieces `pnpm perf` times (spec §7).
-        perf: { layoutNow, flush, openDoc, newDoc, downloadPdf },
+        perf: {
+          layoutNow,
+          flush,
+          openDoc,
+          newDoc,
+          downloadPdf,
+          // What the title bar's count and the Review panel read after each edit.
+          reviewScan: () => {
+            const e = getEditor();
+            const d = app.get().doc;
+            return e && d ? reviewItems(e.state.doc, d.comments, "open", null).length : 0;
+          },
+        },
       },
       configurable: true,
     });
@@ -136,6 +150,7 @@ export function App() {
   const narrow = app.use((s) => s.narrow);
   const hasDoc = app.use((s) => !!s.current);
   const historyOpen = app.use((s) => s.history);
+  const reviewOpen = app.use((s) => s.review);
   useTheme();
 
   useEffect(() => {
@@ -188,6 +203,7 @@ export function App() {
         {chrome && panel ? <LeftPanel /> : null}
         {hasDoc ? <PageArea /> : <main className="canvas" data-region aria-label="Page" />}
         {chrome && hasDoc && historyOpen ? <HistoryPanel /> : null}
+        {chrome && hasDoc && reviewOpen && !historyOpen ? <ReviewPanel /> : null}
       </div>
       {chrome ? <StatusBar /> : null}
       {focus ? (

@@ -16,7 +16,13 @@ export type Dialog =
   | { kind: "headerFooter" }
   | { kind: "rename"; ref: DocRef; title: string }
   | { kind: "move"; ref: DocRef; title: string; to: Space }
-  | { kind: "restoreVersion"; sha: string; time: string };
+  | { kind: "restoreVersion"; sha: string; time: string }
+  | { kind: "deleteComment"; thread: string; reply: string | null };
+
+/** Editing, Suggesting or Viewing (U21, U27). */
+export type Mode = "editing" | "suggesting" | "viewing";
+/** How suggestions show (U23): Simple (applied, with a margin bar), All (inline), No markup (accepted), Original (rejected). */
+export type Markup = "simple" | "all" | "none" | "original";
 
 export interface Toast {
   id: number;
@@ -49,6 +55,10 @@ export interface AppState {
   peek: boolean;
   /** The version history panel (V6) is open on the right. */
   history: boolean;
+  /** The Review panel (U26) is open on the right; it and history take turns. */
+  review: boolean;
+  mode: Mode;
+  markup: Markup;
   /** Bumped on each editor transaction, for views that follow the content (outline, counts). */
   tick: number;
   e2e: boolean;
@@ -72,6 +82,9 @@ export const app = createStore<AppState>({
   narrow: false,
   peek: false,
   history: false,
+  review: false,
+  mode: "editing",
+  markup: "all",
   tick: 0,
   e2e: false,
 });
@@ -90,6 +103,9 @@ export async function updateSettings(patch: Partial<Omit<Settings, "version">>):
   const next = await window.pdoc.settings.set(patch);
   app.set({ settings: next });
 }
+
+/** The page takes typing: Editing or Suggesting, with a markup view the text can be changed in. */
+export const pageEditable = (s: AppState) => s.mode !== "viewing" && (s.markup === "all" || s.markup === "simple");
 
 export const openDialog = (dialog: Dialog) => app.set({ dialog, palette: false });
 export const closeDialog = () => app.set({ dialog: null });

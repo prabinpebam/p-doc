@@ -4,6 +4,10 @@ import {
   ArrowRedo20Regular,
   ArrowUndo20Regular,
   ChevronDown16Regular,
+  CommentAdd20Regular,
+  CommentEdit20Regular,
+  Edit20Regular,
+  Eye20Regular,
   Highlight20Regular,
   Image20Regular,
   Link20Regular,
@@ -35,6 +39,8 @@ import { COMMANDS, fontSizeAt, runCommand, setFontSize, shownChord, STYLE_NAMES,
 import { currentStyle, applyStyle } from "../editor/blocks.ts";
 import { getEditor, focusEditor } from "../session.ts";
 import { app, updateSettings } from "../state.ts";
+import { MODE_NAMES } from "../review.ts";
+import { history } from "../versions.ts";
 import { MenuList, useOutside } from "./Menu.tsx";
 import { toSpecs } from "./MenuBar.tsx";
 
@@ -108,13 +114,13 @@ function Btn({ id, icon, label, pressed, onClick, disabled, first }: { id?: stri
 }
 
 /** A button that opens a floating panel. */
-function Drop({ label, icon, children, wide, more }: { label: string; icon: ReactNode; children: (close: () => void) => ReactNode; wide?: boolean; more?: boolean }) {
+function Drop({ label, icon, children, wide, more, end, disabled, className }: { label: string; icon: ReactNode; children: (close: () => void) => ReactNode; wide?: boolean; more?: boolean; end?: boolean; disabled?: boolean; className?: string }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const close = () => setOpen(false);
   useOutside(ref, open, close);
   return (
-    <div ref={ref} className={`tb-drop${more ? " tb-more-drop" : ""}`}>
+    <div ref={ref} className={`tb-drop${more ? " tb-more-drop" : ""}${className ? ` ${className}` : ""}`}>
       <button
         type="button"
         className={`tb-btn${wide ? " wide" : ""}`}
@@ -124,7 +130,7 @@ function Drop({ label, icon, children, wide, more }: { label: string; icon: Reac
         title={label}
         aria-haspopup="true"
         aria-expanded={open}
-        disabled={!more && !getEditor()}
+        disabled={disabled ?? (!more && !getEditor()?.isEditable)}
         onMouseDown={(e) => e.preventDefault()}
         onClick={() => setOpen((o) => !o)}
         onKeyDown={(e) => {
@@ -139,7 +145,7 @@ function Drop({ label, icon, children, wide, more }: { label: string; icon: Reac
       </button>
       {open ? (
         <div
-          className={`popover${more ? " end" : ""}`}
+          className={`popover${more || end ? " end" : ""}`}
           onKeyDown={(e) => {
             if (e.key === "Escape") {
               e.stopPropagation();
@@ -155,9 +161,9 @@ function Drop({ label, icon, children, wide, more }: { label: string; icon: Reac
   );
 }
 
-function MenuDrop({ label, icon, items }: { label: string; icon: ReactNode; items: string[] }) {
+function MenuDrop({ label, icon, items, end, disabled, className, wide }: { label: string; icon: ReactNode; items: string[]; end?: boolean; disabled?: boolean; className?: string; wide?: boolean }) {
   return (
-    <Drop label={label} icon={icon}>
+    <Drop label={label} icon={icon} end={end} disabled={disabled} className={className} wide={wide}>
       {(close) => (
         <MenuList
           items={toSpecs(items)}
@@ -290,8 +296,12 @@ export function Toolbar() {
   app.use((s) => s.tick);
   const zoom = app.use((s) => s.settings?.zoom ?? 100);
   app.use((s) => s.doc?.styles);
+  const mode = app.use((s) => s.mode);
+  app.use((s) => s.markup);
+  history.use((s) => s.viewing);
   const ref = useRef<HTMLDivElement>(null);
   const editor = getEditor();
+  const editable = !!editor?.isEditable;
   const style = editor ? currentStyle(editor) : null;
   const size = editor ? fontSizeAt(editor) : 11;
   const family = (editor?.getAttributes("textStyle").fontFamily as string | undefined) ?? "";
@@ -308,7 +318,8 @@ export function Toolbar() {
       for (const el of bar.querySelectorAll<HTMLElement>(":scope > [data-group]")) widths.current[Number(el.dataset.group)] = el.getBoundingClientRect().width;
       const cs = getComputedStyle(bar);
       const gap = parseFloat(cs.columnGap) || 0;
-      const room = bar.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+      const fixed = bar.querySelector<HTMLElement>(":scope > .tb-fixed")?.getBoundingClientRect().width ?? 0;
+      const room = bar.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - (fixed ? fixed + gap : 0);
       const more = (bar.querySelector<HTMLElement>(".tb-btn")?.getBoundingClientRect().width ?? 0) * 1.5 + gap * 2;
       const upTo = (k: number) => widths.current.slice(0, k).reduce((a, w) => a + w + gap, 0) - gap;
       const n = count.current;
@@ -379,7 +390,7 @@ export function Toolbar() {
           aria-label="Paragraph style"
           title="Paragraph style (Ctrl+Alt+0 to 4)"
           value={style ?? ""}
-          disabled={!editor}
+          disabled={!editable}
           onChange={(e) => {
             if (editor) applyStyle(editor, e.target.value as never);
           }}
@@ -398,7 +409,7 @@ export function Toolbar() {
           aria-label="Font"
           title="Font"
           value={fontLabel}
-          disabled={!editor}
+          disabled={!editable}
           onChange={(e) => {
             const f = FONTS.find(([n]) => n === e.target.value);
             if (!editor || !f) return;
@@ -423,7 +434,7 @@ export function Toolbar() {
           aria-label="Font size"
           title="Font size"
           inputMode="decimal"
-          disabled={!editor}
+          disabled={!editable}
           value={sizeText ?? String(size)}
           onFocus={(e) => {
             setSizeText(String(size));
@@ -500,8 +511,12 @@ export function Toolbar() {
     <>
         <Btn id="format.clear" icon={<TextClearFormatting20Regular />} />
     </>,
+    <>
+        <Btn id="insert.comment" icon={<CommentAdd20Regular />} />
+    </>,
   ];
   count.current = groups.length;
+  const ModeIcon = mode === "suggesting" ? CommentEdit20Regular : mode === "viewing" ? Eye20Regular : Edit20Regular;
 
   return (
     <div ref={ref} role="toolbar" aria-label="Formatting" className="toolbar" data-region onKeyDown={onKeyDown} onFocus={onFocus}>
@@ -519,6 +534,22 @@ export function Toolbar() {
           </Drop>
         </div>
       ) : null}
+      <div className="tb-group tb-fixed">
+        <MenuDrop
+          label={`Mode: ${MODE_NAMES[mode]}`}
+          className="tb-mode"
+          wide
+          end
+          disabled={!editor}
+          icon={
+            <>
+              <ModeIcon aria-hidden />
+              <span className="tb-mode-name">{MODE_NAMES[mode]}</span>
+            </>
+          }
+          items={["mode.editing", "mode.suggesting", "mode.viewing"]}
+        />
+      </div>
     </div>
   );
 }

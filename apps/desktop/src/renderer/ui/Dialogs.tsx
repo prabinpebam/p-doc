@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { COMMANDS, MENU_PATH, MENUS, labelOf, shownChord } from "../commands.ts";
 import { moveDoc } from "../ops.ts";
 import { restoreVersion } from "../versions.ts";
+import { deleteComment } from "../review.ts";
 import { getEditor, renameDoc } from "../session.ts";
 import { app, closeDialog, updateSettings, type Dialog as DialogState } from "../state.ts";
 import type { Theme } from "../../shared/api.ts";
@@ -32,6 +33,8 @@ export function Dialogs() {
       return <Move d={d} />;
     case "restoreVersion":
       return <RestoreVersion d={d} />;
+    case "deleteComment":
+      return <DeleteComment d={d} />;
     case "pageSetup":
       return <PageSetupDialog />;
     case "headerFooter":
@@ -503,6 +506,27 @@ function RestoreVersion({ d }: { d: Extract<DialogState, { kind: "restoreVersion
       }
     >
       <p>The current version stays in history.</p>
+    </Dialog>
+  );
+}
+
+function DeleteComment({ d }: { d: Extract<DialogState, { kind: "deleteComment" }> }) {
+  const reply = d.reply != null;
+  return (
+    <Dialog
+      title={reply ? "Delete this reply?" : "Delete this comment?"}
+      onClose={closeDialog}
+      onSubmit={() => deleteComment(d.thread, d.reply)}
+      actions={
+        <>
+          <Cancel />
+          <button type="submit" className="btn primary" data-autofocus>
+            Delete
+          </button>
+        </>
+      }
+    >
+      <p>{reply ? "The reply is removed from the thread." : "The comment and its replies are removed, and the text loses its highlight."}</p>
     </Dialog>
   );
 }

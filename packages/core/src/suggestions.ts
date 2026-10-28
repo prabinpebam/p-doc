@@ -159,12 +159,15 @@ const hasText = (f: Fragment) => {
   return t;
 };
 
-/** Reuses the id of an adjacent suggestion of the same kind and author, so a word typed is one change. */
-function neighbourId(doc: PMNode, pos: number, type: MarkType, author: string): string | null {
+/**
+ * The info of an adjacent suggestion of the same kind and author, so a word typed is one change
+ * (and one mark: same id, author and start time).
+ */
+function neighbour(doc: PMNode, pos: number, type: MarkType, author: string): SuggestionInfo | null {
   const $p = doc.resolve(Math.max(0, Math.min(pos, doc.content.size)));
   for (const n of [$p.nodeBefore, $p.nodeAfter]) {
     const m = n && markOf(n, type);
-    if (m && m.attrs.author === author) return m.attrs.id;
+    if (m && m.attrs.author === author) return { id: m.attrs.id, author, time: m.attrs.time };
   }
   return null;
 }
@@ -194,8 +197,7 @@ export function suggestEdits(trs: readonly Transaction[], oldState: EditorState,
       const b = rest.map(s.from + s.slice.size, 1);
       // Inserted text and new paragraph boundaries.
       if (s.slice.size > 0 && b > a) {
-        const id = neighbourId(out.doc, a, ins, st.author) ?? suggestionId();
-        const info = { id, author: st.author, time };
+        const info = neighbour(out.doc, a, ins, st.author) ?? { id: suggestionId(), author: st.author, time };
         out.removeMark(a, b, del);
         out.addMark(a, b, ins.create(info));
         out.doc.nodesBetween(a, b, (node, pos) => {
@@ -207,8 +209,7 @@ export function suggestEdits(trs: readonly Transaction[], oldState: EditorState,
       // Deleted text stays, marked.
       if (s.to > s.from) {
         const sliced = before.slice(s.from, s.to);
-        const id = neighbourId(out.doc, a, del, st.author) ?? suggestionId();
-        const info = { id, author: st.author, time };
+        const info = neighbour(out.doc, a, del, st.author) ?? { id: suggestionId(), author: st.author, time };
         const kept = keepDeleted(sliced.content, info, ins, del);
         const multi = sliced.openStart > 0 && sliced.content.childCount > 1;
         // Own split boundaries deleted with their text simply go.

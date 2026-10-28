@@ -8,5 +8,6 @@ export * from "./cadence.ts";
 export * from "./group.ts";
 export * from "./diff.ts";
 export * from "./suggestions.ts";
+export * from "./comments.ts";
 export * from "./styles.ts";
 export * from "./convert.ts";

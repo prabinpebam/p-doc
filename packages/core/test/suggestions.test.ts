@@ -45,6 +45,22 @@ describe("suggestions", () => {
     expect(nodeText(s.doc.toJSON().content[0])).toBe("Hello big world");
   });
 
+  it("keeps a word typed over time as one mark, dated when it began", async () => {
+    let s = start("Hello world");
+    s = type(s, at(s, 0, 5), " b");
+    await new Promise((r) => setTimeout(r, 5));
+    s = type(s, at(s, 0, 7), "ig");
+    s = backspace(s, at(s, 0, 15), 2);
+    await new Promise((r) => setTimeout(r, 5));
+    s = backspace(s, at(s, 0, 13), 2);
+    const marks = new Set<string>();
+    s.doc.descendants((n) => {
+      for (const m of n.marks) marks.add(JSON.stringify(m.attrs));
+    });
+    // One insertion mark (" big") and one deletion mark ("world"): the same attrs on every piece.
+    expect(marks.size).toBe(2);
+  });
+
   it("keeps deleted text visible as a deletion; backspacing continues leftwards", () => {
     let s = start("Hello world");
     s = backspace(s, at(s, 0, 11), 5);

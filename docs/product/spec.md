@@ -158,15 +158,15 @@ Waits name their class from the perceived-performance skill: *instant* (< 100 ms
 
 ### 4.5 Suggest and review (U21–U27)
 
-1. The mode switcher at the right of the toolbar: **Editing** (Ctrl+Alt+Shift+Z), **Suggesting** (Ctrl+Alt+Shift+X), **Viewing** (Ctrl+Alt+Shift+C). Suggesting and Viewing show a badge in the title bar.
-2. In Suggesting, typed text is underlined in the author colour; deleted text stays visible and struck through. Formatting changes apply directly (O6).
-3. **View > Markup**: Simple (changes shown applied, a bar in the margin), All (inline insertions and strikethroughs), No markup (as if all accepted), Original (as if all rejected). *(instant)*
-4. **Review panel** (Tools > Review changes, or the review button in the title bar): a right panel listing changes and comment threads in document order with author, time and excerpt; **Accept** / **Reject** on changes; **Reply** and **Resolve** on comments. Header: counts, **Previous**, **Next**, **Accept all**, **Reject all**, filter **Open / Resolved**. Selecting an item selects its text. Accept or reject moves to the next (W R-004). *(instant)*
-5. **Comment**: select text, Ctrl+Alt+M or the toolbar comment button → a card in the panel with a text box, **Comment** and **Cancel**. The text is highlighted. **Resolve** removes the highlight and keeps the thread under Resolved (GD R-008); **Reopen** brings it back.
+1. The mode switcher at the right of the toolbar (it never moves into **More**), also View > Mode: **Editing** (Ctrl+Alt+Shift+Z), **Suggesting** (Ctrl+Alt+Shift+X), **Viewing** (Ctrl+Alt+Shift+C). Suggesting and Viewing show a badge in the title bar.
+2. In Suggesting, typed text is underlined in the insertion colour; deleted text stays visible and struck through in the deletion colour. One colour pair for every author; the author is on the card. Formatting changes apply directly (O6).
+3. **View > Markup**: Simple (changes shown applied, a bar in the margin), All (inline insertions and strikethroughs), No markup (as if all accepted), Original (as if all rejected). No markup and Original are read-only; the status bar says which is on with a link back to All. *(instant)*
+4. **Review panel** (Tools > Review changes, or the review button in the title bar, which shows the open count): a right panel listing changes and comment threads in document order with author, time and excerpt; **Accept** / **Reject** on changes; **Reply** and **Resolve** on comments. Header: counts, **Previous**, **Next**, **Accept all**, **Reject all**, filter **Open / Resolved**. Selecting an item selects its text. Accept or reject moves to the next (W R-004). The Review and Version history panels replace each other. *(instant)*
+5. **Comment**: select text, Ctrl+Alt+M, Insert > Comment or the toolbar comment button → a card in the panel with a text box, **Comment** and **Cancel** (Ctrl+Enter posts, Esc cancels). The text is highlighted while you write. **Resolve** removes the highlight and keeps the thread under Resolved (GD R-008); **Reopen** brings it back. A thread's menu has **Edit** (your own comments) and **Delete** (asks first); a reply's menu the same.
 
-**Branches:** no selection → the comment anchors to the word at the cursor; the commented text is deleted → the thread stays, marked "Text deleted"; Viewing → typing does nothing and the badge says "Viewing".
+**Branches:** no selection → the comment anchors to the word at the cursor, or "Select some text to comment on." between words; the commented text is deleted → the thread stays, marked "Text deleted." and listed last; Viewing → typing, accept and reject do nothing and the badge says "Viewing", but comments still work.
 
-**Defaults:** author is the Git identity name; markup All.
+**Defaults:** author is the Git identity name; markup All; mode Editing for each document opened.
 
 ### 4.6 Versions (U28–U32)
 
@@ -198,7 +198,7 @@ Waits name their class from the perceived-performance skill: *instant* (< 100 ms
 | View | Layout | Serves | Regions and data |
 |---|---|---|---|
 | V1 Editor window | Title bar 44 px; menu bar 30 px; toolbar 40 px pill; left panel 280 px (collapsible); page area; right panel 340 px when open; status bar 28 px | U1–U32 | Title bar: app mark, title field, save state, mode badge, review and history buttons, account. Menu bar: File, Edit, View, Insert, Format, Tools, Help. Status bar: page *n* of *m*, words, mode, sync status, zoom. |
-| V2 Toolbar | One row of groups with separators; overflow menu "More" at narrow widths | U2–U7, U10, U21 | Command search · undo, redo, print · zoom · style picker · font · size − value + · B I U S · text colour · highlight · link · comment · image · table · align · line spacing · checklist · bullets · numbering · indent − + · clear formatting ·· mode switch. Each button's name includes its shortcut (GD R-010). |
+| V2 Toolbar | One row of groups with separators; overflow menu "More" at narrow widths | U2–U7, U10, U21 | Command search · undo, redo, print · zoom · style picker · font · size − value + · B I U S · text colour · highlight · link · image · table · align · line spacing · checklist · bullets · numbering · indent − + · clear formatting · comment ·· mode switch. Each button's name includes its shortcut (GD R-010). |
 | V3 Left panel | Tabs **Library** and **Outline** | U8, U33 | Library: search, New, Private and Public sections, Bin. Outline: heading tree with chevrons and drag. |
 | V4 Page area | Grey canvas; pages centred with a 16 px gap and shadow (Pages), or one sheet (Pageless) | U1, U13–U15 | Header and footer with page numbers; page breaks; comment and change highlights. |
 | V5 Review panel | Right panel | U23–U26 | Counts, Previous/Next, Accept/Reject all, filter, cards. |
@@ -274,7 +274,7 @@ Failure words: "Couldn't save. Retrying…"; "P-Doc can't write to *folder*. You
 | A1 | Block-level pagination in the live editor matches print/PDF closely enough | Feasibility | High (P4) | e2e `pagination` 2026-10-28: a 16-page fixture with a manual break, table, quote and a code block taller than a page has the same pages on screen, in the print layout and in the PDF | A multi-page fixture has the same page count on screen and in the PDF | Stage 2 e2e comparing screen pages with PDF pages | O2 | Confirmed |
 | A2 | Git is present or installable on writers' machines | Feasibility | High (P1) | Focus Notes has the same requirement | First run finds Git ≥ 2.40 or the writer installs it | First-run Git check | Bundle Git | Open |
 | A3 | Writers accept documents stored as JSON rather than .docx | Desirability | Medium (P2) | Focus Notes uses plain files; JSON diffs well | Writers use export when they need .docx | Ask after stage 6 | Native .docx storage | Open |
-| A4 | Insert/delete suggestions cover review needs without formatting tracking | Usability | Medium (P5) | Docs and Word track formatting (W R-003) | Reviewing a fixture with text edits feels complete | Try-it in stage 4 | Add format suggestions | Open |
+| A4 | Insert/delete suggestions cover review needs without formatting tracking | Usability | Medium (P5) | Docs and Word track formatting (W R-003) | Reviewing a fixture with text edits feels complete | Try-it in stage 4 | Add format suggestions | Open: e2e `review` and `comments` review a fixture of text edits end to end; the owner's try-it settles it |
 | A5 | Research never alters third-party documents | Ethics | High | Anonymous visitors to the public doc are in Suggesting | The rig never types or clicks in the page | Review `research/rig` | — | Held |
 | A6 | Embedded images up to 2 MB keep files workable in Git | Viability | Low | GitHub warns at 50 MB per file | A 100-page fixture with 20 images stays under 20 MB | Measure in stage 6 | Store images beside the file | Open |
 | A7 | A clear warning before Move to Public prevents accidental publishing | Usability | High (P6) | None | No move without the confirmation; tests prove it | e2e | Two-step confirmation | Open |
@@ -361,3 +361,23 @@ Engineering notes:
 - Opening history commits only when the scheduler has changes waiting (`commitIfWaiting`), and reads the log and the tags in parallel: each Git process costs about 90 ms on Windows. At start, `Library.unversioned` (`git status`) hands documents saved but never committed (a crash) to the scheduler.
 - The start-up focus ("ready for typing") leaves the cursor alone if the person already focused the page.
 - e2e `versions` covers 3.1–3.6, including closing with unsaved text and running without Git.
+
+### Stage 4: Suggest and review (built)
+
+What a person meets, beyond the flows above:
+
+- **Modes.** Editing, Suggesting and Viewing from the switcher at the right end of the toolbar, View > Mode or their shortcuts. The title bar shows a badge in Suggesting and Viewing. In Viewing the toolbar's editing controls are greyed and typing does nothing, but comments still work. Each document opens in Editing.
+- **Suggesting.** Typing is underlined green; deleting leaves the text struck through red, and deleting your own suggestion simply removes it. A word typed over a few seconds is one change, dated when it began. Typing over a selection makes a deletion and an insertion side by side. Undo takes back suggestions like any edit.
+- **Markup.** All shows changes inline; Simple shows the text as if accepted with a bar in the margin beside changed lines; No markup and Original show the text as if all were accepted or rejected, read-only. Any view but All shows its name in the status bar ("No markup · read only"); a click there goes back to All. A suggested split of a paragraph can't be shown re-joined in Original.
+- **Review panel.** Opened by Tools > Review changes, the title bar's review button (with the open count) or by starting a comment; it replaces Version history and the other way round. Cards for changes (author, time, "Added" / "Deleted" and the text) and threads, in document order; selecting one selects its text in the page. Accept or reject moves to the next. **Accept all** and **Reject all** ask nothing and can be undone. **Open / Resolved** filters; with nothing open the panel says how to suggest or comment, and "No resolved comments." under Resolved.
+- **Comments.** On a selection, or the word at the cursor. While writing, the text has a draft highlight; Esc or Cancel drops it. Posted threads show their highlight in the page; Reply, Resolve, Reopen, Edit (your own) and Delete (asks first) from the card and its menu. Comments, replies and resolved state are saved with the document and come back after a restart. Text whose comment was deleted loses its highlight.
+
+Engineering notes:
+
+- Core `suggestions.ts` turns edits into `pd-insertion`/`pd-deletion` marks in an `appendTransaction` while suggesting is on; a new character joins the neighbouring suggestion's mark (same id, author and start time) so contiguous typing stays one change. `resolveChanges` accepts or rejects one id or all. Unit `suggestions` (9 tests).
+- Core `comments.ts` holds threads in `doc.comments` (id, quote, author, time, body, replies, resolved) with pure add, reply, edit, resolve, delete; the `pd-comment` mark carries the thread id. `finalContent` drops comment marks and resolves suggestions for export. Unit `comments`.
+- Renderer `review.ts` keeps mode, markup and panel state, lists items (`reviewItems`) from one document walk, cached per editor state, and does navigation and decisions. Mode is applied to each new editor in `applyMode` (which keeps a shown version read-only). Markup is a class on the page (`markup-simple` etc.) plus editability.
+- Comment marks are added on **Comment** without an undo step, so Ctrl+Z after posting doesn't strip the highlight.
+- `pnpm perf` adds "Review list after an edit" on a 50-page document with 100 suggestions (budget 16 ms; p95 0.2 ms).
+- e2e `review` covers 4.1–4.4 and 4.6 and the toolbar in Viewing; e2e `comments` covers 4.5 end to end, including a restart.
+- Known small gap: Word count counts suggested deletions as words.

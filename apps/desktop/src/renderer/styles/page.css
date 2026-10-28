@@ -349,6 +349,45 @@
   background: var(--color-comment);
 }
 
+.pd-comment-draft {
+  background: var(--color-comment-active);
+}
+
+/* Markup views (U23): Simple and No markup show the text as if accepted; Original as if rejected. */
+
+.page.markup-simple .pd-content .pd-insertion,
+.page.markup-none .pd-content .pd-insertion,
+.page.markup-original .pd-content .pd-deletion {
+  color: inherit;
+  text-decoration: none;
+}
+
+.page.markup-simple .pd-content .pd-deletion,
+.page.markup-none .pd-content .pd-deletion,
+.page.markup-original .pd-content .pd-insertion {
+  display: none;
+}
+
+.page.markup-none .pd-content :is(.pd-comment, .pd-comment-draft),
+.page.markup-original .pd-content :is(.pd-comment, .pd-comment-draft) {
+  background: none;
+}
+
+/* Simple markup: a bar in the margin beside each block with a change. */
+.page.markup-simple .pd-content > :is(:has(.pd-insertion, .pd-deletion), .pd-split, .pd-join) {
+  position: relative;
+}
+
+.page.markup-simple .pd-content > :is(:has(.pd-insertion, .pd-deletion), .pd-split, .pd-join)::after {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: calc(var(--space-3) * -1);
+  width: var(--border-focus);
+  background: var(--color-insertion);
+  pointer-events: none;
+}
+
 .pd-match {
   background: var(--color-match);
 }

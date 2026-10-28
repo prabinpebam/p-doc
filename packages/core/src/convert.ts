@@ -14,7 +14,18 @@ const contentOf = (doc: PDocFile | JSONContent): JSONContent => ((doc as PDocFil
 
 /** Content as it reads with every suggestion accepted and comment anchors dropped: what exports carry. */
 export function finalContent(content: JSONContent): JSONContent {
-  return acceptAll(content);
+  return dropComments(acceptAll(content));
+}
+
+function dropComments(node: JSONContent): JSONContent {
+  const out: JSONContent = { ...node };
+  if (node.marks) {
+    const marks = node.marks.filter((m) => m.type !== "comment");
+    if (marks.length) out.marks = marks;
+    else delete out.marks;
+  }
+  if (node.content) out.content = node.content.map(dropComments);
+  return out;
 }
 
 // ------------------------------------------------------------------------------ HTML

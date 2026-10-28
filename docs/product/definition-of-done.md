@@ -15,10 +15,10 @@ What success means for the [spec](spec.md): the project's Definition of Done, ma
 | PD2 | P2 | Every feature works with the network off and no account; documents are readable JSON in plain Git repositories | e2e suites run offline with no GitHub; unit `format` | Partial 2026-10-28: stage 1 runs offline with no account (`offline`); readable JSON (unit `format`) |
 | PD3 | P3 | Outline and table of contents follow heading changes with no manual step; every command is reachable by command search | e2e `outline`, `toc`, `command-search` | Pass 2026-10-28: `outline`, `command-search` and `toc` pass |
 | PD4 | P4 | A multi-page fixture has the same page count on screen and in the exported PDF (A1) | e2e `pagination` | Pass 2026-10-28: the 16-page fixture has the same page count on screen, in the print layout and in the PDF (A1 confirmed) |
-| PD5 | P5 | Accepting all gives the suggested text; rejecting all gives the original, exactly | unit `suggestions`; e2e `review` | |
+| PD5 | P5 | Accepting all gives the suggested text; rejecting all gives the original, exactly | unit `suggestions`; e2e `review` | Pass 2026-10-28: unit `suggestions` "accept-all gives the suggested text and reject-all the original, exactly"; e2e `review` checks the page text after Accept all and after Reject all |
 | PD6 | P6 | Nothing reaches the public repository without the Move to Public confirmation; new documents are private | e2e `privacy`; unit `library` | |
 | PD7 | The outcome is valuable | A fresh install reaches a first saved document in under a minute, offline or signed in | e2e `first-run` timing; owner try-it | |
-| PD8 | Nothing live breaks | No real GitHub, documents or settings of the owner are touched by tests; budgets in spec §7 hold | test isolation (W7); `pnpm perf` against `perf-baseline.json` | Partial 2026-10-28: every e2e run has its own data, library and empty Git config; unit `library` uses an empty Git config. `pnpm perf` within budget (keystroke p95 1.3 ms, repagination 2.7 ms, save 10 ms, open 100 pages 90 ms, cold start 0.55 s, 50-page PDF 0.3 s; [baseline](perf-baseline.json)); stage 3: version commit of 50 pages p95 0.44 s (budget 1 s), history of 500 versions p95 0.2 s (budget 0.3 s); waits of stages 5 and 6 are measured there |
+| PD8 | Nothing live breaks | No real GitHub, documents or settings of the owner are touched by tests; budgets in spec §7 hold | test isolation (W7); `pnpm perf` against `perf-baseline.json` | Partial 2026-10-28: every e2e run has its own data, library and empty Git config; unit `library` uses an empty Git config. `pnpm perf` within budget (keystroke p95 1.3 ms, repagination 2.7 ms, save 10 ms, open 100 pages 90 ms, cold start 0.55 s, 50-page PDF 0.3 s; [baseline](perf-baseline.json)); stage 3: version commit of 50 pages p95 0.44 s (budget 1 s), history of 500 versions p95 0.2 s (budget 0.3 s); stage 4: review list on 50 pages p95 0.2 ms (budget 16 ms); waits of stages 5 and 6 are measured there |
 | PD9 | Docs | The spec's "As built" records what was built | Review | |
 
 ## 2. Stages
@@ -94,12 +94,12 @@ A person can suggest, comment, and accept or reject changes.
 
 | # | Done when | Evidence | Result |
 |---|---|---|---|
-| 4.1 | Editing, Suggesting and Viewing switch from the toolbar and shortcuts; Viewing blocks edits (U21, U27) | e2e `review` | |
-| 4.2 | In Suggesting, insertions and deletions become suggestion marks with author and time; deleting your own suggestion removes it (U22) | unit `suggestions`; e2e `review` | |
-| 4.3 | Markup views show Simple, All, No markup and Original correctly (U23) | e2e `review` | |
-| 4.4 | Accept, Reject, Next, Previous, Accept all and Reject all work; accept-all equals the suggested text and reject-all the original (U24, PD5) | unit `suggestions`; e2e `review` | |
-| 4.5 | Comments: add, reply, edit, resolve, reopen, delete; persisted in the file (U25) | e2e `comments` | |
-| 4.6 | The panel lists changes and comments in document order with Open/Resolved filter (U26) | e2e `review` | |
+| 4.1 | Editing, Suggesting and Viewing switch from the toolbar and shortcuts; Viewing blocks edits (U21, U27) | e2e `review` | Pass 2026-10-28: e2e `review` (switcher, View > Mode and the three shortcuts; badge; in Viewing typing changes nothing and the toolbar's editing controls are disabled, comments still allowed) |
+| 4.2 | In Suggesting, insertions and deletions become suggestion marks with author and time; deleting your own suggestion removes it (U22) | unit `suggestions`; e2e `review` | Pass 2026-10-28: unit `suggestions` (9 tests) and e2e `review`. Found and fixed: each typed character was its own change because its time differed; a new character now joins its neighbour's change, dated when it began |
+| 4.3 | Markup views show Simple, All, No markup and Original correctly (U23) | e2e `review` | Pass 2026-10-28: e2e `review` checks the text shown in each view and that No markup and Original are read-only; screenshots reviewed. Known limit: Original can't show a suggested paragraph split re-joined |
+| 4.4 | Accept, Reject, Next, Previous, Accept all and Reject all work; accept-all equals the suggested text and reject-all the original (U24, PD5) | unit `suggestions`; e2e `review` | Pass 2026-10-28: unit `suggestions` (accept-all and reject-all exact, by id); e2e `review` (one by one moving to the next, Next/Previous, all, undo) |
+| 4.5 | Comments: add, reply, edit, resolve, reopen, delete; persisted in the file (U25) | e2e `comments` | Pass 2026-10-28: e2e `comments` (add, Esc drops the draft, reply, edit, resolve, reopen, delete a reply, comment in Viewing, "Text deleted.", saved and back after a restart, delete a thread); unit `comments` |
+| 4.6 | The panel lists changes and comments in document order with Open/Resolved filter (U26) | e2e `review` | Pass 2026-10-28: e2e `review` (order, counts, filter); `pnpm perf` "Review list after an edit" on 50 pages with 100 suggestions p95 0.2 ms (budget 16 ms) |
 
 **Depends on:** nothing outside the product.
 

@@ -17,17 +17,26 @@ test("2.5 the table of contents lists the headings with their pages, stays curre
   await page.screenshot({ path: test.info().outputPath("toc.png") });
 
   /** Clicks a heading until the caret is in it (pages may still be settling under the pointer). */
+  const caret = () =>
+    page.evaluate(() => {
+      const s = (window as unknown as { __pdoc: { getEditor(): { state: { selection: { empty: boolean; $from: { parentOffset: number; parent: { textContent: string; content: { size: number } } } } } } } }).__pdoc.getEditor().state.selection;
+      return { text: s.$from.parent.textContent, empty: s.empty, atEnd: s.$from.parentOffset === s.$from.parent.content.size };
+    });
   const caretInto = async (text: string) => {
-    const caretBlock = () => page.evaluate(() => (window as unknown as { __pdoc: { getEditor(): { state: { selection: { $from: { parent: { textContent: string } } } } } } }).__pdoc.getEditor().state.selection.$from.parent.textContent);
     await expect(async () => {
       await page.locator(".pd-content h1", { hasText: text }).click();
-      expect(await caretBlock()).toBe(text);
-    }).toPass({ timeout: 10_000 });
+      // Quick retries can count as a double or triple click and select the heading instead.
+      expect(await caret()).toMatchObject({ text, empty: true });
+    }).toPass({ intervals: [600], timeout: 10_000 });
+  };
+  const caretToEnd = async (text: string) => {
+    await page.keyboard.press("End");
+    await expect.poll(caret).toEqual({ text, empty: true, atEnd: true });
   };
 
   // Rename a heading: the contents follow as you type.
   await caretInto("Chapter 2");
-  await page.keyboard.press("End");
+  await caretToEnd("Chapter 2");
   await page.keyboard.type(" revised");
   await expect.poll(entries).toEqual(["Chapter 1 1", "Chapter 2 revised 2", "Chapter 3 3"]);
 
@@ -39,7 +48,7 @@ test("2.5 the table of contents lists the headings with their pages, stays curre
 
   // Text added before Chapter 3 pushes it to the next page, and its number follows.
   await caretInto("Chapter 2 revised");
-  await page.keyboard.press("End");
+  await caretToEnd("Chapter 2 revised");
   for (let i = 0; i < 45; i++) await page.keyboard.press("Enter");
   await expect.poll(entries).toEqual(["Chapter 1 1", "Chapter 2 revised 2", "Chapter 3 4", "Appendix 4"]);
   await page.keyboard.press("Control+z");

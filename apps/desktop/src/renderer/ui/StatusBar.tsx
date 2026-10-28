@@ -5,6 +5,7 @@ import { runCommand } from "../commands.ts";
 import { getEditor } from "../session.ts";
 import { pageLayout } from "../editor/pages.ts";
 import { app, openDialog } from "../state.ts";
+import { MARKUP_NAMES, setMarkup } from "../review.ts";
 
 export function countWords(text: string): number {
   const m = text.match(/[\p{L}\p{N}]+(?:['’\-][\p{L}\p{N}]+)*/gu);
@@ -14,6 +15,7 @@ export function countWords(text: string): number {
 export function StatusBar() {
   app.use((s) => s.tick);
   const zoom = app.use((s) => s.settings?.zoom ?? 100);
+  const markup = app.use((s) => s.markup);
   const layout = pageLayout.use((s) => s.layout);
   const editor = getEditor();
   const docRef = editor?.state.doc;
@@ -30,6 +32,18 @@ export function StatusBar() {
         {words === 1 ? "1 word" : `${words.toLocaleString()} words`}
       </button>
       <span className="status-fill" />
+      {markup !== "all" ? (
+        <button
+          type="button"
+          className="status-btn markup-note"
+          data-testid="markup-note"
+          title={markup === "simple" ? "Show all markup" : "Read only. Show all markup to edit."}
+          onClick={() => setMarkup("all")}
+        >
+          {MARKUP_NAMES[markup]}
+          {markup === "simple" ? "" : " · read only"}
+        </button>
+      ) : null}
       <span className="status-item" title="Documents are saved on this computer. Connect GitHub in Settings to sync.">
         <CloudOff16Regular aria-hidden /> Not connected to GitHub
       </span>

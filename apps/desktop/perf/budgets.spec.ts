@@ -46,6 +46,7 @@ type Perf = {
   openDoc(r: unknown): Promise<void>;
   newDoc(): Promise<void>;
   downloadPdf(): Promise<void>;
+  reviewScan(): number;
 };
 
 /** Puts the caret inside the middle paragraph of the open document. */
@@ -136,6 +137,32 @@ test("typing, repagination and saving in a 50-page document", async () => {
     return out;
   });
   record("save50", "Save to disk after the debounce", 300, saves, "Serialising and writing a 50-page document");
+
+  // Suggestions all through the document: the title bar's count and the Review panel's list are read again after each edit.
+  const scans = await page.evaluate(async () => {
+    const w = window as unknown as { __pdoc: { getEditor(): { view: any; commands: any; state: any }; perf: Perf } };
+    const e = w.__pdoc.getEditor();
+    e.commands.setSuggesting(true);
+    const size = e.state.doc.content.size;
+    for (let i = 0; i < 100; i++) {
+      const at = Math.floor(((i + 0.5) / 100) * size);
+      const $p = e.state.doc.resolve(at);
+      if ($p.parent.isTextblock) e.view.dispatch(e.state.tr.insertText("s", at));
+    }
+    const found = w.__pdoc.perf.reviewScan();
+    const out: number[] = [];
+    for (let i = 0; i < 40; i++) {
+      e.view.dispatch(e.state.tr.insertText("x"));
+      const t = performance.now();
+      w.__pdoc.perf.reviewScan();
+      out.push(performance.now() - t);
+      await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
+    }
+    e.commands.setSuggesting(false);
+    return { found, out };
+  });
+  expect(scans.found).toBeGreaterThanOrEqual(50);
+  record("review50", "Review list after an edit", 16, scans.out, `Finding every suggestion and comment in a 50-page document with ${scans.found} changes`);
   await quit(l);
 });
 

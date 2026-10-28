@@ -7,7 +7,7 @@ import { diffContent, diffStats, type PDocFile } from "@p-doc/core";
 import { sameRef, type DocRef, type VersionEntry } from "../shared/api.ts";
 import { createStore } from "./lib/store.ts";
 import { flush, focusEditor, getEditor, ipcMessage, openDoc, refreshList, reloadDoc, snapshot } from "./session.ts";
-import { app, closeDialog, openDialog, toast } from "./state.ts";
+import { app, closeDialog, openDialog, pageEditable, toast } from "./state.ts";
 
 export interface Viewing {
   entry: VersionEntry;
@@ -66,7 +66,7 @@ export async function loadHistory(commit = false): Promise<void> {
 
 export function openHistory(): void {
   if (!app.get().current) return;
-  app.set({ history: true, focus: false });
+  app.set({ history: true, review: false, focus: false });
   requestAnimationFrame(() => document.querySelector<HTMLElement>("#history-panel [data-autofocus]")?.focus());
 }
 
@@ -107,7 +107,7 @@ export async function viewVersion(v: VersionEntry): Promise<void> {
 export function backToCurrent(): void {
   if (!history.get().viewing && !history.get().opening) return;
   history.set({ viewing: null, opening: null });
-  getEditor()?.setEditable(true, false);
+  getEditor()?.setEditable(pageEditable(app.get()), false);
 }
 
 export function askRestore(v: VersionEntry): void {

@@ -42,6 +42,8 @@ test("1.11 every control stays reachable down to 800 × 600: toolbar groups move
   await page.screenshot({ path: info.outputPath("more-open.png") });
   await expect(panel.locator("[data-tb]").first()).toBeFocused();
   await page.keyboard.press("End");
+  await expect(panel.getByRole("button", { name: /^Comment/ })).toBeFocused();
+  await page.keyboard.press("ArrowLeft");
   await expect(panel.getByRole("button", { name: /^Clear formatting/ })).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(panel).toBeHidden();

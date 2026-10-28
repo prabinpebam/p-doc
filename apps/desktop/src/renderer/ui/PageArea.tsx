@@ -8,6 +8,7 @@ import { geometry, pageLayout, setPageSetup, type Layout } from "../editor/pages
 import { attachEditor, changed, detachEditor, getEditor } from "../session.ts";
 import { app, openDialog, toast } from "../state.ts";
 import { history } from "../versions.ts";
+import { applyMode, review, reviewCss } from "../review.ts";
 import { FindBar } from "./FindBar.tsx";
 import { VersionView } from "./HistoryPanel.tsx";
 
@@ -36,7 +37,7 @@ export function bumpTick(): void {
 const tooLarge = () => toast("This image is larger than 2 MB. Make it smaller and try again.", { tone: "error" });
 
 function DocEditor({ doc }: { doc: PDocFile }) {
-  const author = app.use((s) => s.settings?.identity.name ?? "Me");
+  const author = app.use((s) => s.settings?.identity.name || "Me");
   const spelling = app.use((s) => s.settings?.spelling ?? true);
   const editor = useEditor(
     {
@@ -73,6 +74,7 @@ function DocEditor({ doc }: { doc: PDocFile }) {
         },
       },
       onCreate: ({ editor }) => {
+        applyMode(editor);
         attachEditor(editor);
         bumpTick();
       },
@@ -88,6 +90,11 @@ function DocEditor({ doc }: { doc: PDocFile }) {
   useEffect(() => {
     if (editor && !editor.isDestroyed) editor.view.dom.setAttribute("spellcheck", String(spelling));
   }, [editor, spelling]);
+
+  // A new name in Settings signs suggestions made from now on.
+  useEffect(() => {
+    if (editor && !editor.isDestroyed) editor.commands.setSuggestAuthor(author);
+  }, [editor, author]);
 
   useEffect(() => {
     if (!editor) return;
@@ -127,6 +134,8 @@ export function PageArea() {
   const zoom = app.use((s) => s.settings?.zoom ?? 100);
   const layout = pageLayout.use((s) => s.layout);
   const viewing = history.use((s) => s.viewing);
+  const markup = app.use((s) => s.markup);
+  const active = review.use((s) => s.active);
   const page = doc?.page ?? null;
   useEffect(() => setPageSetup(page), [page]);
   if (!doc) return <main className="canvas" aria-busy="true" />;
@@ -149,9 +158,10 @@ export function PageArea() {
         }}
       >
         <style>{styleCss(doc.styles, ".page .pd-content")}</style>
+        <style>{reviewCss(doc.comments, active)}</style>
         <div className="page-stack" style={{ zoom: zoom / 100 }}>
           <article
-            className={`page${paged ? " paged" : " pageless"}`}
+            className={`page${paged ? " paged" : " pageless"} markup-${markup}`}
             style={pageStyle(doc, shown)}
             data-testid="page"
             data-pages={shown?.pages}

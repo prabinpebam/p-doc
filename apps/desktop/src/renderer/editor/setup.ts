@@ -6,6 +6,7 @@ import { Placeholder, TrailingNode } from "@tiptap/extensions";
 import { extensions, Suggest, TocSync } from "@p-doc/core";
 import { FindHighlight } from "./find.ts";
 import { Pages } from "./pages.ts";
+import { CommentDraft } from "./review.ts";
 
 export const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
 
@@ -109,6 +110,7 @@ export function editorExtensions(o: { author: string; onImageTooLarge: () => voi
       Placeholder.configure({ placeholder: "Start writing" }),
       TocSync,
       Suggest.configure({ author: o.author }),
+      CommentDraft,
       FindHighlight,
       ImageFiles(o.onImageTooLarge),
       Pages,

@@ -11,6 +11,8 @@ import { downloadPdf, printDoc } from "./output.ts";
 import { flush, getEditor, newDoc, syncSelection, updateDoc } from "./session.ts";
 import { app, openDialog, showPanel, shownPanel, toast, togglePanel, updateSettings } from "./state.ts";
 import { nameCurrent, toggleHistory } from "./versions.ts";
+import { canDecide, decideAll, MARKUP_NAMES, MODE_NAMES, setMarkup, setMode, startComment, step, toggleReview } from "./review.ts";
+import type { Markup, Mode } from "./state.ts";
 
 export interface Command {
   id: string;
@@ -39,6 +41,8 @@ export interface Menu {
 
 const ed = () => getEditor();
 const hasEditor = () => !!getEditor();
+/** The page takes changes: not in Viewing, a read-only markup view or over a version. */
+const canEdit = () => !!getEditor()?.isEditable;
 const hasDoc = () => !!app.get().doc;
 const setPage = (patch: Partial<PageSetup>) => {
   const d = app.get().doc;
@@ -166,8 +170,8 @@ const commands: Command[] = [
   { id: "file.print", label: "Print", keys: ["Ctrl+P"], global: true, run: () => void printDoc(), enabled: hasEditor },
 
   // Edit
-  { id: "edit.undo", label: "Undo", keys: ["Ctrl+Z"], run: chain((c) => c.undo()), enabled: () => !!ed()?.can().undo() },
-  { id: "edit.redo", label: "Redo", keys: ["Ctrl+Y", "Ctrl+Shift+Z"], run: chain((c) => c.redo()), enabled: () => !!ed()?.can().redo() },
+  { id: "edit.undo", label: "Undo", keys: ["Ctrl+Z"], run: chain((c) => c.undo()), enabled: () => canEdit() && !!ed()?.can().undo() },
+  { id: "edit.redo", label: "Redo", keys: ["Ctrl+Y", "Ctrl+Shift+Z"], run: chain((c) => c.redo()), enabled: () => canEdit() && !!ed()?.can().redo() },
   { id: "edit.cut", label: "Cut", hint: "Ctrl+X", run: () => clip("cut") },
   { id: "edit.copy", label: "Copy", hint: "Ctrl+C", run: () => clip("copy") },
   { id: "edit.paste", label: "Paste", hint: "Ctrl+V", run: () => clip("paste") },
@@ -224,26 +228,27 @@ const commands: Command[] = [
   ),
 
   // Insert
-  { id: "insert.image", label: "Image…", keywords: "picture photo", run: () => document.querySelector<HTMLInputElement>("#image-file")?.click(), enabled: hasEditor },
+  { id: "insert.image", label: "Image…", keywords: "picture photo", run: () => document.querySelector<HTMLInputElement>("#image-file")?.click(), enabled: canEdit },
   ...[2, 3, 4, 5].map(
-    (n): Command => ({ id: `insert.table${n}`, label: `${n} × ${n} table`, keywords: "table grid", run: chain((c) => c.insertTable({ rows: n, cols: n, withHeaderRow: false })), enabled: hasEditor }),
+    (n): Command => ({ id: `insert.table${n}`, label: `${n} × ${n} table`, keywords: "table grid", run: chain((c) => c.insertTable({ rows: n, cols: n, withHeaderRow: false })), enabled: canEdit }),
   ),
-  { id: "insert.link", label: "Link", keys: ["Ctrl+K"], run: () => openDialog({ kind: "link" }), enabled: hasEditor },
-  { id: "insert.hr", label: "Horizontal line", keywords: "rule divider", run: chain((c) => c.setHorizontalRule()), enabled: hasEditor },
-  { id: "insert.pageBreak", label: "Page break", keys: ["Ctrl+Enter"], run: withEditor((e) => insertAtomBlock(e, "pageBreak")), enabled: hasEditor },
-  { id: "insert.toc", label: "Table of contents", keywords: "toc contents", run: withEditor((e) => insertAtomBlock(e, "tableOfContents")), enabled: hasEditor },
+  { id: "insert.link", label: "Link", keys: ["Ctrl+K"], run: () => openDialog({ kind: "link" }), enabled: canEdit },
+  { id: "insert.hr", label: "Horizontal line", keywords: "rule divider", run: chain((c) => c.setHorizontalRule()), enabled: canEdit },
+  { id: "insert.pageBreak", label: "Page break", keys: ["Ctrl+Enter"], run: withEditor((e) => insertAtomBlock(e, "pageBreak")), enabled: canEdit },
+  { id: "insert.toc", label: "Table of contents", keywords: "toc contents", run: withEditor((e) => insertAtomBlock(e, "tableOfContents")), enabled: canEdit },
   { id: "insert.headerFooter", label: "Header and footer", keywords: "page number count footer header", global: true, run: () => openDialog({ kind: "headerFooter" }), enabled: hasDoc },
-  { id: "insert.special", label: "Special characters…", keywords: "symbol emoji character", run: () => openDialog({ kind: "specialChars" }), enabled: hasEditor },
+  { id: "insert.special", label: "Special characters…", keywords: "symbol emoji character", run: () => openDialog({ kind: "specialChars" }), enabled: canEdit },
+  { id: "insert.comment", label: "Comment", keys: ["Ctrl+Alt+M"], keywords: "note annotate review", run: startComment, enabled: hasEditor },
 
   // Format > Text
-  { id: "format.bold", label: "Bold", keys: ["Ctrl+B"], run: chain((c) => c.toggleBold()), checked: () => !!ed()?.isActive("bold"), enabled: hasEditor },
-  { id: "format.italic", label: "Italic", keys: ["Ctrl+I"], run: chain((c) => c.toggleItalic()), checked: () => !!ed()?.isActive("italic"), enabled: hasEditor },
-  { id: "format.underline", label: "Underline", keys: ["Ctrl+U"], run: chain((c) => c.toggleUnderline()), checked: () => !!ed()?.isActive("underline"), enabled: hasEditor },
-  { id: "format.strike", label: "Strikethrough", keys: ["Alt+Shift+5"], run: chain((c) => c.toggleStrike()), checked: () => !!ed()?.isActive("strike"), enabled: hasEditor },
-  { id: "format.sup", label: "Superscript", keys: ["Ctrl+."], run: chain((c) => c.toggleSuperscript()), checked: () => !!ed()?.isActive("superscript"), enabled: hasEditor },
-  { id: "format.sub", label: "Subscript", keys: ["Ctrl+,"], run: chain((c) => c.toggleSubscript()), checked: () => !!ed()?.isActive("subscript"), enabled: hasEditor },
-  { id: "format.sizeUp", label: "Increase font size", keys: ["Ctrl+Shift+.", "Ctrl+]"], run: stepFont(1), enabled: hasEditor },
-  { id: "format.sizeDown", label: "Decrease font size", keys: ["Ctrl+Shift+,", "Ctrl+["], run: stepFont(-1), enabled: hasEditor },
+  { id: "format.bold", label: "Bold", keys: ["Ctrl+B"], run: chain((c) => c.toggleBold()), checked: () => !!ed()?.isActive("bold"), enabled: canEdit },
+  { id: "format.italic", label: "Italic", keys: ["Ctrl+I"], run: chain((c) => c.toggleItalic()), checked: () => !!ed()?.isActive("italic"), enabled: canEdit },
+  { id: "format.underline", label: "Underline", keys: ["Ctrl+U"], run: chain((c) => c.toggleUnderline()), checked: () => !!ed()?.isActive("underline"), enabled: canEdit },
+  { id: "format.strike", label: "Strikethrough", keys: ["Alt+Shift+5"], run: chain((c) => c.toggleStrike()), checked: () => !!ed()?.isActive("strike"), enabled: canEdit },
+  { id: "format.sup", label: "Superscript", keys: ["Ctrl+."], run: chain((c) => c.toggleSuperscript()), checked: () => !!ed()?.isActive("superscript"), enabled: canEdit },
+  { id: "format.sub", label: "Subscript", keys: ["Ctrl+,"], run: chain((c) => c.toggleSubscript()), checked: () => !!ed()?.isActive("subscript"), enabled: canEdit },
+  { id: "format.sizeUp", label: "Increase font size", keys: ["Ctrl+Shift+.", "Ctrl+]"], run: stepFont(1), enabled: canEdit },
+  { id: "format.sizeDown", label: "Decrease font size", keys: ["Ctrl+Shift+,", "Ctrl+["], run: stepFont(-1), enabled: canEdit },
 
   // Format > Paragraph styles
   ...STYLE_KEYS_MENU.map(
@@ -257,7 +262,7 @@ const commands: Command[] = [
         const e = ed();
         return !!e && currentStyle(e) === k;
       },
-      enabled: hasEditor,
+      enabled: canEdit,
     }),
   ),
   {
@@ -267,7 +272,7 @@ const commands: Command[] = [
     run: updateStyleToMatch,
     enabled: () => {
       const e = ed();
-      return !!e && !!styleKeyAt(e);
+      return !!e && e.isEditable && !!styleKeyAt(e);
     },
   },
   {
@@ -278,18 +283,18 @@ const commands: Command[] = [
       updateDoc({ styles: defaultStyles() });
       toast("Styles reset");
     },
-    enabled: () => !!app.get().doc,
+    enabled: () => !!app.get().doc && canEdit(),
   },
 
   // Format > Align
-  { id: "align.left", label: "Left", keywords: "align", keys: ["Ctrl+Shift+L", "Ctrl+L"], run: chain((c) => c.setTextAlign("left")), checked: () => !!ed()?.isActive({ textAlign: "left" }), enabled: hasEditor },
-  { id: "align.center", label: "Centre", keywords: "align center", keys: ["Ctrl+Shift+E", "Ctrl+E"], run: chain((c) => c.setTextAlign("center")), checked: () => !!ed()?.isActive({ textAlign: "center" }), enabled: hasEditor },
-  { id: "align.right", label: "Right", keywords: "align", keys: ["Ctrl+Shift+R", "Ctrl+R"], run: chain((c) => c.setTextAlign("right")), checked: () => !!ed()?.isActive({ textAlign: "right" }), enabled: hasEditor },
-  { id: "align.justify", label: "Justify", keywords: "align", keys: ["Ctrl+Shift+J", "Ctrl+J"], run: chain((c) => c.setTextAlign("justify")), checked: () => !!ed()?.isActive({ textAlign: "justify" }), enabled: hasEditor },
+  { id: "align.left", label: "Left", keywords: "align", keys: ["Ctrl+Shift+L", "Ctrl+L"], run: chain((c) => c.setTextAlign("left")), checked: () => !!ed()?.isActive({ textAlign: "left" }), enabled: canEdit },
+  { id: "align.center", label: "Centre", keywords: "align center", keys: ["Ctrl+Shift+E", "Ctrl+E"], run: chain((c) => c.setTextAlign("center")), checked: () => !!ed()?.isActive({ textAlign: "center" }), enabled: canEdit },
+  { id: "align.right", label: "Right", keywords: "align", keys: ["Ctrl+Shift+R", "Ctrl+R"], run: chain((c) => c.setTextAlign("right")), checked: () => !!ed()?.isActive({ textAlign: "right" }), enabled: canEdit },
+  { id: "align.justify", label: "Justify", keywords: "align", keys: ["Ctrl+Shift+J", "Ctrl+J"], run: chain((c) => c.setTextAlign("justify")), checked: () => !!ed()?.isActive({ textAlign: "justify" }), enabled: canEdit },
 
   // Format > Indent
-  { id: "indent.more", label: "Increase indent", keys: ["Ctrl+M"], run: withEditor((e) => indent(e, 1)), enabled: hasEditor },
-  { id: "indent.less", label: "Decrease indent", keys: ["Ctrl+Shift+M"], run: withEditor((e) => indent(e, -1)), enabled: hasEditor },
+  { id: "indent.more", label: "Increase indent", keys: ["Ctrl+M"], run: withEditor((e) => indent(e, 1)), enabled: canEdit },
+  { id: "indent.less", label: "Decrease indent", keys: ["Ctrl+Shift+M"], run: withEditor((e) => indent(e, -1)), enabled: canEdit },
 
   // Format > Line spacing
   ...LINE_SPACINGS.map(
@@ -302,7 +307,7 @@ const commands: Command[] = [
         const e = ed();
         return !!e && lineHeightAt(e) === v;
       },
-      enabled: hasEditor,
+      enabled: canEdit,
     }),
   ),
   {
@@ -310,20 +315,20 @@ const commands: Command[] = [
     label: "Add space before paragraph",
     keywords: "line spacing",
     run: withEditor((e) => setBlockAttrs(e, { spaceBefore: spaceAt(e, "spaceBefore") > 0 ? 0 : 12 })),
-    enabled: hasEditor,
+    enabled: canEdit,
   },
   {
     id: "spacing.after",
     label: "Remove space after paragraph",
     keywords: "line spacing",
     run: withEditor((e) => setBlockAttrs(e, { spaceAfter: spaceAt(e, "spaceAfter") > 0 ? 0 : 8 })),
-    enabled: hasEditor,
+    enabled: canEdit,
   },
 
   // Format > Lists
-  { id: "list.bullets", label: "Bulleted list", keys: ["Ctrl+Shift+8"], run: chain((c) => c.toggleBulletList()), checked: () => !!ed()?.isActive("bulletList"), enabled: hasEditor },
-  { id: "list.numbers", label: "Numbered list", keys: ["Ctrl+Shift+7"], run: chain((c) => c.toggleOrderedList()), checked: () => !!ed()?.isActive("orderedList"), enabled: hasEditor },
-  { id: "list.checklist", label: "Checklist", keys: ["Ctrl+Shift+9"], run: chain((c) => c.toggleTaskList()), checked: () => !!ed()?.isActive("taskList"), enabled: hasEditor },
+  { id: "list.bullets", label: "Bulleted list", keys: ["Ctrl+Shift+8"], run: chain((c) => c.toggleBulletList()), checked: () => !!ed()?.isActive("bulletList"), enabled: canEdit },
+  { id: "list.numbers", label: "Numbered list", keys: ["Ctrl+Shift+7"], run: chain((c) => c.toggleOrderedList()), checked: () => !!ed()?.isActive("orderedList"), enabled: canEdit },
+  { id: "list.checklist", label: "Checklist", keys: ["Ctrl+Shift+9"], run: chain((c) => c.toggleTaskList()), checked: () => !!ed()?.isActive("taskList"), enabled: canEdit },
 
   // Format > Table
   ...(
@@ -336,7 +341,7 @@ const commands: Command[] = [
       ["table.deleteCol", "Delete column", (c) => c.deleteColumn()],
       ["table.delete", "Delete table", (c) => c.deleteTable()],
     ] as [string, string, (c: ReturnType<Editor["chain"]>) => ReturnType<Editor["chain"]>][]
-  ).map(([id, label, fn]): Command => ({ id, label, keywords: "table", run: chain(fn), enabled: () => !!ed()?.isActive("table") })),
+  ).map(([id, label, fn]): Command => ({ id, label, keywords: "table", run: chain(fn), enabled: () => canEdit() && !!ed()?.isActive("table") })),
 
   {
     id: "format.clear",
@@ -346,13 +351,49 @@ const commands: Command[] = [
       e.chain().focus().unsetAllMarks().unsetTextAlign().run();
       setBlockAttrs(e, { lineHeight: null, spaceBefore: null, spaceAfter: null, indent: 0 });
     }),
-    enabled: hasEditor,
+    enabled: canEdit,
   },
 
   // Tools
   { id: "tools.wordCount", label: "Word count", keys: ["Ctrl+Shift+C"], global: true, run: () => openDialog({ kind: "wordCount" }), enabled: hasEditor },
   { id: "tools.spelling", label: "Spelling", keywords: "spell check", checked: () => !!app.get().settings?.spelling, run: () => void updateSettings({ spelling: !app.get().settings?.spelling }) },
   { id: "tools.search", label: "Command search", keys: ["Alt+/"], global: true, run: () => app.set((s) => ({ palette: !s.palette })) },
+
+  // Review (spec §4.5)
+  ...(
+    [
+      ["editing", "Ctrl+Alt+Shift+Z", "edit directly"],
+      ["suggesting", "Ctrl+Alt+Shift+X", "track changes suggest"],
+      ["viewing", "Ctrl+Alt+Shift+C", "read only"],
+    ] as [Mode, string, string][]
+  ).map(
+    ([m, key, words]): Command => ({
+      id: `mode.${m}`,
+      label: MODE_NAMES[m],
+      keywords: `mode ${words}`,
+      keys: [key],
+      global: true,
+      checked: () => app.get().mode === m,
+      run: () => setMode(m),
+      enabled: hasDoc,
+    }),
+  ),
+  ...(["simple", "all", "none", "original"] as Markup[]).map(
+    (m): Command => ({
+      id: `view.markup.${m}`,
+      label: MARKUP_NAMES[m],
+      keywords: "markup suggestions track changes show",
+      global: true,
+      checked: () => app.get().markup === m,
+      run: () => setMarkup(m),
+      enabled: hasDoc,
+    }),
+  ),
+  { id: "tools.review", label: "Review changes", keywords: "suggestions comments track changes accept reject panel", global: true, checked: () => app.get().review, run: toggleReview, enabled: hasDoc },
+  { id: "review.next", label: "Next change or comment", keywords: "review", global: true, run: () => step(1), enabled: hasEditor },
+  { id: "review.prev", label: "Previous change or comment", keywords: "review", global: true, run: () => step(-1), enabled: hasEditor },
+  { id: "review.acceptAll", label: "Accept all changes", keywords: "review suggestions", global: true, run: () => decideAll("accept"), enabled: canDecide },
+  { id: "review.rejectAll", label: "Reject all changes", keywords: "review suggestions", global: true, run: () => decideAll("reject"), enabled: canDecide },
 
   // Help
   { id: "help.shortcuts", label: "Keyboard shortcuts", keys: ["Ctrl+/"], global: true, run: () => openDialog({ kind: "shortcuts" }) },
@@ -427,6 +468,8 @@ export const MENUS: Menu[] = [
       "view.outline",
       "view.library",
       "view.history",
+      { label: "Mode", items: ["mode.editing", "mode.suggesting", "mode.viewing"] },
+      { label: "Markup", items: ["view.markup.simple", "view.markup.all", "view.markup.none", "view.markup.original"] },
       "-",
       "view.pages",
       "view.pageless",
@@ -444,7 +487,7 @@ export const MENUS: Menu[] = [
     id: "insert",
     label: "Insert",
     key: "I",
-    items: ["insert.image", { label: "Table", items: ["insert.table2", "insert.table3", "insert.table4", "insert.table5"] }, "insert.link", "insert.hr", "insert.pageBreak", "insert.toc", "insert.headerFooter", "insert.special"],
+    items: ["insert.image", { label: "Table", items: ["insert.table2", "insert.table3", "insert.table4", "insert.table5"] }, "insert.link", "insert.hr", "insert.pageBreak", "insert.toc", "insert.headerFooter", "insert.special", "-", "insert.comment"],
   },
   {
     id: "format",
@@ -462,7 +505,12 @@ export const MENUS: Menu[] = [
       "format.clear",
     ],
   },
-  { id: "tools", label: "Tools", key: "T", items: ["tools.wordCount", "tools.spelling", "tools.search"] },
+  {
+    id: "tools",
+    label: "Tools",
+    key: "T",
+    items: ["tools.wordCount", "tools.spelling", "-", "tools.review", { label: "Changes", items: ["review.next", "review.prev", "-", "review.acceptAll", "review.rejectAll"] }, "-", "tools.search"],
+  },
   { id: "help", label: "Help", key: "H", items: ["help.shortcuts", "help.about", "help.logs"] },
 ];
 

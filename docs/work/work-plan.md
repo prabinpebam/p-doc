@@ -32,8 +32,8 @@ The spec and its Definitions of Done. Assumptions are tracked there (A1–A7).
 | I1 | Monorepo scaffold, tokens, app shell; stage 1 Write offline | 1.1–1.11 | vitest; typecheck; Playwright-Electron e2e | Done |
 | I2 | Stage 2 Pages and print | 2.1–2.6 | vitest; e2e; `pnpm perf` | Done |
 | I3 | Stage 3 Versions | 3.1–3.6 | vitest with temp repos; e2e; `pnpm perf` | Done |
-| I4 | Stage 4 Review | 4.1–4.6 | vitest; e2e | In progress |
-| I5 | Stage 5 GitHub and first run | 5.1–5.6 | vitest with fake API and bare repos; e2e | Not started |
+| I4 | Stage 4 Review | 4.1–4.6 | vitest; e2e; `pnpm perf` | Done |
+| I5 | Stage 5 GitHub and first run | 5.1–5.6 | vitest with fake API and bare repos; e2e | In progress |
 | I6 | Stage 6 Import and export, CLI | 6.1–6.5 | vitest | Not started |
 | I7 | Stage 7 Install | 7.1–7.2 | `pnpm package`; packaged smoke e2e | Not started |
 
@@ -65,5 +65,6 @@ The spec and its Definitions of Done. Assumptions are tracked there (A1–A7).
 | I1 | Done 2026-10-28 | 12 e2e journeys (`apps/desktop/e2e`) pass with `--repeat-each=2`; 73 unit tests (`pnpm test`); `pnpm typecheck`; `pnpm lint:design` clean. DoD 1.1–1.11 Pass |
 | I2 | Done 2026-10-28 | 17 e2e journeys pass with `--repeat-each=2` (stage-2 journeys also 5 of 5); 75 unit tests; `pnpm typecheck`; `pnpm lint:design` clean; `pnpm perf` within every budget. DoD 2.1–2.6, PD3, PD4 Pass; A1 Confirmed |
 | I3 | Done 2026-10-28 | 20 e2e journeys pass with `--repeat-each=2` (`versions` also 3 of 3); 93 unit tests; `pnpm typecheck`; `pnpm lint:design` clean; `pnpm perf` within every budget, including version commit (p95 0.44 s) and a 500-version history (p95 0.2 s). DoD 3.1–3.6 and PD1 Pass; screenshots of the comparison at 1280 and 800 px reviewed |
+| I4 | Done 2026-10-28 | 24 e2e journeys pass (`review`, `comments`, `layout` also 2 of 2; `toc` 5 of 5 after hardening its caret clicks); 99 unit tests; `pnpm typecheck`; `pnpm lint:design` clean; `pnpm perf` within every budget, including the review list on 50 pages (p95 0.2 ms). DoD 4.1–4.6 and PD5 Pass; review panel and Original markup screenshots reviewed |
 
 **Not checked:** live Word UI and signed-in Google Docs surfaces (no test accounts).
