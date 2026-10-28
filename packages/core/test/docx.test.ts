@@ -134,6 +134,13 @@ describe("export-docx bookmarks (10.2)", () => {
     expect(xml.match(/<w:bookmarkStart /g)!.length).toBe(xml.match(/<w:bookmarkEnd /g)!.length);
   });
 
+  it("links each contents entry to its heading (10.4)", async () => {
+    const content = withLinks();
+    content.content!.unshift({ type: "tableOfContents", attrs: { levels: 3, show: "pages", entries: [{ id: "h-intro", level: 1, text: "Intro" }] } });
+    const xml = await unzip(await toDocx(createDocument({ content })), "word/document.xml");
+    expect(xml.match(/<w:hyperlink [^>]*w:anchor="_pd_h_intro"/g)!.length).toBe(2);
+  });
+
   it("re-imports bookmarks and links to them, and headings keep the links that go to them", async () => {
     const { content } = await fromDocx(await toDocx(createDocument({ content: withLinks() })));
     const marks: JSONContent[] = [];

@@ -19,6 +19,7 @@ import { ParagraphDialog } from "./ParagraphDialog.tsx";
 import { SortDialog } from "./SortDialog.tsx";
 import { NotesDialog } from "./NotesDialog.tsx";
 import { BookmarkDialog } from "./BookmarkDialog.tsx";
+import { ContentsDialog } from "./ContentsDialog.tsx";
 
 export function Dialogs() {
   const d = app.use((s) => s.dialog);
@@ -64,6 +65,8 @@ export function Dialogs() {
       return <NotesDialog />;
     case "bookmark":
       return <BookmarkDialog />;
+    case "contents":
+      return <ContentsDialog />;
   }
 }
 

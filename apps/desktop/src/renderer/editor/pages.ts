@@ -7,7 +7,7 @@ import { Extension } from "@tiptap/core";
 import { Plugin, PluginKey, type EditorState, type Transaction } from "@tiptap/pm/state";
 import { Decoration, DecorationSet, type EditorView, type NodeView } from "@tiptap/pm/view";
 import { DOMSerializer, type Node as PMNode } from "@tiptap/pm/model";
-import { CSS_PX_PER_INCH, headerFooterText, notesOf, pageInches, paginate, sheetsOf, type BlockBox, type HfAlign, type NoteBox, type PageSetup, type Sheet, type TocEntry } from "@p-doc/core";
+import { CSS_PX_PER_INCH, headerFooterText, notesOf, pageInches, paginate, sheetsOf, type BlockBox, type HfAlign, type NoteBox, type PageSetup, type Sheet, type TocEntry, digitsFor } from "@p-doc/core";
 import { createStore } from "../lib/store.ts";
 
 /** A page's geometry in CSS pixels, rounded as the page is drawn. */
@@ -519,10 +519,15 @@ function tocView(node: PMNode, decos: readonly Decoration[]): NodeView {
   const render = (n: PMNode, d: readonly Decoration[]) => {
     const pages = (d.find((x) => (x.spec as { tocPages?: unknown }).tocPages)?.spec as { tocPages?: Record<string, number> } | undefined)?.tocPages ?? null;
     const entries = (n.attrs.entries ?? []) as TocEntry[];
-    const sig = JSON.stringify([entries, pages]);
+    const links = n.attrs.show === "links";
+    const sig = JSON.stringify([entries, pages, links]);
     if (sig === last) return;
     last = sig;
     dom.setAttribute("data-entries", JSON.stringify(entries));
+    dom.dataset.levels = String(n.attrs.levels);
+    dom.dataset.show = links ? "links" : "pages";
+    // Every number takes the room of the widest, so the contents change height only when it gains a digit (A19).
+    dom.style.setProperty("--pd-toc-digits", String(digitsFor(Object.values(pages ?? {}))));
     dom.replaceChildren(el("p", "pd-toc-title", "Contents"));
     const ul = document.createElement("ul");
     for (const e of entries) {
@@ -531,7 +536,7 @@ function tocView(node: PMNode, decos: readonly Decoration[]): NodeView {
       a.href = `#${e.id}`;
       a.textContent = e.text || " ";
       li.append(a);
-      if (pages?.[e.id]) li.append(el("span", "pd-toc-dots"), el("span", "pd-toc-page", String(pages[e.id])));
+      if (!links && pages?.[e.id]) li.append(el("span", "pd-toc-dots"), el("span", "pd-toc-page", String(pages[e.id])));
       ul.append(li);
     }
     dom.append(ul);

@@ -275,7 +275,12 @@ function blocks(nodes: JSONContent[] | undefined, ctx: Ctx, list?: { ref: string
       }
       case "tableOfContents": {
         out.push(new Paragraph({ style: "TOCHeading", children: [new TextRun({ text: "Contents", bold: true })] }));
-        for (const e of (n.attrs?.entries ?? []) as { level: number; text: string }[]) out.push(new Paragraph({ indent: { left: (e.level - 1) * 360 }, children: [new TextRun(e.text)] }));
+        // Each entry links to its heading's bookmark, as Word's own contents do.
+        for (const e of (n.attrs?.entries ?? []) as { level: number; text: string; id: string }[]) {
+          const anchor = ctx.anchors.get(e.id);
+          const text = new TextRun({ text: e.text, style: anchor ? "Hyperlink" : undefined });
+          out.push(new Paragraph({ indent: { left: (e.level - 1) * 360 }, children: [anchor ? new InternalHyperlink({ anchor, children: [text] }) : text] }));
+        }
         break;
       }
       case "bulletList":

@@ -282,6 +282,30 @@ export function paginate(blocks: BlockBox[], pageContentHeight: number, options:
   return { pageOf, starts, startLines, fills, firsts, pages: page, push, notes: places };
 }
 
+/**
+ * Page numbers that change the layout they come from (contents, page references, A19): lay out, measure the
+ * blocks again with the numbers that layout gives, and repeat until nothing moves. `measure` gets the last
+ * layout (null on the first pass). It settles in two passes when every number takes the room of the widest
+ * one (`digitsFor`), so text holding numbers changes size only when the largest number gains a digit.
+ */
+export function settlePages(
+  measure: (last: Pagination | null) => BlockBox[],
+  pageContentHeight: number,
+  options: PaginateOptions = {},
+  maxPasses = 5,
+): { pagination: Pagination; passes: number } {
+  let last: Pagination | null = null;
+  for (let pass = 1; pass <= maxPasses; pass++) {
+    const next = paginate(measure(last), pageContentHeight, options);
+    if (last && next.pages === last.pages && next.pageOf.every((p, i) => p === last!.pageOf[i])) return { pagination: last, passes: pass - 1 };
+    last = next;
+  }
+  return { pagination: last!, passes: maxPasses };
+}
+
+/** How many digits each page number makes room for: those of the largest number shown (at least one). */
+export const digitsFor = (numbers: Iterable<number>): number => String(Math.max(1, ...numbers)).length;
+
 /** A run of blocks laid out on one sheet: one page, or several when a tall block overflows its page. */
 export interface Sheet {
   /** First block index. */

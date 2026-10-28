@@ -14,7 +14,7 @@ function shortId(): string {
   return `h-${globalThis.crypto.randomUUID().replace(/-/g, "").slice(0, 8)}`;
 }
 
-/** TOC entries from a ProseMirror document (headings 1–3). */
+/** TOC entries from a ProseMirror document (headings 1 to `maxLevel`, 1–3 unless the contents' options say). */
 export function tocEntriesOf(doc: PMNode, maxLevel = TOC_LEVELS): TocEntry[] {
   const out: TocEntry[] = [];
   doc.descendants((node) => {
@@ -52,9 +52,11 @@ export function syncHeadingsAndToc(state: EditorState): Transaction | null {
     return node.isBlock;
   });
   const doc = tr ? (tr as Transaction).doc : state.doc;
-  const entries = tocEntriesOf(doc);
+  const all = tocEntriesOf(doc, 6);
   doc.descendants((node, pos) => {
     if (node.type.name === "tableOfContents") {
+      const levels = Number(node.attrs.levels ?? TOC_LEVELS);
+      const entries = all.filter((e) => e.level <= levels);
       if (!same(node.attrs.entries ?? [], entries)) {
         tr ??= state.tr;
         tr.setNodeMarkup(pos, undefined, { ...node.attrs, entries });

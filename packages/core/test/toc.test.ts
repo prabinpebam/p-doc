@@ -78,4 +78,13 @@ describe("toc", () => {
     expect(bookmarkName("", "ends the paragraph.")).toBe("ends the paragraph");
     expect(bookmarkName("")).toBe("Bookmark");
   });
+
+  it("lists as many levels as each contents' options say (10.4)", () => {
+    let state = make();
+    state = state.apply(state.tr.insert(state.doc.content.size, schema().nodes.tableOfContents!.create({ levels: 6, show: "links" })));
+    state = state.apply(syncHeadingsAndToc(state)!);
+    const lists = [state.doc.firstChild!, state.doc.lastChild!].map((n) => n.attrs.entries.map((e: { text: string }) => e.text));
+    expect(lists).toEqual([["One", "Two"], ["One", "Two", "Deep"]]);
+    expect(state.doc.lastChild!.attrs.show).toBe("links");
+  });
 });

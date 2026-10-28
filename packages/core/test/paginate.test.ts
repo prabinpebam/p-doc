@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { paginate, sheetsOf } from "../src/index.ts";
+import { digitsFor, paginate, settlePages, sheetsOf, type BlockBox, type Pagination } from "../src/index.ts";
 
 describe("paginate", () => {
   it("keeps blocks that fit on one page", () => {
@@ -167,5 +167,54 @@ describe("paginate", () => {
       paginate([lazy(3), lazy(3), lazy(3), lazy(10)], 300);
       expect(asked).toBe(1);
     });
+  });
+});
+
+describe("page numbers settle (A19, 10.6)", () => {
+  // 50 pages of 18 lines; a heading starts each page, and every fifth page refers to a heading 10 pages on.
+  const LINE = 48;
+  const PAGE = 18 * LINE;
+  const WIDTH = 60;
+  // Every third title is 58 characters: one line with a 1-digit number after it, two with a 2-digit one.
+  const titles = Array.from({ length: 50 }, (_, i) => (i % 3 === 0 ? `Chapter ${i + 1}: `.padEnd(58, "x") : `Chapter ${i + 1}: short`));
+  /** Lines a text takes in a WIDTH-character line, with room for a number of `digits` after it. */
+  const lines = (text: string, digits: number) => Math.ceil((text.length + 1 + digits) / WIDTH);
+
+  function fixture(reserve: boolean) {
+    return (last: Pagination | null): BlockBox[] => {
+      // Where each heading was on the last pass: block 0 is the contents, then per chapter heading + body.
+      const headingPage = (k: number) => last?.pageOf[1 + k * 3] ?? 0;
+      const shown = titles.map((_, k) => headingPage(k)).filter((n) => n > 0);
+      const room = (n: number) => (reserve ? digitsFor(shown) : String(Math.max(1, n)).length);
+      const contents = titles.reduce((h, t, k) => h + LINE * lines(t, last ? room(headingPage(k)) : 0), LINE);
+      const blocks: BlockBox[] = [{ height: contents }];
+      titles.forEach((t, k) => {
+        const ref = k % 5 === 0 && k + 10 < titles.length ? `See chapter ${k + 11} on page`.padEnd(58, ".") : "";
+        blocks.push({ height: LINE, breakBefore: true }, { height: LINE * 14 }, { height: ref ? LINE * lines(ref, last ? room(headingPage(k + 10)) : 0) : 0 });
+      });
+      return blocks;
+    };
+  }
+
+  it("with contents and page references, a 50-page document is stable within 2 passes", () => {
+    const { pagination, passes } = settlePages(fixture(true), PAGE);
+    // The numbers do move the layout (pass 2 differs from pass 1), and pass 2 is the last that does.
+    expect(passes).toBe(2);
+    expect(pagination.pages).toBeGreaterThanOrEqual(50);
+    // Stable: measuring once more with its own numbers gives the same layout.
+    expect(paginate(fixture(true)(pagination), PAGE).pageOf).toEqual(pagination.pageOf);
+  });
+
+  it("gives up after its passes and keeps the last layout rather than looping", () => {
+    let n = 0;
+    const flip = () => [{ height: (n++ % 2) * PAGE + 10 }, { height: 10 }];
+    const { passes } = settlePages(flip, PAGE, {}, 4);
+    expect(passes).toBe(4);
+  });
+
+  it("makes room for the widest number", () => {
+    expect(digitsFor([])).toBe(1);
+    expect(digitsFor([3, 9])).toBe(1);
+    expect(digitsFor([3, 12, 104])).toBe(3);
   });
 });

@@ -160,7 +160,10 @@ export interface TocEntry {
   text: string;
 }
 
-/** A table of contents; its entries are kept current by the TOC plugin (see toc.ts). */
+/**
+ * A table of contents; its entries are kept current by the TOC plugin (see toc.ts). Contents options (U54):
+ * `levels` 1–6 deep, and `show` page numbers (with dotted leaders, in Pages) or links only.
+ */
 export const TableOfContents = Node.create({
   name: "tableOfContents",
   group: "block",
@@ -177,6 +180,16 @@ export const TableOfContents = Node.create({
         }
       },
       renderHTML: (a) => ({ "data-entries": JSON.stringify(a.entries ?? []) }),
+    },
+    levels: {
+      default: 3,
+      parseHTML: (el) => Math.min(6, Math.max(1, Number(el.getAttribute("data-levels")) || 3)),
+      renderHTML: (a) => ({ "data-levels": a.levels }),
+    },
+    show: {
+      default: "pages",
+      parseHTML: (el) => (el.getAttribute("data-show") === "links" ? "links" : "pages"),
+      renderHTML: (a) => ({ "data-show": a.show }),
     },
   }),
   parseHTML: () => [{ tag: 'nav[data-type="toc"]' }],

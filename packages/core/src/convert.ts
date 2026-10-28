@@ -57,7 +57,7 @@ td, th { border: 1px solid #999; padding: 4px 6px; vertical-align: top; }
 img { max-width: 100%; }
 .pd-page-break { break-after: page; }
 .pd-toc ul { list-style: none; padding-left: 0; }
-.pd-toc .pd-toc-l2 { padding-left: 1.5em; } .pd-toc .pd-toc-l3 { padding-left: 3em; }
+.pd-toc .pd-toc-l2 { padding-left: 1.5em; } .pd-toc .pd-toc-l3 { padding-left: 3em; } .pd-toc .pd-toc-l4 { padding-left: 4.5em; } .pd-toc .pd-toc-l5 { padding-left: 6em; } .pd-toc .pd-toc-l6 { padding-left: 7.5em; }
 ul[data-type="taskList"] { list-style: none; padding-left: 0.5em; }
 ul[data-type="taskList"] li { display: flex; gap: 0.5em; }
 .pd-note-ref a { text-decoration: none; }

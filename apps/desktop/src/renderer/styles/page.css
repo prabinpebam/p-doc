@@ -564,7 +564,10 @@
 }
 
 .pd-toc-page {
+  --pd-digit: 1ch;
   flex: none;
+  min-width: calc(var(--pd-toc-digits, 1) * var(--pd-digit));
+  text-align: end;
   font-variant-numeric: tabular-nums;
 }
 
@@ -802,4 +805,13 @@
   color: var(--color-page-muted);
   font-family: var(--font-ui);
   font-size: var(--text-sm);
+}
+
+/* Contents levels 5 and 6 (U54). */
+.pd-toc .pd-toc-l5 {
+  padding-left: calc(var(--doc-toc-indent) * 4);
+}
+
+.pd-toc .pd-toc-l6 {
+  padding-left: calc(var(--doc-toc-indent) * 5);
 }

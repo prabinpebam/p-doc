@@ -9,6 +9,7 @@ import type { Theme } from "../shared/api.ts";
 import { applyStyle, clearBlockDirectFormatting, currentStyle, indent, insertAtomBlock, setBlockAttrs, currentBlock, styleFromSelection } from "./editor/blocks.ts";
 import { endCrop, imageUi, selectedImage, startCrop } from "./editor/image.ts";
 import { convertNote, insertNote, noteAt } from "./editor/notes.ts";
+import { contentsAt } from "./editor/refs.ts";
 import { copyDoc, deleteDoc } from "./ops.ts";
 import { downloadAs, downloadPdf, openFromFile, printDoc } from "./output.ts";
 import { flush, getEditor, newDoc, syncSelection, updateDoc } from "./session.ts";
@@ -290,6 +291,7 @@ const commands: Command[] = [
   { id: "insert.toc", label: "Table of contents", keywords: "toc contents", run: withEditor((e) => insertAtomBlock(e, "tableOfContents")), enabled: canEdit },
   { id: "insert.headerFooter", label: "Header and footer", keywords: "page number count footer header", global: true, run: () => openDialog({ kind: "headerFooter" }), enabled: hasDoc },
   { id: "insert.special", label: "Special characters…", keywords: "symbol emoji character", run: () => openDialog({ kind: "specialChars" }), enabled: canEdit },
+  { id: "toc.options", label: "Contents options…", keywords: "table of contents toc levels page numbers links leaders", run: () => openDialog({ kind: "contents" }), enabled: () => canEdit() && !!contentsAt(ed()!.state) },
   { id: "insert.bookmark", label: "Bookmark…", keywords: "anchor place name link target", run: () => openDialog({ kind: "bookmark" }), enabled: canEdit },
   { id: "insert.footnote", label: "Footnote", keys: ["Ctrl+Alt+F"], keywords: "note reference citation foot of page", run: withEditor((e) => insertNote(e, "footnote")), enabled: canEdit },
   { id: "insert.endnote", label: "Endnote", keys: ["Ctrl+Alt+D"], keywords: "note reference citation end of document", run: withEditor((e) => insertNote(e, "endnote")), enabled: canEdit },
@@ -585,7 +587,7 @@ export const MENUS: Menu[] = [
     id: "insert",
     label: "Insert",
     key: "I",
-    items: ["insert.image", { label: "Table", items: ["insert.table2", "insert.table3", "insert.table4", "insert.table5"] }, "insert.link", "insert.hr", "insert.pageBreak", "insert.toc", "insert.headerFooter", "insert.special", "-", "insert.footnote", "insert.endnote", "insert.bookmark", "-", "insert.comment"],
+    items: ["insert.image", { label: "Table", items: ["insert.table2", "insert.table3", "insert.table4", "insert.table5"] }, "insert.link", "insert.hr", "insert.pageBreak", "insert.toc", "toc.options", "insert.headerFooter", "insert.special", "-", "insert.footnote", "insert.endnote", "insert.bookmark", "-", "insert.comment"],
   },
   {
     id: "format",

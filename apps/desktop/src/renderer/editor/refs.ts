@@ -5,7 +5,7 @@
 import type { Editor } from "@tiptap/core";
 import { closeHistory } from "@tiptap/pm/history";
 import { NodeSelection, TextSelection, type EditorState } from "@tiptap/pm/state";
-import { anchorsOf, bookmarkName, newBookmarkId } from "@p-doc/core";
+import { anchorsOf, bookmarkName, newBookmarkId, tocEntriesOf } from "@p-doc/core";
 
 /** The selected bookmark, when there is one. */
 export function bookmarkAt(state: EditorState): { pos: number; name: string } | null {
@@ -55,4 +55,29 @@ export function followAnchor(editor: Editor, id: string): boolean {
   const el = node instanceof HTMLElement ? node : node.parentElement;
   el?.closest("p, h1, h2, h3, h4, h5, h6, li, td, th")?.scrollIntoView({ block: "center" });
   return true;
+}
+
+export type ContentsShow = "pages" | "links";
+
+/** The contents Contents options apply to: the selected one, else the last one before the caret, else the first. */
+export function contentsAt(state: EditorState): { pos: number; levels: number; show: ContentsShow } | null {
+  const sel = state.selection;
+  if (sel instanceof NodeSelection && sel.node.type.name === "tableOfContents") return { pos: sel.from, levels: Number(sel.node.attrs.levels), show: sel.node.attrs.show };
+  let found: { pos: number; levels: number; show: ContentsShow } | null = null;
+  state.doc.forEach((n, pos) => {
+    if (n.type.name !== "tableOfContents") return;
+    if (!found || pos <= sel.from) found = { pos, levels: Number(n.attrs.levels), show: n.attrs.show };
+  });
+  return found;
+}
+
+/** Sets a contents' levels and what it shows, its entries with them: one step to undo. */
+export function setContentsOptions(editor: Editor, levels: number, show: ContentsShow): void {
+  const at = contentsAt(editor.state);
+  if (!at) return;
+  const { view } = editor;
+  const node = view.state.doc.nodeAt(at.pos)!;
+  const entries = tocEntriesOf(view.state.doc, levels);
+  view.dispatch(closeHistory(view.state.tr.setNodeMarkup(at.pos, undefined, { ...node.attrs, levels, show, entries })));
+  view.focus();
 }
