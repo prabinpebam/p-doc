@@ -77,11 +77,11 @@ What Google Docs and Microsoft Word can do, and what P-Doc does about each. Ever
 | Charts | F-013 | yes | Skip |  |  | Needs a spreadsheet; paste an image |
 | Tables: insert, add and remove rows and columns | F-012 | F-030 | Have | U7 | 1 |  |
 | Merge and split cells | F-012 | yes | Add | U60 | 12 |  |
-| Column widths, table width and alignment | F-012 | yes | Add | U60 | 12 |  |
+| Column widths, table width and alignment | F-012 | yes | Add | U60 | 12 | Alignment on the page left over from stage 12 (DoD 12.1) |
 | Borders, cell shading, vertical alignment, cell padding | F-012 | yes | Add | U60 | 12 |  |
 | Header rows that repeat on each page | F-012 | yes | Add | U60 | 12 |  |
 | Long tables break between rows across pages | yes | yes | Add | U60 | 12 | Today a tall table overflows its page (A11) |
-| Text to table and back, distribute columns | — | yes | Add | U60 | 12 |  |
+| Text to table and back, distribute columns | — | yes | Add | U60 | 12 | Text to table and back left over from stage 12 (DoD 12.1) |
 | Table styles | — | yes | Later |  |  | Borders and shading cover it |
 | Table formulas | — | yes | Skip |  |  | Spreadsheet work |
 | Code blocks | F-014 | — | Have | U3 | 1 |  |
