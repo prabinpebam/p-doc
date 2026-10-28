@@ -149,7 +149,7 @@ Waits name their class from the perceived-performance skill: *instant* (< 100 ms
 ### 4.4 Lay out pages, print and export (U13–U17)
 
 1. **View > Pages / Pageless**. Pageless has no page edges and a text width from **View > Text width** (Narrow 640 px, Medium 800 px, Wide 960 px, Full). Headers, footers and page numbers are hidden, not deleted (GD R-003).
-2. **File > Page setup** dialog: Pages or Pageless; Orientation (Portrait, Landscape); Paper size (Letter, Legal, A4, A5, Tabloid); Margins top, bottom, left, right (inches or cm by locale); Page colour; **Set as default**, **Cancel**, **OK**. *(instant; pages reflow in-flow)*
+2. **File > Page setup** dialog: Pages or Pageless; Orientation (Portrait, Landscape); Paper size (Letter, Legal, A4, A5, Tabloid); Margins top, bottom, left, right (inches or cm by locale); Page colour; **Set as default**, **Cancel**, **Apply**. *(instant; pages reflow in-flow)*
 3. **Insert > Header and footer**: header and footer text fields with "Different first page", and the tokens "Page number" and "Page count". They repeat on every page.
 4. **File > Print** (Ctrl+P) prints the pages as shown. **File > Download > PDF** writes a PDF with the same paper, margins, header, footer and breaks. *(in-flow; "Making PDF…")*
 5. **File > Download > Word (.docx), Markdown (.md), Web page (.html), Plain text (.txt)** → save dialog → file written → toast "Saved *name*" with **Show in folder**.
@@ -207,21 +207,21 @@ Waits name their class from the perceived-performance skill: *instant* (< 100 ms
 | V9 First run | Centred card 560 px | U35 | Welcome, Git, Sign in, Identity, Repositories, Done; step dots. |
 | V10 Settings | Dialog with sections | U14, U20, U35 | Appearance; Editing (spelling, smart quotes); Storage (library folder, Show in folder); GitHub (account, repositories, sync on/off, Sync now, Sign out); About (version, licences). |
 
-**Complete by definition:** light and dark; rest, hover, active, focus-visible, disabled, error, empty and loading states; full keyboard use (menus with arrow keys, toolbar with roving focus, F6 cycles regions, Esc closes panels); screen-reader names and a live region for the save state and toasts; windows down to 800×600 (toolbar groups move into More; the left panel collapses under 1000 px).
+**Complete by definition:** light and dark; rest, hover, active, focus-visible, disabled, error, empty and loading states; full keyboard use (menus with arrow keys, toolbar with roving focus, F6 cycles regions, Esc closes panels); screen-reader names and a live region for the save state and toasts; windows down to 800×600 (toolbar groups move into More, from the end, as the window narrows; under 1000 px the left panel collapses, and View > Show outline or Show library opens it over the page until Esc or a press on the page).
 
 ### 5.1 Menus
 
 | Menu | Items |
 |---|---|
-| File | New (Ctrl+N) · Open library (Ctrl+O) · Open from file… (Ctrl+Shift+O) · Make a copy · Rename · Move to Public/Private · Delete · — · Version history ▸ (See version history Ctrl+Alt+Shift+H, Name current version) · Sync now (Ctrl+Alt+S) · — · Download ▸ (Word .docx, PDF, Markdown, Web page, Plain text) · Page setup… · Print (Ctrl+P) · — · Settings (Ctrl+,) |
+| File | New (Ctrl+N) · Open library (Ctrl+O) · Open from file… (Ctrl+Shift+O) · Make a copy · Rename · Move to Public/Private · Delete · — · Version history ▸ (See version history Ctrl+Alt+Shift+H, Name current version) · Sync now (Ctrl+Alt+S) · — · Download ▸ (Word .docx, PDF, Markdown, Web page, Plain text) · Page setup… · Print (Ctrl+P) · — · Settings |
 | Edit | Undo (Ctrl+Z) · Redo (Ctrl+Y) · — · Cut · Copy · Paste · Paste without formatting (Ctrl+Shift+V) · — · Select all (Ctrl+A) · — · Find (Ctrl+F) · Find and replace (Ctrl+H) |
-| View | Mode ▸ · Markup ▸ · — · Pages / Pageless · Text width ▸ · Show outline (Ctrl+Alt+A) · Show library · Review panel · Version history · — · Zoom ▸ (Ctrl+= / Ctrl+- / Ctrl+0) · Focus view (Ctrl+Shift+J) · Compact mode (Ctrl+Shift+F) · Full screen (F11) · — · Appearance ▸ (Light, Dark, System) |
+| View | Mode ▸ · Markup ▸ · — · Pages / Pageless · Text width ▸ · Show outline (Ctrl+Alt+A) · Show library · Review panel · Version history · — · Zoom ▸ (Ctrl+= / Ctrl+- / Ctrl+0) · Focus view (Ctrl+Alt+Shift+F) · Compact mode (Ctrl+Shift+F) · Full screen (F11) · — · Appearance ▸ (Light, Dark, System) |
 | Insert | Image… · Table ▸ · Link (Ctrl+K) · Horizontal line · Page break (Ctrl+Enter) · Table of contents · Header and footer · Special characters… · Comment (Ctrl+Alt+M) |
 | Format | Text ▸ (Bold, Italic, Underline, Strikethrough, Superscript Ctrl+., Subscript Ctrl+,) · Paragraph styles ▸ (Apply each; Update *style* to match; Reset styles) · Align ▸ (Left Ctrl+Shift+L, Centre Ctrl+Shift+E, Right Ctrl+Shift+R, Justify Ctrl+Shift+J) · Indent ▸ · Line spacing ▸ · Lists ▸ · Table ▸ (rows and columns, delete) · Clear formatting (Ctrl+\) |
 | Tools | Word count (Ctrl+Shift+C) · Spelling (on/off) · Review changes ▸ (Next, Previous, Accept, Reject, Accept all, Reject all) · Command search (Alt+/) |
 | Help | Keyboard shortcuts (Ctrl+/) · About P-Doc · Open logs folder |
 
-Shortcuts follow Google Docs where Docs and Word differ, plus Word's Ctrl+E/L/R/J alignment and Ctrl+[ / Ctrl+] font size (W SRC-001). Ctrl+S is accepted and shows "Saved" (GD R-001).
+Shortcuts follow Google Docs where Docs and Word differ, plus Word's Ctrl+E/L/R/J alignment and Ctrl+[ / Ctrl+] font size (W SRC-001). Ctrl+S is accepted and shows "Saved" (GD R-001). Where two chords would collide, the formatting one wins: Ctrl+Shift+J is Justify, so Focus view is Ctrl+Alt+Shift+F; Ctrl+, is Subscript, so Settings has no chord (it is in File and command search). Cut, Copy and Paste show their chords as hints; the keys themselves are the system's.
 
 ## 6. Architecture
 
@@ -237,7 +237,7 @@ packages/cli          `pdoc` command line over core and the library
 
 - **Document format** (`*.pdoc.json`, UTF-8, pretty-printed so Git diffs read well): `{ format: "p-doc", version: 1, id, title, created, page: { mode, size, orientation, margins, color, textWidth, header, footer, differentFirstPage }, styles: { normal, title, subtitle, heading1..4 }, content: <ProseMirror JSON>, comments: [ { id, author, created, body, resolved, replies[] } ] }`. Suggestions are marks in `content` (`insertion`, `deletion`, with id, author, time); comment anchors are `comment` marks with the thread id. Images are embedded data URLs up to 2 MB each (O4).
 - **Library**: `<root>/private` and `<root>/public`, each a Git repository on `main` with documents at `docs/<slug>-<id8>.pdoc.json`, a `.bin/` folder and a `README.md`. App state (recent, settings, setup progress) lives in the app data folder, never in the repositories.
-- **Saving**: the renderer debounces 800 ms and sends the document to main; main writes atomically (temp file + rename). A recovery copy of unsaved state goes to the app data folder every 5 s while dirty.
+- **Saving**: the renderer debounces 800 ms and sends the document to main; main writes atomically (temp file + rename, retried for up to about 2 s while Windows reports the file busy). A recovery copy of unsaved state goes to the app data folder 300 ms after each change while dirty, and once more on close if the last save failed.
 - **Versions**: one commit queue per repository; history from `git log --follow`; content from `git show`; named versions as annotated tags `pdoc/<id8>/<n>`; restore writes old content and commits "Restore …"; diff is a word diff per block in core.
 - **GitHub**: the credential lives only in Git's helper (Focus Notes SEC-03), read with `git credential fill` when needed, kept in memory, never written, logged or put in an argument. API calls go only to `https://api.github.com` (user, get repository, create repository). Sync: `git fetch`, merge `origin/main` keeping local versions of conflicting documents and writing the remote ones as copies, `git push`. Network failures leave everything local and show "Offline".
 - **Security**: `contextIsolation`, `sandbox`, no `nodeIntegration`, a CSP with no remote scripts, navigation blocked, links opened in the browser only on click and only for `https:`; Electron fuses as Focus Notes; IPC arguments validated in main; file access limited to the library and files the person picked.
@@ -299,3 +299,22 @@ Execution choices (research rig, test isolation) are working defaults W1–W8 in
 ## 11. As built
 
 Updated with each stage; evidence in the [Definitions of Done](definition-of-done.md).
+
+### Stage 1: Write offline (built)
+
+What a person meets, beyond the flows above:
+
+- **Window.** Title bar, menu bar, toolbar pill, left panel (Library, Outline), page and status bar as V1. The toolbar shows every group in one row at 1600 px; as the window narrows, groups at the end move into **More** (⋯), which opens a panel with the same controls (arrow keys move among them; a command closes it). Under 1000 px the left panel collapses; View > Show outline or Show library opens it over the page, and Esc or a press on the page puts it away. Wider again, it is back beside the page.
+- **Typing and saving.** Saves 800 ms after a pause; "Saving…" then "Saved to this computer". A save that fails at close leaves a recovery copy, restored on the next start with "Recovered unsaved changes to *title*."
+- **Structure after blocks.** A page break, table of contents, table, horizontal line, image or code block is never the last thing in a document: a paragraph always follows, as in Word and Google Docs, so there is somewhere to type after it and Ctrl+End lands there. After **Insert > Page break** or **Table of contents** the cursor is in the paragraph after it.
+- **Moving sections.** Dragging a heading in the outline moves it with everything up to the next heading of the same or higher level, including trailing empty paragraphs.
+- **Dialogs.** One Esc closes any dialog, even from a search field with text in it. The field the dialog is for has the cursor when it opens (Link when the text is selected; Text when there is none).
+- **Links.** Bare domains get `https://`; email addresses become `mailto:`; `#id` links stay in the document.
+- **Shortcuts.** As §5.1, with Focus view on Ctrl+Alt+Shift+F and no chord for Settings (see the note under §5.1).
+
+Engineering notes (for whoever builds the next stage):
+
+- Keys and clicks act on the selection the person sees: before a command runs, the editor reads any caret move the browser hasn't reported yet (`syncSelection`), and focusing the editor is immediate (`focusEditor`, and a `focus` command that doesn't wait a frame), so a key pressed straight after a toolbar click or a closing popover lands in the page.
+- Library writes are atomic and retried on Windows' transient `EPERM`/`EACCES`/`EBUSY`; unit `write-atomic`.
+- The library runs one commit queue per repository; unit `library` covers create, save without a version, rename, copy, Bin and restore (including a name taken meanwhile), move both ways, refusal of paths outside the library, unreadable files, the queue, and Git missing.
+- Tests never touch the owner's Git, GitHub, documents or settings: each run has its own data and library folders and an empty Git config.

@@ -11,14 +11,14 @@ What success means for the [spec](spec.md): the project's Definition of Done, ma
 
 | # | Promise | Done when | Evidence | Result |
 |---|---|---|---|---|
-| PD1 | P1 | Typing is on disk within 1 s of a pause, survives a forced quit (recovery), and every committed state is listed and restorable | e2e `autosave`, `recovery`, `versions`; unit `library` | |
-| PD2 | P2 | Every feature works with the network off and no account; documents are readable JSON in plain Git repositories | e2e suites run offline with no GitHub; unit `format` | |
-| PD3 | P3 | Outline and table of contents follow heading changes with no manual step; every command is reachable by command search | e2e `outline`, `toc`, `command-search` | |
+| PD1 | P1 | Typing is on disk within 1 s of a pause, survives a forced quit (recovery), and every committed state is listed and restorable | e2e `autosave`, `recovery`, `versions`; unit `library` | Partial 2026-10-28: `autosave`, `recovery` and unit `library` pass; `versions` is stage 3 |
+| PD2 | P2 | Every feature works with the network off and no account; documents are readable JSON in plain Git repositories | e2e suites run offline with no GitHub; unit `format` | Partial 2026-10-28: stage 1 runs offline with no account (`offline`); readable JSON (unit `format`) |
+| PD3 | P3 | Outline and table of contents follow heading changes with no manual step; every command is reachable by command search | e2e `outline`, `toc`, `command-search` | Partial 2026-10-28: `outline` and `command-search` pass; `toc` is stage 2 |
 | PD4 | P4 | A multi-page fixture has the same page count on screen and in the exported PDF (A1) | e2e `pagination` | |
 | PD5 | P5 | Accepting all gives the suggested text; rejecting all gives the original, exactly | unit `suggestions`; e2e `review` | |
 | PD6 | P6 | Nothing reaches the public repository without the Move to Public confirmation; new documents are private | e2e `privacy`; unit `library` | |
 | PD7 | The outcome is valuable | A fresh install reaches a first saved document in under a minute, offline or signed in | e2e `first-run` timing; owner try-it | |
-| PD8 | Nothing live breaks | No real GitHub, documents or settings of the owner are touched by tests; budgets in spec §7 hold | test isolation (W7); `pnpm perf` against `perf-baseline.json` | |
+| PD8 | Nothing live breaks | No real GitHub, documents or settings of the owner are touched by tests; budgets in spec §7 hold | test isolation (W7); `pnpm perf` against `perf-baseline.json` | Partial 2026-10-28: every e2e run has its own data, library and empty Git config; unit `library` uses an empty Git config. `pnpm perf` is stage 2 |
 | PD9 | Docs | The spec's "As built" records what was built | Review | |
 
 ## 2. Stages
@@ -33,16 +33,17 @@ A person can open P-Doc with no account, write a structured, formatted document 
 
 | # | Done when | Evidence | Result |
 |---|---|---|---|
-| 1.1 | A person can create a document and type; it is written to `private/docs/*.pdoc.json` within 1 s of a pause and the save state says "Saved to this computer" (U1) | e2e `autosave` | |
-| 1.2 | Character formatting, styles, alignment, spacing, lists, links, images, tables, horizontal lines and page breaks apply from the toolbar, menus and shortcuts, and survive reopening (U2, U3, U5–U7) | e2e `formatting`; unit `format` | |
-| 1.3 | "Update Heading 1 to match" changes every Heading 1, and reset restores defaults (U4) | e2e `styles` | |
-| 1.4 | The outline lists headings, jumps, collapses, and dragging a heading moves its section (U8) | e2e `outline`; unit `outline` | |
-| 1.5 | Find and replace finds with match case, whole word and regex, replaces one and all (U10) | e2e `find-replace`; unit `find` | |
-| 1.6 | Command search runs any menu command; Ctrl+/ lists shortcuts; Ctrl+Shift+C shows counts (U11, U12) | e2e `command-search` | |
-| 1.7 | The library lists Private and Public documents, searches, renames, copies, deletes to Bin and restores (U33) | e2e `library`; unit `library` | |
-| 1.8 | Light and dark render with no hard-coded colours (U20) | `pnpm lint:design`; e2e `theme` screenshots | |
-| 1.9 | A forced quit with unsaved typing loses nothing: the next start restores it (negative case for P1) | e2e `recovery` | |
-| 1.10 | No network request is made in stage 1 flows (negative case for P2) | e2e `offline` request log | |
+| 1.1 | A person can create a document and type; it is written to `private/docs/*.pdoc.json` within 1 s of a pause and the save state says "Saved to this computer" (U1) | e2e `autosave` | Pass 2026-10-28: e2e `autosave` (file in `private/docs` within the poll after a pause; "Saved to this computer"; text survives a restart) |
+| 1.2 | Character formatting, styles, alignment, spacing, lists, links, images, tables, horizontal lines and page breaks apply from the toolbar, menus and shortcuts, and survive reopening (U2, U3, U5–U7) | e2e `formatting`; unit `format` | Pass 2026-10-28: e2e `formatting` (keys, toolbar and menus; bold, italic, lists, page break, table, rule, link in the file and after restart); unit `format`. Found and fixed: keys after a toolbar popover went nowhere; a document ending in a table lost the cursor (a paragraph now always follows) |
+| 1.3 | "Update Heading 1 to match" changes every Heading 1, and reset restores defaults (U4) | e2e `styles` | Pass 2026-10-28: e2e `styles`, 6 of 6 repeats. Fixed: a key straight after Shift+End acted on the old selection |
+| 1.4 | The outline lists headings, jumps, collapses, and dragging a heading moves its section (U8) | e2e `outline`; unit `outline` | Pass 2026-10-28: e2e `outline`; unit `outline` |
+| 1.5 | Find and replace finds with match case, whole word and regex, replaces one and all (U10) | e2e `find-replace`; unit `find` | Pass 2026-10-28: e2e `find-replace`; unit `find` |
+| 1.6 | Command search runs any menu command; Ctrl+/ lists shortcuts; Ctrl+Shift+C shows counts (U11, U12) | e2e `command-search` | Pass 2026-10-28: e2e `command-search` (Alt+/, Ctrl+/, Ctrl+Shift+C). Fixed: focus taken back from the command search a frame later |
+| 1.7 | The library lists Private and Public documents, searches, renames, copies, deletes to Bin and restores (U33) | e2e `library`; unit `library` | Pass 2026-10-28: e2e `library`; unit `library` (11 cases with real Git in a temp folder) |
+| 1.8 | Light and dark render with no hard-coded colours (U20) | `pnpm lint:design`; e2e `theme` screenshots | Pass 2026-10-28: `pnpm lint:design` "tokens only"; e2e `theme` light and dark screenshots reviewed |
+| 1.9 | A forced quit with unsaved typing loses nothing: the next start restores it (negative case for P1) | e2e `recovery` | Pass 2026-10-28: e2e `recovery` (forced quit, and a save failing at close). Fixed: Windows `EPERM` on rename (retried; unit `write-atomic`); no recovery copy when the last save failed |
+| 1.10 | No network request is made in stage 1 flows (negative case for P2) | e2e `offline` request log | Pass 2026-10-28: e2e `offline` request log is empty |
+| 1.11 | Every control is reachable in windows down to 800×600: toolbar groups move into More, the left panel collapses under 1000 px and opens over the page (spec §5 "Complete by definition") | e2e `layout` | Pass 2026-10-28: e2e `layout` at 1600, 1280, 1000 and 800 px; screenshots reviewed. Found and fixed: the toolbar was cut off at 1280 px |
 
 **Depends on:** nothing outside the product.
 

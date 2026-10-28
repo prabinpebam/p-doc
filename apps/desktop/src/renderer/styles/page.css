@@ -1,0 +1,230 @@
+/*
+ * The page and the document inside it. The page is paper: it keeps its own colours in both themes.
+ * Document geometry (points and inches of the file format) is set as data on .page, then read here.
+ */
+
+.page-stack {
+  padding: var(--c-page-gap) var(--space-4) var(--space-12);
+}
+
+.page {
+  --doc-list-indent: 1.5em;
+  --doc-cell-pad: 0.25em 0.5em;
+  --doc-gap: 0.75em;
+  --doc-code-pad: 0.1em 0.3em;
+  --doc-toc-indent: 1.5em;
+  width: var(--page-width);
+  max-width: 100%;
+  min-height: var(--page-height);
+  margin: 0 auto;
+  padding: var(--page-pad-top) var(--page-pad-right) var(--page-pad-bottom) var(--page-pad-left);
+  background: var(--page-color, var(--color-page));
+  color: var(--color-page-text);
+  box-shadow: var(--shadow-page);
+  cursor: text;
+}
+
+.page.pageless {
+  box-shadow: none;
+}
+
+.focus .page-stack {
+  padding-top: var(--space-12);
+}
+
+.pd-content {
+  outline: none;
+  min-height: 100%;
+  caret-color: var(--color-page-text);
+  overflow-wrap: break-word;
+}
+
+.pd-content ::selection {
+  background: var(--color-page-selection);
+}
+
+.pd-content p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  color: var(--color-page-muted);
+  pointer-events: none;
+}
+
+.pd-content ul,
+.pd-content ol {
+  padding-left: var(--doc-list-indent);
+}
+
+.pd-content li > p {
+  margin: 0;
+}
+
+.pd-content ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0;
+}
+
+.pd-content ul[data-type="taskList"] li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--doc-gap);
+}
+
+.pd-content ul[data-type="taskList"] li > label {
+  flex: none;
+  user-select: none;
+}
+
+.pd-content ul[data-type="taskList"] li > div {
+  flex: 1;
+}
+
+.pd-content ul[data-type="taskList"] li[data-checked="true"] > div {
+  color: var(--color-page-muted);
+  text-decoration: line-through;
+}
+
+.pd-content blockquote {
+  margin-left: 0;
+  margin-right: 0;
+  padding-left: var(--doc-list-indent);
+  border-left: var(--border-focus) solid var(--color-page-muted);
+  color: var(--color-page-muted);
+}
+
+.pd-content code {
+  padding: var(--doc-code-pad);
+  border-radius: var(--radius-sm);
+  background: var(--color-page-selection);
+  font-family: Consolas, "Cascadia Mono", monospace;
+}
+
+.pd-content pre {
+  padding: var(--doc-gap);
+  border-radius: var(--radius-sm);
+  background: var(--color-page-selection);
+  font-family: Consolas, "Cascadia Mono", monospace;
+  white-space: pre-wrap;
+}
+
+.pd-content pre code {
+  padding: 0;
+  background: transparent;
+}
+
+.pd-content a {
+  color: var(--color-accent);
+  text-decoration: underline;
+}
+
+.pd-content img {
+  max-width: 100%;
+  height: auto;
+}
+
+.pd-content img.ProseMirror-selectednode {
+  outline: var(--border-focus) solid var(--color-focus);
+}
+
+.pd-content table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  margin: var(--doc-gap) 0;
+}
+
+.pd-content td,
+.pd-content th {
+  position: relative;
+  min-width: 1em;
+  padding: var(--doc-cell-pad);
+  border: var(--border-hairline) solid var(--color-page-muted);
+  vertical-align: top;
+}
+
+.pd-content td > p,
+.pd-content th > p {
+  margin: 0;
+}
+
+.pd-content .selectedCell::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--color-page-selection);
+  pointer-events: none;
+}
+
+.pd-content .column-resize-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: var(--border-focus);
+  background: var(--color-focus);
+  pointer-events: none;
+}
+
+.pd-content.resize-cursor {
+  cursor: col-resize;
+}
+
+.pd-content hr {
+  border: 0;
+  border-top: var(--border-hairline) solid var(--color-page-muted);
+}
+
+/* A page break shows as a dashed rule until pages are laid out (stage 2). */
+.pd-page-break {
+  margin: var(--doc-gap) 0;
+  border-top: var(--border-hairline) dashed var(--color-page-muted);
+}
+
+.pd-toc {
+  margin: var(--doc-gap) 0;
+}
+
+.pd-toc ul {
+  list-style: none;
+  margin: 0;
+  padding-left: 0;
+}
+
+.pd-toc .pd-toc-l2 {
+  padding-left: var(--doc-toc-indent);
+}
+
+.pd-toc .pd-toc-l3 {
+  padding-left: calc(var(--doc-toc-indent) * 2);
+}
+
+.pd-toc .pd-toc-l4 {
+  padding-left: calc(var(--doc-toc-indent) * 3);
+}
+
+.pd-toc-title {
+  font-weight: var(--weight-semibold);
+}
+
+.pd-insertion {
+  color: var(--color-insertion);
+  text-decoration: underline;
+}
+
+.pd-deletion {
+  color: var(--color-deletion);
+  text-decoration: line-through;
+}
+
+.pd-comment {
+  background: var(--color-comment);
+}
+
+.pd-match {
+  background: var(--color-match);
+}
+
+.pd-match-current {
+  background: var(--color-match-current);
+}

@@ -1,0 +1,31 @@
+{
+  "name": "p-doc",
+  "private": true,
+  "version": "0.1.0",
+  "description": "P-Doc: a desktop word processor with documents versioned in your own GitHub, online or offline.",
+  "license": "MIT",
+  "type": "module",
+  "packageManager": "pnpm@10.28.2",
+  "engines": { "node": ">=24" },
+  "scripts": {
+    "build": "pnpm --filter @p-doc/desktop run build",
+    "dev": "pnpm --filter @p-doc/desktop run dev",
+    "start": "pnpm --filter @p-doc/desktop run start",
+    "test": "vitest run",
+    "typecheck": "pnpm -r run typecheck",
+    "e2e": "pnpm --filter @p-doc/desktop run e2e",
+    "perf": "pnpm --filter @p-doc/desktop run perf",
+    "package": "pnpm --filter @p-doc/desktop run package",
+    "tokens": "node agentic-craft/tools/build-tokens.mjs --src packages/tokens/design --css packages/tokens/tokens.css --md docs/design/tokens.md && node agentic-craft/tools/check-tokens.mjs --src packages/tokens/design --checks packages/tokens/design/checks.json",
+    "lint:design": "node agentic-craft/tools/lint-styles.mjs apps/desktop/src/renderer && node agentic-craft/tools/build-tokens.mjs --src packages/tokens/design --css packages/tokens/tokens.css --md docs/design/tokens.md --check",
+    "docs:sync": "node tools/sync-docs.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.1",
+    "typescript": "6.0.3",
+    "vitest": "5.0.3"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["electron", "esbuild"]
+  }
+}

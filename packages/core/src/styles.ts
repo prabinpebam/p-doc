@@ -1,0 +1,43 @@
+/** CSS for a document's paragraph styles, shared by the editor, print and HTML export. */
+import type { StyleDef, Styles, StyleKey } from "./format.ts";
+
+const SELECTORS: Record<StyleKey, string> = {
+  normal: "p",
+  title: "p.pd-style-title",
+  subtitle: "p.pd-style-subtitle",
+  heading1: "h1",
+  heading2: "h2",
+  heading3: "h3",
+  heading4: "h4",
+};
+
+function decl(s: StyleDef, isNormal: boolean): string {
+  const out = [
+    `font-family: ${s.fontFamily}`,
+    `font-size: ${s.fontSize}pt`,
+    `font-weight: ${s.bold ? 700 : 400}`,
+    `font-style: ${s.italic ? "italic" : "normal"}`,
+    `line-height: ${s.lineHeight}`,
+    `margin: ${s.spaceBefore}pt 0 ${s.spaceAfter}pt 0`,
+  ];
+  if (s.color) out.push(`color: ${s.color}`);
+  else if (!isNormal) out.push("color: inherit");
+  return out.join("; ");
+}
+
+/** Style rules scoped under a selector (the page). */
+export function styleCss(styles: Styles, scope: string): string {
+  const n = styles.normal;
+  const rules = [`${scope} { font-family: ${n.fontFamily}; font-size: ${n.fontSize}pt; line-height: ${n.lineHeight}; ${n.color ? `color: ${n.color};` : ""} }`];
+  for (const k of Object.keys(SELECTORS) as StyleKey[]) rules.push(`${scope} ${SELECTORS[k]} { ${decl(styles[k], k === "normal")} }`);
+  rules.push(`${scope} li > p { margin: 0 }`);
+  rules.push(`${scope} td > p, ${scope} th > p { margin: 0 }`);
+  return rules.join("\n");
+}
+
+/** The style a text block has, by its node type and attributes. */
+export function styleKeyOf(type: string, attrs: Record<string, unknown>): StyleKey | null {
+  if (type === "heading") return `heading${Number(attrs.level ?? 1)}` as StyleKey;
+  if (type === "paragraph") return attrs.textStyle === "title" ? "title" : attrs.textStyle === "subtitle" ? "subtitle" : "normal";
+  return null;
+}

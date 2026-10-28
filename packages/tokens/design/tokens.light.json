@@ -1,0 +1,74 @@
+{
+  "color": {
+    "text": {
+      "$type": "color",
+      "$value": "{p.ink.900}",
+      "$description": "Interface text on every surface"
+    },
+    "text-muted": {
+      "$type": "color",
+      "$value": "{p.ink.700}",
+      "$description": "Secondary text: hints, captions, shortcuts"
+    },
+    "bg": {
+      "$type": "color",
+      "$value": "{p.ink.50}",
+      "$description": "The window: title bar, menus bar, toolbar"
+    },
+    "bg-raised": {
+      "$type": "color",
+      "$value": "{p.ink.0}",
+      "$description": "Menus, dialogs, panels and fields"
+    },
+    "canvas": {
+      "$type": "color",
+      "$value": "{p.ink.100}",
+      "$description": "Behind the pages"
+    },
+    "hover": {
+      "$type": "color",
+      "$value": "{p.ink.200}",
+      "$description": "A hovered button or menu item"
+    },
+    "selected": {
+      "$type": "color",
+      "$value": "{p.blue.100}",
+      "$description": "A toggled-on button; the selected list row"
+    },
+    "rule": {
+      "$type": "color",
+      "$value": "{p.ink.300}",
+      "$description": "Rules and outlines"
+    },
+    "accent": {
+      "$type": "color",
+      "$value": "{p.blue.500}",
+      "$description": "Primary actions and links"
+    },
+    "accent-hover": {
+      "$type": "color",
+      "$value": "{p.blue.600}",
+      "$description": "Primary actions, hovered or pressed"
+    },
+    "on-accent": {
+      "$type": "color",
+      "$value": "{p.ink.0}",
+      "$description": "Text on an accent fill"
+    },
+    "focus": {
+      "$type": "color",
+      "$value": "{p.blue.500}",
+      "$description": "The focus ring"
+    },
+    "positive": {
+      "$type": "color",
+      "$value": "{p.green.700}",
+      "$description": "Success: saved, synced"
+    },
+    "negative": {
+      "$type": "color",
+      "$value": "{p.red.600}",
+      "$description": "Errors"
+    }
+  }
+}

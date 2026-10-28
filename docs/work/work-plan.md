@@ -29,8 +29,8 @@ The spec and its Definitions of Done. Assumptions are tracked there (A1–A7).
 | # | Produces | Serves | Checks (tier) | State |
 |---|---|---|---|---|
 | I0 | Research KBs, spec, DoD, this plan, docs site | spec, DoD | `res.mjs check-kb`; Slate runtime check | Done |
-| I1 | Monorepo scaffold, tokens, app shell; stage 1 Write offline | 1.1–1.10 | vitest; typecheck; Playwright-Electron e2e | Not started |
-| I2 | Stage 2 Pages and print | 2.1–2.6 | vitest; e2e | Not started |
+| I1 | Monorepo scaffold, tokens, app shell; stage 1 Write offline | 1.1–1.11 | vitest; typecheck; Playwright-Electron e2e | Done |
+| I2 | Stage 2 Pages and print | 2.1–2.6 | vitest; e2e | In progress |
 | I3 | Stage 3 Versions | 3.1–3.6 | vitest with temp repos; e2e | Not started |
 | I4 | Stage 4 Review | 4.1–4.6 | vitest; e2e | Not started |
 | I5 | Stage 5 GitHub and first run | 5.1–5.6 | vitest with fake API and bare repos; e2e | Not started |
@@ -54,7 +54,7 @@ The spec and its Definitions of Done. Assumptions are tracked there (A1–A7).
 
 ## 5. Shortcuts and found on the way
 
-- **Shortcuts:** none yet.
+- **Shortcuts:** none yet. `pnpm perf` (PD8 budgets) is deferred to stage 2, where pagination makes the budgets meaningful.
 - **Found on the way:** RES `check-kb.mjs` builds file keys with `path.relative`, so on Windows no file-based ID is found — worked around (W6), queued upstream.
 
 ## 6. Status
@@ -62,5 +62,6 @@ The spec and its Definitions of Done. Assumptions are tracked there (A1–A7).
 | Increment | State | Evidence |
 |---|---|---|
 | I0 | Done | `node research/rig/res.mjs check-kb research/re-google-docs` OK; same for `re-microsoft-word`; REPORT.html built |
+| I1 | Done 2026-10-28 | 12 e2e journeys (`apps/desktop/e2e`) pass with `--repeat-each=2`; 73 unit tests (`pnpm test`); `pnpm typecheck`; `pnpm lint:design` clean. DoD 1.1–1.11 Pass |
 
 **Not checked:** live Word UI and signed-in Google Docs surfaces (no test accounts).

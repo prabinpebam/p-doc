@@ -1,0 +1,79 @@
+{
+  "name": "@p-doc/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "P-Doc desktop app",
+  "license": "MIT",
+  "author": "Prabin Pebam",
+  "type": "module",
+  "main": "out/main/main.mjs",
+  "scripts": {
+    "build": "vite build --config vite.config.ts && node scripts/build-main.mjs",
+    "dev": "pnpm run build && electron .",
+    "start": "electron .",
+    "typecheck": "tsc -p tsconfig.json",
+    "e2e": "playwright test",
+    "perf": "playwright test --config playwright.perf.config.ts",
+    "package": "pnpm run build && electron-builder --publish never"
+  },
+  "devDependencies": {
+    "@electron/fuses": "1.8.0",
+    "@fluentui/react-icons": "2.0.344",
+    "@p-doc/core": "workspace:*",
+    "@p-doc/tokens": "workspace:*",
+    "@playwright/test": "1.63.0",
+    "@tiptap/core": "3.31.4",
+    "@tiptap/extension-placeholder": "3.31.4",
+    "@tiptap/extensions": "3.31.4",
+    "@tiptap/pm": "3.31.4",
+    "@tiptap/react": "3.31.4",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "electron": "42.4.1",
+    "electron-builder": "26.15.3",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "vite": "8.3.3"
+  },
+  "build": {
+    "appId": "io.github.prabinpebam.pdoc",
+    "productName": "P-Doc",
+    "artifactName": "P-Doc-${version}-${os}-${arch}.${ext}",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "out/main/**",
+      "out/renderer/**",
+      "package.json"
+    ],
+    "asar": true,
+    "electronFuses": {
+      "runAsNode": false,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "enableNodeCliInspectArguments": false,
+      "enableCookieEncryption": true,
+      "enableEmbeddedAsarIntegrityValidation": true,
+      "onlyLoadAppFromAsar": true
+    },
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "oneClick": false,
+      "artifactName": "P-Doc-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "P-Doc-${version}-portable.${ext}"
+    },
+    "publish": null,
+    "executableName": "p-doc"
+  }
+}

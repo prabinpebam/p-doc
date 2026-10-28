@@ -1,0 +1,130 @@
+{
+  "$comment": "Contrast pairs check-tokens.mjs holds in every theme context (WCAG 2.2: 4.5 for text, 3 for non-text like focus rings).",
+  "contrast": [
+    {
+      "fg": "color.text",
+      "bg": "color.bg",
+      "min": 4.5
+    },
+    {
+      "fg": "color.text",
+      "bg": "color.bg-raised",
+      "min": 4.5
+    },
+    {
+      "fg": "color.text",
+      "bg": "color.hover",
+      "min": 4.5
+    },
+    {
+      "fg": "color.text",
+      "bg": "color.selected",
+      "min": 4.5
+    },
+    {
+      "fg": "color.text-muted",
+      "bg": "color.bg",
+      "min": 4.5
+    },
+    {
+      "fg": "color.text-muted",
+      "bg": "color.bg-raised",
+      "min": 4.5
+    },
+    {
+      "fg": "color.accent",
+      "bg": "color.bg",
+      "min": 4.5
+    },
+    {
+      "fg": "color.accent",
+      "bg": "color.bg-raised",
+      "min": 4.5
+    },
+    {
+      "fg": "color.on-accent",
+      "bg": "color.accent",
+      "min": 4.5
+    },
+    {
+      "fg": "color.negative",
+      "bg": "color.bg-raised",
+      "min": 4.5
+    },
+    {
+      "fg": "color.positive",
+      "bg": "color.bg-raised",
+      "min": 4.5
+    },
+    {
+      "fg": "color.focus",
+      "bg": "color.bg",
+      "min": 3
+    },
+    {
+      "fg": "color.focus",
+      "bg": "color.canvas",
+      "min": 3
+    },
+    {
+      "fg": "color.rule",
+      "bg": "color.bg-raised",
+      "min": 1.5
+    },
+    {
+      "fg": "color.page-text",
+      "bg": "color.page",
+      "min": 4.5
+    },
+    {
+      "fg": "color.page-muted",
+      "bg": "color.page",
+      "min": 4.5
+    },
+    {
+      "fg": "color.insertion",
+      "bg": "color.page",
+      "min": 4.5
+    },
+    {
+      "fg": "color.deletion",
+      "bg": "color.page",
+      "min": 4.5
+    },
+    {
+      "fg": "color.page-text",
+      "bg": "color.comment",
+      "min": 4.5
+    },
+    {
+      "fg": "color.page-text",
+      "bg": "color.comment-active",
+      "min": 4.5
+    },
+    {
+      "fg": "color.page-text",
+      "bg": "color.match",
+      "min": 4.5
+    },
+    {
+      "fg": "color.page-text",
+      "bg": "color.match-current",
+      "min": 4.5
+    },
+    {
+      "fg": "color.insertion",
+      "bg": "color.comment",
+      "min": 4.5
+    },
+    {
+      "fg": "color.deletion",
+      "bg": "color.comment",
+      "min": 4.5
+    },
+    {
+      "fg": "color.page-text",
+      "bg": "color.page-selection",
+      "min": 4.5
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+import { diskText, editor, expect, launch, PROMPTLY, quit, test } from "./helpers.ts";
+
+test("first run: Use offline makes the library and opens a new document ready for typing", async () => {
+  const l = await launch({ setup: false });
+  const { page } = l;
+  await expect(page.getByRole("heading", { name: "Welcome to P-Doc" })).toBeVisible();
+  await expect(page.getByText("Write documents you own. Every version kept, online or not.")).toBeVisible();
+  await page.getByRole("button", { name: "Connect GitHub" }).click();
+  await expect(page.getByText(/isn't in this build yet/)).toBeVisible();
+  await page.getByRole("button", { name: "Use offline" }).click();
+  await expect(editor(page)).toBeFocused();
+  await expect(page.locator("#doc-title")).toHaveValue("Untitled document");
+  await page.keyboard.type("Hello from the first run");
+  await expect.poll(() => diskText(l.dirs), PROMPTLY).toContain("Hello from the first run");
+  await expect(page.getByTestId("save-state")).toHaveText("Saved to this computer");
+  await page.screenshot({ path: "../../test-results/desktop/smoke.png" });
+  await quit(l);
+});

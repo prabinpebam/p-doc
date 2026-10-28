@@ -1,0 +1,64 @@
+/**
+ * Modal dialogs on the native <dialog> (focus trap, Esc, inert page), returning focus on close. The
+ * control to start in carries `data-autofocus`; without one, the first control gets the keyboard.
+ */
+import { useEffect, useId, useRef, type ReactNode } from "react";
+
+export interface DialogProps {
+  title: string;
+  onClose: () => void;
+  children: ReactNode;
+  actions?: ReactNode;
+  wide?: boolean;
+  className?: string;
+  /** Submit runs on Enter in a field (the primary action). */
+  onSubmit?: () => void;
+}
+
+export function Dialog({ title, onClose, children, actions, wide, className, onSubmit }: DialogProps) {
+  const ref = useRef<HTMLDialogElement>(null);
+  const id = useId();
+  useEffect(() => {
+    const back = document.activeElement as HTMLElement | null;
+    const d = ref.current!;
+    if (!d.open) d.showModal();
+    // React's autoFocus runs while the dialog is still closed, so the field to start in is marked instead.
+    d.querySelector<HTMLElement>("[data-autofocus]")?.focus();
+    return () => {
+      if (d.open) d.close();
+      if (back?.isConnected) back.focus();
+    };
+  }, []);
+  return (
+    <dialog
+      ref={ref}
+      className={`dialog${wide ? " wide" : ""} ${className ?? ""}`}
+      aria-labelledby={`${id}-title`}
+      onKeyDown={(e) => {
+        // One Esc closes, even from a search field (where Chromium would only clear the text).
+        if (e.key !== "Escape" || e.defaultPrevented) return;
+        e.preventDefault();
+        e.stopPropagation();
+        onClose();
+      }}
+      onCancel={(e) => {
+        e.preventDefault();
+        onClose();
+      }}
+    >
+      <form
+        method="dialog"
+        onSubmit={(e) => {
+          e.preventDefault();
+          onSubmit?.();
+        }}
+      >
+        <h2 id={`${id}-title`} className="dialog-title">
+          {title}
+        </h2>
+        <div className="dialog-body">{children}</div>
+        {actions ? <div className="dialog-actions">{actions}</div> : null}
+      </form>
+    </dialog>
+  );
+}
