@@ -152,6 +152,8 @@ function blockMd(n: JSONContent, indent = ""): string[] {
     case "sectionBreak":
       // Markdown has no sections: one that starts a page is a page break.
       return n.attrs?.kind === "continuous" ? [] : ['<div style="page-break-after: always"></div>'];
+    case "columnBreak":
+      return [];
     case "image":
       return [inlineMd([n])];
     case "tableOfContents":
@@ -263,6 +265,8 @@ function blockText(n: JSONContent, indent = ""): string[] {
       return ["\f"];
     case "sectionBreak":
       return n.attrs?.kind === "continuous" ? [] : ["\f"];
+    case "columnBreak":
+      return [];
     case "blockquote":
       return (n.content ?? []).flatMap((c) => blockText(c, indent));
     default:

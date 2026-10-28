@@ -6,7 +6,7 @@
  */
 import { Node, type JSONContent } from "@tiptap/core";
 import type { Node as PMNode } from "@tiptap/pm/model";
-import { cleanNumFormat, pageNumberText, HF_FIELDS, hfFor, hfTextsOf, PAPER, type HfTexts, type Margins, type NumFormat, type Orientation, type PageSetup, type PaperSize } from "./format.ts";
+import { cleanColumns, cleanNumFormat, pageNumberText, type Columns, HF_FIELDS, hfFor, hfTextsOf, PAPER, type HfTexts, type Margins, type NumFormat, type Orientation, type PageSetup, type PaperSize } from "./format.ts";
 
 export type SectionStart = "next" | "continuous" | "odd" | "even";
 export const SECTION_STARTS: readonly SectionStart[] = ["next", "continuous", "odd", "even"];
@@ -92,6 +92,7 @@ export const SectionBreak = Node.create({
       page: jsonAttr("page", cleanSectionPage),
       hf: jsonAttr("hf", cleanHfTexts),
       numbering: jsonAttr("numbering", cleanNumbering),
+      columns: jsonAttr("columns", cleanColumns),
     };
   },
   parseHTML: () => [{ tag: 'div[data-type="section-break"]' }],
@@ -112,7 +113,19 @@ export interface Section {
   /** Its page number format, and the number it starts at (null: continues from the previous section). */
   format: NumFormat;
   numStart: number | null;
+  /** Its text columns (U56): its break's, else the section before's. */
+  columns: Columns;
 }
+
+/** A column break: the next block starts the next column (the next page after the last; on one column, a page). */
+export const ColumnBreak = Node.create({
+  name: "columnBreak",
+  group: "block",
+  atom: true,
+  selectable: true,
+  parseHTML: () => [{ tag: 'div[data-type="column-break"]' }],
+  renderHTML: () => ["div", { "data-type": "column-break", class: "pd-column-break", "data-label": "Column break" }],
+});
 
 type Top = { type: string; attrs?: Record<string, unknown> };
 
@@ -121,7 +134,7 @@ export function sectionsOf(doc: PMNode | JSONContent, base: PageSetup): Section[
   const tops: Top[] = [];
   if ("forEach" in doc && typeof (doc as PMNode).forEach === "function") (doc as PMNode).forEach((n) => void tops.push({ type: n.type.name, attrs: n.attrs }));
   else for (const n of (doc as JSONContent).content ?? []) tops.push({ type: n.type ?? "", attrs: n.attrs });
-  const out: Section[] = [{ from: 0, breakAt: null, start: "next", page: base, hf: hfTextsOf(base), ownHf: true, format: base.numFormat, numStart: base.numStart }];
+  const out: Section[] = [{ from: 0, breakAt: null, start: "next", page: base, hf: hfTextsOf(base), ownHf: true, format: base.numFormat, numStart: base.numStart, columns: base.columns }];
   tops.forEach((n, i) => {
     if (n.type !== "sectionBreak") return;
     const before = out[out.length - 1]!;
@@ -138,6 +151,7 @@ export function sectionsOf(doc: PMNode | JSONContent, base: PageSetup): Section[
       ownHf: !!hf,
       format: num?.format ?? before.format,
       numStart: num?.start ?? null,
+      columns: cleanColumns(n.attrs?.columns) ?? before.columns,
     });
   });
   return out;

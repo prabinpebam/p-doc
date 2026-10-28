@@ -21,6 +21,7 @@ import {
   LevelFormat,
   LineRuleType,
   PageBreak,
+  ColumnBreak as DocxColumnBreak,
   NumberFormat,
   PageNumber,
   SectionType,
@@ -266,6 +267,9 @@ function blocks(nodes: JSONContent[] | undefined, ctx: Ctx, list?: { ref: string
       case "pageBreak":
         out.push(new Paragraph({ children: [new PageBreak()] }));
         break;
+      case "columnBreak":
+        out.push(new Paragraph({ children: [new DocxColumnBreak()] }));
+        break;
       case "sectionBreak":
         // Each section is written as a Word section of its own (see toDocx).
         break;
@@ -420,6 +424,7 @@ export async function toDocx(doc: PDocFile): Promise<Uint8Array> {
             margin: { top: Math.round(sp.margins.top * TWIP), bottom: Math.round(sp.margins.bottom * TWIP), left: Math.round(sp.margins.left * TWIP), right: Math.round(sp.margins.right * TWIP) },
             pageNumbers: { formatType: NUMBER_FORMAT[sec.format], ...(sec.numStart != null ? { start: sec.numStart } : {}) },
           },
+          ...(sec.columns.count > 1 ? { column: { count: sec.columns.count, space: Math.round(sec.columns.gap * TWIP), equalWidth: true } } : {}),
         },
         ...(own ? { headers: hfs(sec.hf, "header"), footers: hfs(sec.hf, "footer") } : {}),
         children: children.length ? children : [new Paragraph({ children: [] })],

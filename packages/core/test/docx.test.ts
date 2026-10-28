@@ -236,4 +236,20 @@ describe("export-docx sections (11.1, 11.3)", () => {
     expect(heads.some((h) => h.includes("Annex even"))).toBe(true);
     expect(heads.some((h) => h.includes("Report even"))).toBe(true);
   });
+
+  it("writes a section's columns and a column break (11.2)", async () => {
+    const p = (text: string): JSONContent => ({ type: "paragraph", content: [{ type: "text", text }] });
+    const doc = createDocument({
+      content: {
+        type: "doc",
+        content: [p("One"), { type: "sectionBreak", attrs: { kind: "continuous", columns: { count: 2, gap: 0.25 } } }, p("Left"), { type: "columnBreak" }, p("Right")],
+      },
+    });
+    const xml = await unzip(await toDocx(doc), "word/document.xml");
+    const sects = [...xml.matchAll(/<w:sectPr[\s\S]*?<\/w:sectPr>/g)].map((m) => m[0]);
+    expect(sects[0]).not.toMatch(/w:num="2"/);
+    expect(sects[1]).toMatch(/<w:cols[^>]*w:num="2"/);
+    expect(sects[1]).toMatch(/<w:cols[^>]*w:space="360"/);
+    expect(xml).toMatch(/<w:br w:type="column"\/>/);
+  });
 });

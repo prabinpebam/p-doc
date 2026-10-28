@@ -230,7 +230,8 @@ function measure(view: EditorView): void {
     boxes.push({
       ...(sec > 0 ? { section: { start: sections[sec]!.start, height: geos[sec]!.content } } : {}),
       height,
-      pageBreak: node.type.name === "pageBreak",
+      // A column break on one column starts a page, as in Word (columns are laid out later: work plan 11.2b).
+      pageBreak: node.type.name === "pageBreak" || node.type.name === "columnBreak",
       float,
       lines,
       widows: layout?.widows !== false,

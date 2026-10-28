@@ -262,12 +262,14 @@
   color: var(--color-page-muted);
 }
 
-.pd-show-marks .pd-content .pd-page-break {
+.pd-show-marks .pd-content .pd-page-break,
+.pd-show-marks .pd-content .pd-column-break {
   position: relative;
   border-top: var(--border-hairline) dashed var(--color-page-muted);
 }
 
-.pd-show-marks .pd-content .pd-page-break::after {
+.pd-show-marks .pd-content .pd-page-break::after,
+.pd-show-marks .pd-content .pd-column-break::after {
   content: "Page break";
   position: absolute;
   inset-inline-start: 50%;
@@ -553,12 +555,18 @@
 }
 
 /* A page break is a dashed rule in Pageless; with pages, the next block simply starts a page. */
-.pd-page-break {
+.pd-page-break,
+.pd-column-break {
   margin: var(--doc-gap) 0;
   border-top: var(--border-hairline) dashed var(--color-page-muted);
 }
 
-.paged .pd-page-break {
+.pd-show-marks .pd-content .pd-column-break::after {
+  content: attr(data-label);
+}
+
+.paged .pd-page-break,
+.paged .pd-column-break {
   height: 0;
   margin: 0;
   border: 0;
@@ -603,6 +611,16 @@
 
 .pd-section-break.ProseMirror-selectednode::after {
   outline: var(--border-focus) solid var(--color-focus);
+}
+
+/* A continuous break sits between lines of text: its label would cover them, so it shows only with formatting marks or when selected. */
+.pd-section-break[data-kind="continuous"]:not(.ProseMirror-selectednode)::after {
+  display: none;
+}
+
+.pd-show-marks .pd-section-break[data-kind="continuous"]::after {
+  display: block;
+  transform: translate(-50%, -100%);
 }
 
 .print-doc .pd-section-break {
@@ -832,7 +850,8 @@
   color-scheme: light;
 }
 
-.print-flow .pd-page-break {
+.print-flow .pd-page-break,
+.print-flow .pd-column-break {
   height: 0;
   margin: 0;
   border: 0;

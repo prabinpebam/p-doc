@@ -41,11 +41,12 @@ The spec and its Definitions of Done. Assumptions are tracked there (A1–A17). 
 | IL | Layout spike, before the pagination stages, 60 minutes at most: paragraphs split at lines on screen and in the PDF (A10), its repagination cost (A20), per-section paper in print (A12), columns on screen and in print (A13); notes and settling page numbers (A8, A19) decided by design and tested in stage 10. Each failing assumption takes its register fallback, logged | 9.3, 9.7, 10.1, 10.6, 11.1, 11.2, 12.2 | unit `paginate`; e2e `pagination` split fixture; probe PDFs | Done |
 | I9 | Stage 9 Paragraph layout | 9.1–9.7 | A10 built in IL; vitest; e2e; `pnpm perf` | Done |
 | I10 | Stage 10 References | 10.1, 10.2, 10.4–10.6 | A8 spike first; vitest; e2e; `pnpm perf` | Done |
-| I11 | Stage 11 Sections and page layout | 11.1–11.7 | A12 and A13 spikes first; vitest; e2e; `pnpm perf` | Not started |
+| I11 | Stage 11 Sections and page layout | 11.1–11.7 | A12 and A13 spikes first; vitest; e2e; `pnpm perf` | In progress |
 | I12 | Stage 12 Tables, code and equations | 12.1–12.5 | vitest; e2e; licence check for new dependencies | Not started |
 | I13 | Stage 13 Review power | 13.1–13.6 | vitest; e2e; `pnpm perf` | Not started |
 | I8 | Stage 8 Styles and lists (moved after 13: no layout risk) | 8.1–8.6 | vitest; e2e | Not started |
 | I10b | Stage 10, rest: captions, cross-references, table of figures (cut from I10 at its cut line). Placed here because it builds on the same field atoms as 14 and needs the tables and equations of 12 to caption | 10.3 | e2e `references` first; vitest; page references reserve the widest number's digits as 10.6 does, re-checked by unit `paginate` settling | Not started |
+| I11b | Stage 11, rest: columns laid out on screen and in the PDF, balanced on a section's last page, Format > Columns… (cut from I11 at its 30-minute review: a column run needs its own placement and measuring in the live editor, beyond the cut line). Placed after I10b because it reuses the line splitting of A10 across columns | 11.2 | e2e `sections` columns fixture first (screen and PDF x positions); unit `paginate` columns; `pnpm perf` | Not started |
 | I14 | Stage 14 Citations, index and fields | 14.1–14.3 | vitest; e2e | Not started |
 | I15 | Stage 15 Navigation and windows | 15.1–15.5 | vitest; e2e | Not started |
 | I16a | Stage 16, first half: library, folders, details, templates | 16.1–16.3 | vitest; e2e | Not started |

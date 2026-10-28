@@ -54,7 +54,22 @@ export interface PageSetup {
   /** How page numbers are written, and the first page's number. */
   numFormat: NumFormat;
   numStart: number;
+  /** The first section's text columns (U56). */
+  columns: Columns;
 }
+
+/** Text columns: how many (1–3) and the space between them (inches). */
+export interface Columns {
+  count: number;
+  gap: number;
+}
+export const cleanColumns = (raw: unknown): Columns | null => {
+  if (!raw || typeof raw !== "object") return null;
+  const c = raw as Record<string, unknown>;
+  const count = typeof c.count === "number" && [1, 2, 3].includes(c.count) ? c.count : 1;
+  const gap = typeof c.gap === "number" && Number.isFinite(c.gap) && c.gap >= 0 && c.gap <= 2 ? c.gap : 0.5;
+  return { count, gap };
+};
 
 /** Page number formats: 1, 2, 3 · i, ii · I, II · a, b · A, B. */
 export type NumFormat = "1" | "i" | "I" | "a" | "A";
@@ -171,6 +186,7 @@ export function defaultPage(locale?: string): PageSetup {
     evenFooter: "",
     numFormat: "1",
     numStart: 1,
+    columns: { count: 1, gap: 0.5 },
   };
 }
 
@@ -252,6 +268,7 @@ export function cleanPage(raw: unknown): PageSetup {
     evenFooter: text(p.evenFooter, d.evenFooter),
     numFormat: cleanNumFormat(p.numFormat, d.numFormat),
     numStart: typeof p.numStart === "number" && Number.isInteger(p.numStart) && p.numStart >= 0 && p.numStart <= 9999 ? p.numStart : d.numStart,
+    columns: cleanColumns(p.columns) ?? d.columns,
   };
 }
 

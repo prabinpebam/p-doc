@@ -279,9 +279,12 @@ describe("sectionsOf (U55)", () => {
     const land = { size: "a4", orientation: "landscape", margins: { top: 1, bottom: 1, left: 1, right: 1 } };
     const hf = { header: "H {page}", footer: "F", firstHeader: "", firstFooter: "", evenHeader: "E", evenFooter: "" };
     const numbering = { format: "I", start: 4 };
-    const json = { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "A" }] }, { type: "sectionBreak", attrs: { kind: "odd", page: land, hf, numbering } }, { type: "paragraph", content: [{ type: "text", text: "B" }] }] };
+    const columns = { count: 2, gap: 0.3 };
+    const json = { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "A" }] }, { type: "sectionBreak", attrs: { kind: "odd", page: land, hf, numbering, columns } }, { type: "columnBreak" }, { type: "paragraph", content: [{ type: "text", text: "B" }] }] };
     const back = fromHTML(contentToHTML(json));
-    expect(back.content?.[1]).toEqual({ type: "sectionBreak", attrs: { kind: "odd", page: land, hf, numbering } });
+    expect(back.content?.[1]).toEqual({ type: "sectionBreak", attrs: { kind: "odd", page: land, hf, numbering, columns } });
+    expect(back.content?.[2]).toEqual({ type: "columnBreak" });
+    expect(sectionsOf(back, defaultPage()).map((s) => s.columns.count)).toEqual([1, 2]);
   });
 });
 

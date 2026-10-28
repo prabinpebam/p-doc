@@ -211,3 +211,22 @@ test("11.3 odd and even headers, a section's own headers (Link to previous off) 
   await task.destroy();
   await quit(l);
 });
+test("11.2 a column break (Ctrl+Shift+Enter) on one column starts the next page; a continuous break's label doesn't cover the text", async () => {
+  const l = await launch();
+  const { page } = l;
+  await load(page, report());
+  expect(await settled(page)).toBe(1);
+  await caretAt(page, "Body");
+  await page.keyboard.press("Control+Shift+Enter");
+  await expect(page.locator(".pd-content .pd-column-break")).toHaveCount(1);
+  expect(await settled(page)).toBe(2);
+  await caretAt(page, "Body");
+  await expect(indicator(page)).toHaveText("Page 2 of 2");
+  // A continuous break draws its line; the label shows only with formatting marks.
+  await caretAt(page, "Appendix");
+  await menu(page, "Insert", /^Break/, /^Section break \(continuous\)/);
+  const label = () => page.locator(".pd-content .pd-section-break").evaluate((e) => getComputedStyle(e, "::after").display);
+  await caretAt(page, "Appendix");
+  await expect.poll(label).toBe("none");
+  await quit(l);
+});
