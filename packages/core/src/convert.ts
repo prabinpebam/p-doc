@@ -273,7 +273,8 @@ export function fromMarkdown(md: string): JSONContent {
   const tasks = html.replace(/<ul>\s*((?:<li><input[^>]*type="checkbox"[^>]*>[\s\S]*?<\/li>\s*)+)<\/ul>/g, (_m, items: string) =>
     `<ul data-type="taskList">${items.replace(/<li><input([^>]*)>\s*([\s\S]*?)<\/li>/g, (_x, attrs: string, body: string) => `<li data-type="taskItem" data-checked="${/checked/.test(attrs)}"><p>${body.trim()}</p></li>`)}</ul>`,
   );
-  return fromHTML(tasks);
+  // marked ends a code block with a newline the fence doesn't hold.
+  return fromHTML(tasks.replace(/\n<\/code><\/pre>/g, "</code></pre>"));
 }
 
 // ------------------------------------------------------------------------------ Text

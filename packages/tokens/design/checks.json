@@ -140,6 +140,12 @@
       "fg": "color.page-text",
       "bg": "color.page-code",
       "min": 4.5
-    }
+    },
+    { "fg": "color.code-keyword", "bg": "color.page-code", "min": 4.5 },
+    { "fg": "color.code-string", "bg": "color.page-code", "min": 4.5 },
+    { "fg": "color.code-comment", "bg": "color.page-code", "min": 4.5 },
+    { "fg": "color.code-number", "bg": "color.page-code", "min": 4.5 },
+    { "fg": "color.code-name", "bg": "color.page-code", "min": 4.5 },
+    { "fg": "color.code-attr", "bg": "color.page-code", "min": 4.5 }
   ]
 }

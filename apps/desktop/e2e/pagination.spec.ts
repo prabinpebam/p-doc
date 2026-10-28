@@ -433,8 +433,8 @@ test("12.2 long tables break between rows with the header row repeated, on scree
       // What follows each break row: the header copy, and the row before it (the last on its page).
       after: rows.map((x) => (x.nextElementSibling as HTMLElement | null)?.matches(".pd-repeat-head") ? x.nextElementSibling!.textContent : null),
       before: rows.map((x) => {
-        let p = x.previousElementSibling as HTMLElement | null;
-        while (p?.matches(".pd-repeat-head")) p = p.previousElementSibling as HTMLElement | null;
+        let p = x.previousElementSibling as HTMLTableRowElement | null;
+        while (p?.matches(".pd-repeat-head")) p = p.previousElementSibling as HTMLTableRowElement | null;
         return p?.cells[0]?.textContent ?? "";
       }),
       fills: rows.map((x) => x.querySelector<HTMLElement>(".pd-sheet-fill")!.getBoundingClientRect().height / scale),

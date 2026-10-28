@@ -26,6 +26,7 @@
   --p-yellow-100: #fef3c7;
   --p-yellow-300: #fcd877;
   --p-yellow-500: #f9ab00;
+  --p-purple-700: #8e24aa;
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
@@ -118,6 +119,12 @@
   --color-match-current: var(--p-yellow-500);
   --color-page-selection: var(--p-blue-100);
   --color-page-code: var(--p-ink-50);
+  --color-code-keyword: var(--p-blue-600);
+  --color-code-string: var(--p-green-700);
+  --color-code-comment: var(--p-ink-500);
+  --color-code-number: var(--p-red-600);
+  --color-code-name: var(--p-purple-700);
+  --color-code-attr: var(--p-blue-500);
   --color-text: light-dark(var(--p-ink-900), var(--p-ink-50));
   --color-text-muted: light-dark(var(--p-ink-700), var(--p-ink-300));
   --color-bg: light-dark(var(--p-ink-50), var(--p-ink-900));

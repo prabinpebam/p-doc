@@ -209,6 +209,8 @@ export interface SchemaOptions {
   resolveImage?: (src: string) => string;
   /** The image node to use instead of the plain one (the window's adds handles and the crop frame). */
   image?: AnyExtension;
+  /** The code block to use instead of the plain one (the window's highlights code and picks its language). */
+  codeBlock?: AnyExtension;
 }
 
 /** The extensions that define P-Doc's content. */
@@ -220,7 +222,9 @@ export function extensions(options: SchemaOptions = {}): AnyExtension[] {
       heading: { levels: [1, 2, 3, 4, 5, 6] },
       link: { openOnClick: false, autolink: true, HTMLAttributes: { rel: "noopener noreferrer", target: null } },
       trailingNode: false,
+      ...(options.codeBlock ? { codeBlock: false as const } : {}),
     }),
+    ...(options.codeBlock ? [options.codeBlock] : []),
     TextStyleKit.configure({ lineHeight: false }),
     Highlight.configure({ multicolor: true }),
     TextAlign.configure({ types: [...TEXTBLOCKS] }),

@@ -11,6 +11,7 @@ import { NonPrinting } from "./marks.ts";
 import { CommentDraft } from "./review.ts";
 import { NotesKeys, textEnd } from "./notes.ts";
 import { Equations } from "./equations.ts";
+import { LiveCodeBlock } from "./code.ts";
 
 /**
  * TipTap's `focus` waits a frame before focusing, so keys pressed straight after a toolbar or menu
@@ -55,6 +56,7 @@ const DocEnds = Extension.create({
 export function editorExtensions(o: { author: string; images: () => ImageHost }): AnyExtension[] {
   return extensions({
     image: LiveImage,
+    codeBlock: LiveCodeBlock,
     extra: [
       SyncFocus,
       DocEnds,

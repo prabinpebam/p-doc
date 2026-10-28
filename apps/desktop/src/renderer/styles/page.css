@@ -395,6 +395,67 @@
   background: transparent;
 }
 
+/* A code block's language (U61): a quiet picker at its top right, on screen only. */
+.pd-content pre {
+  position: relative;
+}
+
+.pd-code-lang {
+  position: absolute;
+  top: var(--space-1);
+  right: var(--space-1);
+  user-select: none;
+}
+
+.pd-code-lang select {
+  padding: 0 var(--space-1);
+  border: var(--border-hairline) solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-page-muted);
+  font: var(--text-sm) / 1.5 var(--font-ui);
+  cursor: pointer;
+}
+
+.pd-code-lang select:hover:not(:disabled),
+.pd-code-lang select:focus-visible {
+  border-color: var(--color-page-muted);
+}
+
+.pd-code-lang select:disabled {
+  cursor: default;
+  appearance: none;
+}
+
+/* Highlighted code (U61): highlight.js classes, coloured from the code tokens. */
+.pd-content :is(.hljs-keyword, .hljs-tag, .hljs-selector-tag, .hljs-meta .hljs-keyword) {
+  color: var(--color-code-keyword);
+}
+
+.pd-content :is(.hljs-string, .hljs-regexp, .hljs-addition, .hljs-template-tag, .hljs-symbol) {
+  color: var(--color-code-string);
+}
+
+.pd-content :is(.hljs-comment, .hljs-quote, .hljs-meta) {
+  color: var(--color-code-comment);
+}
+
+.pd-content .hljs-comment {
+  font-style: italic;
+}
+
+.pd-content :is(.hljs-number, .hljs-literal, .hljs-deletion, .hljs-bullet) {
+  color: var(--color-code-number);
+}
+
+.pd-content :is(.hljs-title, .hljs-section, .hljs-type, .hljs-name, .hljs-selector-class, .hljs-selector-id) {
+  color: var(--color-code-name);
+}
+
+.pd-content :is(.hljs-attr, .hljs-attribute, .hljs-built_in, .hljs-property, .hljs-variable, .hljs-params, .hljs-selector-attr) {
+  color: var(--color-code-attr);
+}
+
 .pd-content a {
   color: var(--color-accent);
   text-decoration: underline;

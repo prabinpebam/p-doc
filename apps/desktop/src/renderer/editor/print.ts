@@ -13,7 +13,7 @@ import { geometry, layoutNow, noteRest, watermarkStyle, type Geometry, type Layo
 // The editor's own state: selection, find highlights, the empty-document placeholder.
 const EDITOR_ONLY = ["ProseMirror-selectednode", "selectedCell", "pd-match", "pd-match-current", "has-focus", "is-empty", "is-editor-empty", "is-cropping", "is-resizing", "pd-np-space"];
 // Drawn only on screen: resize handles, the crop frame, and an image whose file is missing (exports skip it).
-const SCREEN_ONLY = ".pd-np-break, .column-resize-handle, .pd-img-handle, .pd-crop, .pd-img-missing, .pd-img.is-missing";
+const SCREEN_ONLY = ".pd-code-lang, .pd-np-break, .column-resize-handle, .pd-img-handle, .pd-crop, .pd-img-missing, .pd-img.is-missing";
 // Footnotes drawn at a page foot print with their sheet (sheetNotes), not with the notes after the text.
 const PLACED = ".pd-note--placed, .pd-note-rest";
 
