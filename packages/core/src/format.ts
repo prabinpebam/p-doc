@@ -228,6 +228,7 @@ export interface CreateOptions {
   page?: PageSetup;
   styles?: Styles;
   content?: JSONContent;
+  comments?: CommentThread[];
   id?: string;
   now?: Date;
 }
@@ -242,7 +243,7 @@ export function createDocument(o: CreateOptions = {}): PDocFile {
     page: structuredClone(o.page ?? defaultPage()),
     styles: structuredClone(o.styles ?? defaultStyles()),
     content: o.content ?? emptyContent(),
-    comments: [],
+    comments: structuredClone(o.comments ?? []),
   };
 }
 

@@ -228,7 +228,7 @@ export async function run(argv: string[], io: Io): Promise<number> {
         const lib = await open();
         const r = await importInto(lib, basename(file), new Uint8Array(readFileSync(file)), settings.get().pageDefault);
         const s = r.opened.summary;
-        print(`Imported ${s.title} (${s.id})${r.leftOut.length ? `. Some parts (${r.leftOut.join(", ")}) were left out.` : ""}`, { ...brief(s), file: lib.file(s), leftOut: r.leftOut });
+        print(`Imported ${s.title} (${s.id})${r.leftOut.length ? `. Some parts (${r.leftOut.join(", ")}) were left out.` : ""}${r.kept ? `. ${r.kept === 1 ? "1 change kept as a comment" : `${r.kept} changes kept as comments`}.` : ""}`, { ...brief(s), file: lib.file(s), leftOut: r.leftOut, kept: r.kept });
         return EXIT.ok;
       }
       default:

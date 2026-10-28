@@ -1,5 +1,5 @@
 /** File > Download and File > Print (U16, U17); File > Open from file and dropped files (U18). */
-import type { ExportKind, Imported } from "../shared/api.ts";
+import { importNotice, type ExportKind, type Imported } from "../shared/api.ts";
 import { printDocument } from "./editor/print.ts";
 import { getEditor, ipcMessage, openMade, snapshot, syncSelection } from "./session.ts";
 import { dismissToast, toast } from "./state.ts";
@@ -76,7 +76,7 @@ export async function downloadAs(kind: ExportKind): Promise<void> {
 
 function imported(r: Imported | null): void {
   if (!r) return;
-  toast(r.leftOut.length ? `Imported. Some parts (${r.leftOut.join(", ")}) were left out.` : `Opened ${r.opened.summary.title}`);
+  toast(importNotice(r.leftOut, r.kept) ?? `Opened ${r.opened.summary.title}`);
 }
 
 async function importWith(get: () => Promise<Imported | null>): Promise<void> {

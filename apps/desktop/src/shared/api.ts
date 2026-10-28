@@ -169,6 +169,7 @@ export interface CreateRequest {
   space?: Space;
   content?: PDocFile["content"];
   page?: PageSetup;
+  comments?: PDocFile["comments"];
 }
 
 export interface PrintRequest {
@@ -201,6 +202,15 @@ export interface Imported {
   opened: Opened;
   /** Parts left out, for "Imported. Some parts … were left out."; empty when everything came in. */
   leftOut: string[];
+  /** Word changes P-Doc keeps as comments (moves, formatting, table changes), for "*n* changes kept as comments". */
+  kept: number;
+}
+
+/** The notice after an import, or null when everything came in as it was. */
+export function importNotice(leftOut: string[], kept: number): string | null {
+  const parts = leftOut.length ? ` Some parts (${leftOut.join(", ")}) were left out.` : "";
+  const changes = kept === 1 ? " 1 change kept as a comment." : kept > 1 ? ` ${kept} changes kept as comments.` : "";
+  return parts || changes ? `Imported.${parts}${changes}` : null;
 }
 
 /** One version (commit) of a document (U28). */

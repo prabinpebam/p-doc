@@ -5,7 +5,7 @@
 import type { JSONContent } from "@tiptap/core";
 import { cleanPage, fromHTML, fromMarkdown, fromText, importKind, parseDocument, titleFromFile, toHTML, toMarkdown, toText, type PageSetup, type PDocFile } from "@p-doc/core";
 import { fromDocx, toDocx } from "@p-doc/core/docx";
-import type { ExportKind, Imported, Space } from "../shared/api.ts";
+import { importNotice, type ExportKind, type Imported, type Space } from "../shared/api.ts";
 import type { Library } from "./library.ts";
 
 /** The largest file Open from file accepts. */
@@ -42,7 +42,7 @@ export async function exportBytes(source: PDocFile, kind: ExportKind, from?: { l
   }
 }
 
-export type FromFile = { kind: "pdoc"; doc: PDocFile; leftOut: string[] } | { kind: "content"; title: string; content: JSONContent; leftOut: string[] };
+export type FromFile = { kind: "pdoc"; doc: PDocFile; leftOut: string[] } | { kind: "content"; title: string; content: JSONContent; leftOut: string[]; comments?: PDocFile["comments"]; kept?: number };
 
 const text = (data: Uint8Array) => new TextDecoder("utf-8").decode(data).replace(/^\uFEFF/, "");
 
@@ -69,7 +69,7 @@ export async function readFile(name: string, data: Uint8Array): Promise<FromFile
         return { kind: "pdoc", doc: parseDocument(text(data)), leftOut: [] };
       case "docx": {
         const r = await fromDocx(data);
-        return { kind: "content", title, content: r.content, leftOut: leftOutOf(r.warnings) };
+        return { kind: "content", title, content: r.content, leftOut: leftOutOf(r.warnings), comments: r.comments, kept: r.kept };
       }
       case "md":
         return { kind: "content", title, content: fromMarkdown(text(data)), leftOut: [] };
@@ -88,11 +88,11 @@ export async function readFile(name: string, data: Uint8Array): Promise<FromFile
 export async function importInto(library: Library, name: string, data: Uint8Array, page?: PageSetup | null): Promise<Imported> {
   const f = await readFile(name, data);
   await library.ensure();
-  const opened = f.kind === "pdoc" ? await library.adopt(f.doc) : await library.create({ title: f.title, space: "private", content: f.content, page: page ? cleanPage(page) : undefined });
-  return { opened, leftOut: f.leftOut };
+  const opened = f.kind === "pdoc" ? await library.adopt(f.doc) : await library.create({ title: f.title, space: "private", content: f.content, comments: f.comments, page: page ? cleanPage(page) : undefined });
+  return { opened, leftOut: f.leftOut, kept: f.kind === "content" ? (f.kept ?? 0) : 0 };
 }
 
-/** "Imported. Some parts (text boxes, embedded objects) were left out." */
-export function leftOutMessage(leftOut: string[]): string | null {
-  return leftOut.length ? `Imported. Some parts (${leftOut.join(", ")}) were left out.` : null;
+/** "Imported. Some parts (text boxes, embedded objects) were left out. 2 changes kept as comments." */
+export function leftOutMessage(leftOut: string[], kept = 0): string | null {
+  return importNotice(leftOut, kept);
 }

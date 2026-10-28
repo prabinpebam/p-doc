@@ -4,6 +4,9 @@ import {
   AlignmentType,
   Bookmark as DocxBookmark,
   BorderStyle,
+  CommentRangeEnd,
+  CommentRangeStart,
+  CommentReference,
   DeletedTextRun,
   Document,
   EndnoteReferenceRun,
@@ -41,10 +44,14 @@ import {
   VerticalAlign,
   VerticalPositionRelativeFrom,
   WidthType,
+  type ICommentOptions,
   type IParagraphOptions,
   type ParagraphChild,
 } from "docx";
+import JSZip from "jszip";
 import mammoth from "mammoth";
+import { applyReview, prepareReview, readWordComments, stripMarkers } from "./docx-review.ts";
+import type { CommentThread } from "./format.ts";
 import { latexToMath } from "docx/math";
 import { PAPER, type HfAlign, type HfTexts, type NumFormat, type PDocFile, type StyleDef } from "./format.ts";
 import { sectionsOf, type SectionStart } from "./sections.ts";
@@ -83,6 +90,9 @@ interface Ctx {
   noteIds: Map<string, { kind: "footnote" | "endnote"; num: number }>;
   /** Word's bookmark name of each heading and bookmark, by id. */
   anchors: Map<string, string>;
+  /** Word's comment ids that start before, and end after, each text node (U67). */
+  commentStarts: Map<JSONContent, number[]>;
+  commentEnds: Map<JSONContent, number[]>;
 }
 
 function runs(nodes: JSONContent[] | undefined, ctx: Ctx, extra: { font?: string } = {}): ParagraphChild[] {
@@ -143,9 +153,48 @@ function runs(nodes: JSONContent[] | undefined, ctx: Ctx, extra: { font?: string
     const link = marks.find((m) => m.type === "link");
     const href = String(link?.attrs?.href ?? "");
     const anchor = href.startsWith("#") ? ctx.anchors.get(href.slice(1)) : undefined;
+    for (const id of ctx.commentStarts.get(n) ?? []) out.push(new CommentRangeStart(id));
     if (anchor) out.push(new InternalHyperlink({ anchor, children: [run] }));
     else if (link && /^(https?:|mailto:)/i.test(href)) out.push(new ExternalHyperlink({ link: href, children: [run] }));
     else out.push(run);
+    for (const id of ctx.commentEnds.get(n) ?? []) out.push(new CommentRangeEnd(id), new TextRun({ children: [new CommentReference(id)] }));
+  }
+  return out;
+}
+
+/**
+ * Word's comments of a document (U67): each thread on the text its comment mark covers, with its replies threaded
+ * under it and its resolved state. A thread whose text is gone has nowhere to sit in Word, so it stays out.
+ */
+function wordComments(doc: PDocFile, ctx: Ctx): ICommentOptions[] {
+  const first = new Map<string, JSONContent>();
+  const last = new Map<string, JSONContent>();
+  const walk = (n: JSONContent) => {
+    if (n.type === "text") {
+      for (const m of n.marks ?? []) {
+        if (m.type !== "comment") continue;
+        const id = String(m.attrs?.id ?? "");
+        if (!first.has(id)) first.set(id, n);
+        last.set(id, n);
+      }
+    }
+    for (const c of n.content ?? []) walk(c);
+  };
+  walk(doc.content);
+  const out: ICommentOptions[] = [];
+  const body = (s: string) => s.split("\n").map((line) => new Paragraph({ children: [new TextRun(line)] }));
+  const initials = (a: string) => a.split(/\s+/).filter(Boolean).map((w) => w[0]!.toUpperCase()).join("").slice(0, 3) || "P";
+  const at = (iso: string) => (Number.isNaN(Date.parse(iso)) ? new Date() : new Date(iso));
+  for (const t of doc.comments ?? []) {
+    const start = first.get(t.id);
+    const end = last.get(t.id);
+    if (!start || !end) continue;
+    const root = out.length;
+    const ids = [root, ...t.replies.map((_, i) => root + 1 + i)];
+    out.push({ id: root, author: t.author || "P-Doc", initials: initials(t.author), date: at(t.created), children: body(t.body), resolved: t.resolved || undefined });
+    t.replies.forEach((r, i) => out.push({ id: root + 1 + i, author: r.author || "P-Doc", initials: initials(r.author), date: at(r.created), children: body(r.body), parentId: root, resolved: t.resolved || undefined }));
+    ctx.commentStarts.set(start, [...(ctx.commentStarts.get(start) ?? []), ...ids]);
+    ctx.commentEnds.set(end, [...(ctx.commentEnds.get(end) ?? []), ...ids]);
   }
   return out;
 }
@@ -399,7 +448,8 @@ export async function toDocx(doc: PDocFile): Promise<Uint8Array> {
   const p = doc.page;
   const paper = PAPER[p.size];
   const landscape = p.orientation === "landscape";
-  const ctx: Ctx = { doc, listInstance: 0, revision: 1, maxImageWidth: Math.round((((landscape ? paper.height : paper.width) - p.margins.left - p.margins.right) * 96)), noteIds: new Map(), anchors: new Map() };
+  const ctx: Ctx = { doc, listInstance: 0, revision: 1, maxImageWidth: Math.round((((landscape ? paper.height : paper.width) - p.margins.left - p.margins.right) * 96)), noteIds: new Map(), anchors: new Map(), commentStarts: new Map(), commentEnds: new Map() };
+  const comments = wordComments(doc, ctx);
   const taken = new Set<string>();
   for (const a of anchorsOfJSON(doc.content)) if (!ctx.anchors.has(a.id)) ctx.anchors.set(a.id, wordBookmarkName(a, taken));
   const footnotes: Record<string, { children: Paragraph[] }> = {};
@@ -434,6 +484,7 @@ export async function toDocx(doc: PDocFile): Promise<Uint8Array> {
     features: { trackRevisions: false },
     ...(count.footnote ? { footnotes } : {}),
     ...(count.endnote ? { endnotes } : {}),
+    ...(comments.length ? { comments: { children: comments } } : {}),
     styles: {
       default: { document: { run: styleRun(s.normal), paragraph: styleParagraph(s.normal) } },
       paragraphStyles: [
@@ -479,12 +530,27 @@ export interface DocxImport {
   content: JSONContent;
   /** Parts left out, for the "Imported. Some parts … were left out." notice. */
   warnings: string[];
+  /** Word's comments, and the changes P-Doc keeps as comments (U67). */
+  comments: CommentThread[];
+  /** How many of those comments are kept changes, for the "*n* changes kept as comments" notice. */
+  kept: number;
 }
 
-/** Content from a .docx file. */
+const REVIEW_PARTS = /<w:(?:ins|del|moveTo|moveFrom|rPrChange|pPrChange|trPrChange|tcPrChange|tblPrChange|tblGridChange|commentRangeStart)\b/;
+
+/** Content from a .docx file, with Word's tracked changes as suggestions and its comments as comments (U67). */
 export async function fromDocx(data: Uint8Array): Promise<DocxImport> {
+  let buffer: Buffer = Buffer.from(data);
+  const zip = await JSZip.loadAsync(buffer);
+  const docXml = await zip.file("word/document.xml")?.async("string");
+  const prep = docXml && REVIEW_PARTS.test(docXml) ? prepareReview(docXml) : null;
+  if (prep) {
+    zip.file("word/document.xml", prep.xml);
+    buffer = await zip.generateAsync({ type: "nodebuffer" });
+  }
+  const word = prep ? readWordComments((await zip.file("word/comments.xml")?.async("string")) ?? null, (await zip.file("word/commentsExtended.xml")?.async("string")) ?? null) : [];
   const result = await mammoth.convertToHtml(
-    { buffer: Buffer.from(data) },
+    { buffer },
     {
       styleMap: ["p[style-name='Title'] => p.pd-style-title:fresh", "p[style-name='Subtitle'] => p.pd-style-subtitle:fresh", "p[style-name='Quote'] => blockquote > p:fresh", "r[style-name='Code'] => code"],
     },
@@ -492,7 +558,10 @@ export async function fromDocx(data: Uint8Array): Promise<DocxImport> {
   const warnings = result.messages.filter((m) => m.type === "warning").map((m) => m.message);
   // Images are blocks in P-Doc; Word wraps each in a paragraph, which would leave an empty one behind.
   const html = wordBookmarks(wordNotes(result.value.replace(/<p>((?:<img [^>]*\/?>)+)<\/p>/g, "$1")));
-  return { content: orderNotes(fromHTML(html)), warnings };
+  const content = orderNotes(fromHTML(html));
+  if (!prep) return { content, warnings, comments: [], kept: 0 };
+  const review = applyReview(content, prep, word);
+  return { content: JSON.parse(stripMarkers(JSON.stringify(review.content))) as JSONContent, warnings, comments: review.comments, kept: prep.kept.length };
 }
 
 /**

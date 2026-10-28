@@ -141,8 +141,13 @@ describe("pdoc CLI (U38)", () => {
 
     const w = await pdoc("import", "Quarterly plan.docx", "--json");
     expect(w.code).toBe(EXIT.ok);
-    expect(w.json).toMatchObject({ title: "Quarterly plan", space: "private", leftOut: [] });
+    expect(w.json).toMatchObject({ title: "Quarterly plan", space: "private", leftOut: [], kept: 0 });
     expect(readFileSync(w.json.file, "utf8")).toMatch(/Goals/);
+    // Word comments come in with the document (U67).
+    const reviewed = createDocument({ title: "Reviewed", content: { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Look", marks: [{ type: "comment", attrs: { id: "t1" } }] }] }] }, comments: [{ id: "t1", author: "Ana", created: "2026-10-03T10:00:00.000Z", body: "Why?", resolved: false, quote: "Look", replies: [] }] });
+    writeFileSync(join(dir, "Reviewed.docx"), await toDocx(reviewed));
+    const rv = await pdoc("import", "Reviewed.docx", "--json");
+    expect(JSON.parse(readFileSync(rv.json.file, "utf8")).comments).toMatchObject([{ author: "Ana", body: "Why?", quote: "Look" }]);
     const m = await pdoc("import", "readme.md", "--json");
     expect(m.json.title).toBe("readme");
     const p = await pdoc("import", "copy.pdoc.json", "--json");
@@ -154,6 +159,6 @@ describe("pdoc CLI (U38)", () => {
     const bad = await pdoc("import", "picture.png", "--json");
     expect(bad.code).toBe(EXIT.failed);
     expect(bad.json.error).toMatch(/can open \.docx/);
-    expect((await pdoc("list", "--json")).json).toHaveLength(3);
+    expect((await pdoc("list", "--json")).json).toHaveLength(4);
   });
 });
