@@ -4,7 +4,8 @@ import { join } from "node:path";
 import type { Page } from "@playwright/test";
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 import { load, prose, settled } from "./fixtures.ts";
-import { diskText, editor, expect, launch, PROMPTLY, quit, test } from "./helpers.ts";
+import { dialogStep, diskText, editor, expect, launch, PROMPTLY, quit, test } from "./helpers.ts";
+import { zipText } from "./fixtures.ts";
 
 async function menu(page: Page, top: string, ...path: RegExp[]): Promise<void> {
   await page.getByRole("menuitem", { name: top, exact: true }).click();
@@ -177,5 +178,126 @@ test("10.1 a long footnote goes on at the foot of the next page, on screen and i
   expect(one).toBeGreaterThanOrEqual(0);
   expect(pages[one], "the note starts on the reference's page").toContain("Note opens here.");
   expect(pages[one + 1], "and closes on the next").toContain("Note closes here.");
+  await quit(l);
+});
+
+/** Two chapters on two pages; the second has a sentence worth a bookmark. */
+const linkDocument = () => ({
+  type: "doc",
+  content: [
+    { type: "heading", attrs: { level: 1, id: "ch-1" }, content: [t("Chapter one")] },
+    { type: "paragraph", content: [t("See the key result for details.")] },
+    { type: "paragraph", content: [t(prose(80, 1))] },
+    { type: "pageBreak" },
+    { type: "heading", attrs: { level: 2, id: "results" }, content: [t("Results")] },
+    { type: "paragraph", content: [t("The key figure is here and it matters.")] },
+    { type: "paragraph", content: [t(prose(80, 2))] },
+  ],
+});
+
+/** The text of the block the caret is in. */
+const caretBlock = (page: Page) => page.evaluate(() => (window as unknown as { __pdoc: { getEditor(): { state: { selection: { $from: { parent: { textContent: string } } } } } } }).__pdoc.getEditor().state.selection.$from.parent.textContent);
+
+/** Selects `words` in the first paragraph that has them. */
+async function selectText(page: Page, words: string): Promise<void> {
+  await page.evaluate((w) => {
+    const e = (window as unknown as { __pdoc: { getEditor(): any } }).__pdoc.getEditor();
+    let at = -1;
+    e.state.doc.descendants((n: any, pos: number) => {
+      if (at < 0 && n.isText && n.text.includes(w)) at = pos + n.text.indexOf(w);
+    });
+    e.chain().focus().setTextSelection({ from: at, to: at + w.length }).run();
+  }, words);
+}
+
+test("10.2 bookmarks and links to headings and bookmarks: in the page, the PDF, HTML and Word", async () => {
+  const saveDir = mkdtempSync(join(tmpdir(), "pdoc-links-"));
+  const l = await launch({ env: { PDOC_SAVE_DIR: saveDir } });
+  const { page, dirs } = l;
+  const ed = editor(page);
+  await page.locator("#doc-title").fill("Links");
+  await page.keyboard.press("Enter");
+  await load(page, linkDocument());
+  await settled(page);
+
+  // Insert > Bookmark… at the start of a sentence: named from the words after it, renamable; one Undo step.
+  await ed.locator("p", { hasText: "The key figure" }).click();
+  await page.keyboard.press("Home");
+  const bookmarks = () => ed.locator("[data-type=bookmark]").evaluateAll((els) => els.map((e) => e.getAttribute("data-name")));
+  await dialogStep(page, {
+    open: () => menu(page, "Insert", /^Bookmark/),
+    name: "Bookmark",
+    fill: async (d) => {
+      await expect(d.getByLabel("Name")).toHaveValue("The key figure is");
+      await d.getByLabel("Name").fill("Key figure");
+    },
+    read: bookmarks,
+  });
+  expect(await bookmarks()).toEqual(["Key figure"]);
+  const bm = (await ed.locator("[data-type=bookmark]").getAttribute("id"))!;
+  expect(bm).toMatch(/^bm-/);
+
+  // Hidden in the text; a flag when non-printing characters are shown.
+  const flag = () => ed.locator("[data-type=bookmark]").evaluate((e) => e.getBoundingClientRect().width);
+  expect(await flag()).toBe(0);
+  await page.keyboard.press("Control+Shift+P");
+  await expect.poll(flag).toBeGreaterThan(4);
+  await page.keyboard.press("Control+Shift+P");
+
+  // Ctrl+K lists the headings and bookmarks; picking one fills the address. Again one Undo step each.
+  const links = () => ed.locator("a").evaluateAll((els) => els.map((e) => `${e.textContent}>${e.getAttribute("href")}`));
+  await selectText(page, "key result");
+  await dialogStep(page, {
+    open: () => page.keyboard.press("Control+K"),
+    name: "Insert link",
+    fill: async (d) => {
+      const list = d.getByLabel("Headings and bookmarks");
+      await expect(list.locator("option")).toHaveText(["Choose…", "Chapter one", "Results", "Key figure"]);
+      await list.selectOption({ label: "Key figure" });
+      await expect(d.getByLabel("Link", { exact: true })).toHaveValue(`#${bm}`);
+    },
+    read: links,
+  });
+  await selectText(page, "details");
+  await page.keyboard.press("Control+K");
+  await page.getByRole("dialog", { name: "Insert link" }).getByLabel("Headings and bookmarks").selectOption({ label: "Results" });
+  await page.getByRole("dialog", { name: "Insert link" }).getByRole("button", { name: "Apply" }).click();
+  expect(await links()).toEqual([`key result>#${bm}`, "details>#results"]);
+
+  // Ctrl+click follows a link inside the document; a plain click only places the caret.
+  await ed.locator("a", { hasText: "key result" }).click({ modifiers: ["Control"] });
+  await expect.poll(() => caretBlock(page)).toBe("The key figure is here and it matters.");
+  await expect(ed.locator("p", { hasText: "The key figure" })).toBeInViewport();
+  await ed.locator("a", { hasText: "details" }).click({ modifiers: ["Control"] });
+  await expect.poll(() => caretBlock(page)).toBe("Results");
+  await ed.locator("a", { hasText: "key result" }).click();
+  await expect.poll(() => caretBlock(page)).toBe("See the key result for details.");
+  await expect.poll(() => diskText(dirs), PROMPTLY).toContain('"bookmark"');
+
+  // The PDF's links go to their places in it; the web page's and Word's too.
+  await menu(page, "File", /^Download/, /^PDF document/);
+  await expect(page.getByText(/^Saved Links\.pdf/)).toBeVisible({ timeout: 20_000 });
+  const task = getDocument({ data: new Uint8Array(readFileSync(join(saveDir, "Links.pdf"))), useSystemFonts: false });
+  const pdf = await task.promise;
+  const annots = (await (await pdf.getPage(1)).getAnnotations()) as { subtype: string; dest?: unknown; url?: string }[];
+  const internal = annots.filter((a) => a.subtype === "Link" && a.dest);
+  expect(internal.length, "two links inside the PDF").toBe(2);
+  for (const a of internal) {
+    const dest = typeof a.dest === "string" ? await pdf.getDestination(a.dest) : (a.dest as unknown[]);
+    expect(await pdf.getPageIndex(dest![0] as never), "both go to page 2").toBe(1);
+  }
+  await task.destroy();
+  await menu(page, "File", /^Download/, /^Web page/);
+  await expect(page.getByText("Saved Links.html")).toBeVisible();
+  const html = readFileSync(join(saveDir, "Links.html"), "utf8");
+  expect(html).toContain(`href="#${bm}"`);
+  expect(html).toMatch(new RegExp(`id="${bm}"`));
+  expect(html).toContain('id="results"');
+  await menu(page, "File", /^Download/, /^Microsoft Word/);
+  await expect(page.getByText("Saved Links.docx")).toBeVisible();
+  const xml = zipText(readFileSync(join(saveDir, "Links.docx")), "word/document.xml");
+  expect(xml).toMatch(/<w:bookmarkStart [^>]*w:name="Key_figure"/);
+  expect(xml).toMatch(/<w:hyperlink [^>]*w:anchor="Key_figure"/);
+  expect(xml).toMatch(/<w:hyperlink [^>]*w:anchor="_pd_results"/);
   await quit(l);
 });

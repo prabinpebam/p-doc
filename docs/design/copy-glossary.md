@@ -44,3 +44,5 @@ Words P-Doc uses, and the words it doesn't. Sentence case everywhere; no exclama
 | Sort | Put paragraphs, list items or table rows in order, A to Z or Z to A | order, arrange |
 | footnote / endnote | A numbered note at the foot of the page / at the end of the document; its number is the note reference | citation (for a note), annotation, comment |
 | note reference | The small number in the text that a footnote or endnote belongs to | marker, anchor, callout |
+| bookmark | A named place in the text that links and cross-references can go to | anchor, target, marker |
+| headings and bookmarks | The places in this document a link can go to (the link dialog's list) | internal links, anchors, targets |

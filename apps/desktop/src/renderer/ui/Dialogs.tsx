@@ -6,7 +6,7 @@ import { restoreVersion } from "../versions.ts";
 import { deleteComment } from "../review.ts";
 import { getEditor, renameDoc } from "../session.ts";
 import { sameRef } from "../../shared/api.ts";
-import { eachImage } from "@p-doc/core";
+import { anchorsOf, eachImage } from "@p-doc/core";
 import type { JSONContent } from "@tiptap/core";
 import { app, closeDialog, updateSettings, type Dialog as DialogState } from "../state.ts";
 import type { Theme } from "../../shared/api.ts";
@@ -18,6 +18,7 @@ import { ImageAltDialog, ImageOptionsDialog } from "./ImageDialogs.tsx";
 import { ParagraphDialog } from "./ParagraphDialog.tsx";
 import { SortDialog } from "./SortDialog.tsx";
 import { NotesDialog } from "./NotesDialog.tsx";
+import { BookmarkDialog } from "./BookmarkDialog.tsx";
 
 export function Dialogs() {
   const d = app.use((s) => s.dialog);
@@ -61,6 +62,8 @@ export function Dialogs() {
       return <SortDialog />;
     case "notes":
       return <NotesDialog />;
+    case "bookmark":
+      return <BookmarkDialog />;
   }
 }
 
@@ -182,10 +185,13 @@ function LinkDialog() {
   const [text, setText] = useState(initial.text);
   const [href, setHref] = useState(initial.href);
   const [error, setError] = useState<string | null>(null);
+  const anchors = useMemo(() => (e ? anchorsOf(e.state.doc) : []), [e]);
+  const headings = anchors.filter((a) => a.kind === "heading" && a.label);
+  const marks = anchors.filter((a) => a.kind === "bookmark");
   const apply = () => {
     if (!e) return;
     const url = normaliseUrl(href);
-    if (!url) return setError("Enter a web address, an email address or a #heading.");
+    if (!url) return setError("Enter a web address or an email address, or choose a heading or bookmark.");
     const label = text.trim() || url;
     const { from, to, empty } = e.state.selection;
     const original = e.state.doc.textBetween(from, to, " ");
@@ -243,6 +249,42 @@ function LinkDialog() {
           }}
         />
       </label>
+      {headings.length || marks.length ? (
+        <label className="form-row">
+          <span>Headings and bookmarks</span>
+          <select
+            className="field"
+            value={anchors.some((a) => `#${a.id}` === href) ? href : ""}
+            onChange={(ev) => {
+              const a = anchors.find((x) => `#${x.id}` === ev.target.value);
+              if (!a) return;
+              setHref(ev.target.value);
+              setError(null);
+              if (!text.trim()) setText(a.label);
+            }}
+          >
+            <option value="">Choose…</option>
+            {headings.length ? (
+              <optgroup label="Headings">
+                {headings.map((a) => (
+                  <option key={a.id} value={`#${a.id}`}>
+                    {a.label}
+                  </option>
+                ))}
+              </optgroup>
+            ) : null}
+            {marks.length ? (
+              <optgroup label="Bookmarks">
+                {marks.map((a) => (
+                  <option key={a.id} value={`#${a.id}`}>
+                    {a.label}
+                  </option>
+                ))}
+              </optgroup>
+            ) : null}
+          </select>
+        </label>
+      ) : null}
       {error ? (
         <p id="link-error" className="form-error" role="alert">
           {error}

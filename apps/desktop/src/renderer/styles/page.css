@@ -792,3 +792,14 @@
 .print-foot {
   flex: none;
 }
+/* Bookmarks (U52) take no room; with non-printing characters shown, a flag marks the place. */
+.pd-content .pd-bookmark {
+  display: inline;
+}
+
+.pd-show-marks .pd-content .pd-bookmark::before {
+  content: "⚑";
+  color: var(--color-page-muted);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+}

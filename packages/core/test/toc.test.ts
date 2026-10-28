@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { EditorState } from "@tiptap/pm/state";
-import { schema, syncHeadingsAndToc, tocEntriesOf } from "../src/index.ts";
+import { anchorsOf, bookmarkName, schema, syncHeadingsAndToc, tocEntriesOf } from "../src/index.ts";
 
 const make = () =>
   EditorState.create({
@@ -51,5 +51,31 @@ describe("toc", () => {
     state = state.apply(syncHeadingsAndToc(state)!);
     const ids = tocEntriesOf(state.doc).map((e) => e.id);
     expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("gives a pasted bookmark a new id and lists headings and bookmarks in document order (10.2)", () => {
+    let state = EditorState.create({
+      schema: schema(),
+      doc: schema().nodeFromJSON({
+        type: "doc",
+        content: [
+          { type: "heading", attrs: { level: 1, id: "h-a" }, content: [{ type: "text", text: "One" }] },
+          { type: "paragraph", content: [{ type: "bookmark", attrs: { id: "bm-1", name: "Here" } }, { type: "text", text: "text" }] },
+          { type: "paragraph", content: [{ type: "bookmark", attrs: { id: "bm-1", name: "Here" } }, { type: "text", text: "copy" }] },
+        ],
+      }),
+    });
+    state = state.apply(syncHeadingsAndToc(state)!);
+    const anchors = anchorsOf(state.doc);
+    expect(anchors.map((a) => [a.kind, a.label])).toEqual([["heading", "One"], ["bookmark", "Here"], ["bookmark", "Here"]]);
+    expect(anchors[1]!.id).toBe("bm-1");
+    expect(anchors[2]!.id).toMatch(/^bm-[0-9a-f]{8}$/);
+    expect(syncHeadingsAndToc(state)).toBeNull();
+  });
+
+  it("names a bookmark from the next words", () => {
+    expect(bookmarkName("The key figure is here.")).toBe("The key figure is");
+    expect(bookmarkName("", "ends the paragraph.")).toBe("ends the paragraph");
+    expect(bookmarkName("")).toBe("Bookmark");
   });
 });

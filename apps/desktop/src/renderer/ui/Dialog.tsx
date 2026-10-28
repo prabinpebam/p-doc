@@ -29,7 +29,10 @@ export function Dialog({ title, onClose, children, actions, wide, className, onS
       if (d.open) d.close();
       // Never back to the menu bar a command was picked from: the page takes the keyboard again.
       const inMenu = (el: Element | null) => !!el?.closest('[role="menubar"], [role="menu"]');
-      if (back?.isConnected && back !== document.body && !inMenu(back)) back.focus();
+      const view = getEditor()?.view;
+      // The page through its editor, which puts the caret back where it was (a plain focus puts it at the start).
+      if (view && back && view.dom.contains(back)) view.focus();
+      else if (back?.isConnected && back !== document.body && !inMenu(back)) back.focus();
       else {
         const a = document.activeElement;
         if (!a || a === document.body || d.contains(a) || inMenu(a)) getEditor()?.view.focus();

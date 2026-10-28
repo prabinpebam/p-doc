@@ -6,6 +6,7 @@ import { Extension } from "@tiptap/core";
 import { Plugin, PluginKey, type EditorState, type Transaction } from "@tiptap/pm/state";
 import type { Node as PMNode } from "@tiptap/pm/model";
 import type { TocEntry } from "./schema.ts";
+import { newBookmarkId } from "./refs.ts";
 
 export const TOC_LEVELS = 3;
 
@@ -29,22 +30,26 @@ export function tocEntriesOf(doc: PMNode, maxLevel = TOC_LEVELS): TocEntry[] {
 
 const same = (a: TocEntry[], b: TocEntry[]) => a.length === b.length && a.every((e, i) => e.id === b[i]!.id && e.level === b[i]!.level && e.text === b[i]!.text);
 
-/** A transaction that gives headings unique ids and refreshes every TOC, or null when nothing changes. */
+/**
+ * A transaction that gives headings and bookmarks unique ids (a pasted bookmark gets a new one) and refreshes
+ * every TOC, or null when nothing changes.
+ */
 export function syncHeadingsAndToc(state: EditorState): Transaction | null {
   let tr: Transaction | null = null;
   const seen = new Set<string>();
   state.doc.descendants((node, pos) => {
-    if (node.type.name === "heading") {
+    const name = node.type.name;
+    if (name === "heading" || name === "bookmark") {
       const id = node.attrs.id as string | null;
       if (!id || seen.has(id)) {
         tr ??= state.tr;
-        const fresh = shortId();
+        const fresh = name === "heading" ? shortId() : newBookmarkId();
         tr.setNodeMarkup(pos, undefined, { ...node.attrs, id: fresh });
         seen.add(fresh);
       } else seen.add(id);
-      return false;
+      return name === "heading";
     }
-    return true;
+    return node.isBlock;
   });
   const doc = tr ? (tr as Transaction).doc : state.doc;
   const entries = tocEntriesOf(doc);

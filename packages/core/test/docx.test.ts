@@ -109,6 +109,49 @@ const withNotes = (): JSONContent => ({
   ],
 });
 
+const withLinks = (): JSONContent => ({
+  type: "doc",
+  content: [
+    { type: "heading", attrs: { level: 1, id: "h-intro" }, content: [{ type: "text", text: "Intro" }] },
+    { type: "paragraph", content: [
+      { type: "text", text: "to mark", marks: [{ type: "link", attrs: { href: "#bm-1" } }] },
+      { type: "text", text: " and " },
+      { type: "text", text: "to intro", marks: [{ type: "link", attrs: { href: "#h-intro" } }] },
+    ] },
+    { type: "paragraph", content: [{ type: "bookmark", attrs: { id: "bm-1", name: "Key figure" } }, { type: "text", text: "Marked here" }] },
+    { type: "paragraph", content: [{ type: "bookmark", attrs: { id: "bm-2", name: "Key figure" } }, { type: "text", text: "Same name" }] },
+  ],
+});
+
+describe("export-docx bookmarks (10.2)", () => {
+  it("writes bookmarks, hidden bookmarks on headings and links to both", async () => {
+    const xml = await unzip(await toDocx(createDocument({ content: withLinks() })), "word/document.xml");
+    expect(xml).toMatch(/<w:bookmarkStart [^>]*w:name="_pd_h_intro"/);
+    expect(xml).toMatch(/<w:bookmarkStart [^>]*w:name="Key_figure"/);
+    expect(xml, "names are unique in Word").toMatch(/<w:bookmarkStart [^>]*w:name="Key_figure_2"/);
+    expect(xml).toMatch(/<w:hyperlink [^>]*w:anchor="Key_figure"/);
+    expect(xml).toMatch(/<w:hyperlink [^>]*w:anchor="_pd_h_intro"/);
+    expect(xml.match(/<w:bookmarkStart /g)!.length).toBe(xml.match(/<w:bookmarkEnd /g)!.length);
+  });
+
+  it("re-imports bookmarks and links to them, and headings keep the links that go to them", async () => {
+    const { content } = await fromDocx(await toDocx(createDocument({ content: withLinks() })));
+    const marks: JSONContent[] = [];
+    const hrefs: string[] = [];
+    const walk = (n: JSONContent) => {
+      if (n.type === "bookmark") marks.push(n);
+      const l = n.marks?.find((m) => m.type === "link");
+      if (l) hrefs.push(String(l.attrs!.href));
+      n.content?.forEach(walk);
+    };
+    walk(content);
+    expect(marks.map((m) => m.attrs!.name)).toEqual(["Key figure", "Key figure 2"]);
+    const heading = content.content![0]!;
+    expect(heading.type).toBe("heading");
+    expect(hrefs).toEqual([`#${marks[0]!.attrs!.id}`, `#${heading.attrs!.id}`]);
+  });
+});
+
 describe("import-docx", () => {
   it("round-trips footnotes and endnotes as Word's own notes (10.1)", async () => {
     const bytes = await toDocx(createDocument({ content: withNotes() }));

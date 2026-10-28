@@ -207,11 +207,11 @@ A person can write with notes, bookmarks, numbered captions and cross-references
 | # | Done when | Evidence | Result |
 |---|---|---|---|
 | 10.1 | Footnotes number themselves, sit at the foot of their page (continuing on the next page when long; without A10, a long note moves whole), the same on screen and in the PDF; endnotes at the end; convert both ways; .docx exports and imports them (U51, A8) | unit `notes`; e2e `notes`; e2e `pagination` notes fixture | Pass 2026-10-28: unit `notes` (labels, order, sync, convert, formats; placement and continuation in `paginate`), `convert` (HTML links, Markdown `[^1]`, text `[1]`) and `docx` (Word's own footnotes and endnotes out and back); e2e `notes` numbers, renumbers on delete, converts, formats in one Undo step, and a 900-word note goes on at the foot of the next page on screen and in the PDF; e2e `pagination` puts 24 notes on the page of their number on 12 pages and each PDF page prints the same notes, once |
-| 10.2 | Bookmarks, and links to headings and bookmarks, work in the page, the PDF, HTML and .docx (U52) | e2e `notes`; unit `export-docx` | |
+| 10.2 | Bookmarks, and links to headings and bookmarks, work in the page, the PDF, HTML and .docx (U52) | e2e `notes`; unit `export-docx` | Pass 2026-10-28: e2e "10.2 bookmarks and links…" inserts a bookmark named from the next words and renames it in one Undo step, shows its flag only with non-printing characters, lists headings then bookmarks in Ctrl+K, and Ctrl+click goes to both; the PDF has 2 internal links to page 2, the HTML keeps the ids, and Word gets `w:bookmarkStart` plus `w:hyperlink w:anchor` (headings as hidden `_pd_` bookmarks). Unit `export-docx bookmarks (10.2)` covers unique Word names and re-import; `toc` covers fresh ids for pasted bookmarks |
 | 10.3 | Captions number by kind in document order; cross-references show text, number or page and follow moves; a deleted target reads "Reference missing"; a table of figures lists captions with pages (U53) | unit `references`; e2e `references` | |
 | 10.4 | Contents with page numbers and dotted leaders or links, levels 1–6, matching the PDF's pages (U54) | e2e `toc` | |
 | 10.5 | Repagination with 40 notes stays ≤ 16 ms on 50 pages (§7) | `pnpm perf` | Pass 2026-10-28: repagination with 40 footnotes (every fifth one long) p95 10.3 ms, median 7.6 ms (budget 16) on 50 pages; in the baseline as `repaginate50Notes` |
-| 10.6 | Page numbers settle: a 50-page fixture with contents, index fields and page references reaches a stable layout within 2 passes (A19) | unit `paginate` | |
+| 10.6 | Page numbers settle: a 50-page fixture with contents and page references reaches a stable layout within 2 passes (A19) | unit `paginate` | |
 
 ### Stage 11: Sections and page layout
 
@@ -275,7 +275,7 @@ A person can cite sources in a recognised style, index a long document, and inse
 | # | Done when | Evidence | Result |
 |---|---|---|---|
 | 14.1 | Citations and the bibliography format correctly in APA 7, MLA 9 and Chicago author-date for each source type, and change together with the style (U68) | unit `citations` against reference examples; e2e `citations` | |
-| 14.2 | Index entries and subentries give an alphabetical index with the PDF's page numbers (U69) | unit `index`; e2e `references` | |
+| 14.2 | Index entries and subentries give an alphabetical index with the PDF's page numbers (U69); the 10.6 settling check passes again with index fields added to its fixture | unit `index`; unit `paginate`; e2e `references` | |
 | 14.3 | The @ menu filters as you type and inserts each item; date chips, fields and variables stay current and export as text (U70) | e2e `insert-menu`; unit `fields` | |
 
 ### Stage 15: Navigation and windows

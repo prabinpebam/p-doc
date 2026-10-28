@@ -14,6 +14,7 @@ import { TableKit } from "@tiptap/extension-table";
 import { TaskList, TaskItem } from "@tiptap/extension-list";
 import { cleanLayout, layoutCss, lineHeightCss, Tab } from "./paragraph.ts";
 import { Note, NoteRef, Notes, NotesDoc } from "./notes.ts";
+import { Bookmark } from "./refs.ts";
 
 export const TEXTBLOCKS = ["paragraph", "heading"] as const;
 
@@ -224,6 +225,7 @@ export function extensions(options: SchemaOptions = {}): AnyExtension[] {
     NoteRef,
     Note,
     Notes,
+    Bookmark,
     ...(options.extra ?? []),
   ];
 }

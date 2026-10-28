@@ -8,6 +8,7 @@ import { insertImageFiles, replaceImageFile, selectedImage, type ImageHost } fro
 import { jumpToBlock } from "../editor/blocks.ts";
 import { showMarks } from "../editor/marks.ts";
 import { textEnd } from "../editor/notes.ts";
+import { followAnchor } from "../editor/refs.ts";
 import { geometry, pageLayout, setPageSetup, type Layout } from "../editor/pages.ts";
 import { attachEditor, changed, detachEditor, getEditor } from "../session.ts";
 import { app, openDialog, toast } from "../state.ts";
@@ -83,6 +84,12 @@ function DocEditor({ doc }: { doc: PDocFile }) {
               });
               const e = getEditor();
               if (e && index >= 0) jumpToBlock(e, index);
+              return true;
+            }
+            if (event.ctrlKey && href.startsWith("#")) {
+              event.preventDefault();
+              const e = getEditor();
+              if (e && !followAnchor(e, decodeURIComponent(href.slice(1)))) toast("That heading or bookmark is no longer in the document.");
               return true;
             }
             if (event.ctrlKey && /^https:\/\//i.test(href)) {

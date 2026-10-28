@@ -1,4 +1,4 @@
-import { _electron as electron, expect, test as base, type ElectronApplication, type Page } from "@playwright/test";
+import { _electron as electron, expect, test as base, type ElectronApplication, type Locator, type Page } from "@playwright/test";
 import { existsSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -126,5 +126,27 @@ export const test = base.extend<{ cleanup: void }>({
     { auto: true },
   ],
 });
+
+/**
+ * A dialog that changes the document: once applied it closes, the page has focus again, and one Undo returns the
+ * document to how it was (one Redo brings the change back). `read` describes what the dialog changes.
+ */
+export async function dialogStep<T>(page: Page, o: { open: () => Promise<void>; name: string | RegExp; fill: (dialog: Locator) => Promise<void>; read: () => Promise<T>; apply?: string }): Promise<T> {
+  const before = await o.read();
+  await o.open();
+  const dialog = page.getByRole("dialog", { name: o.name });
+  await expect(dialog).toBeVisible();
+  await o.fill(dialog);
+  await dialog.getByRole("button", { name: o.apply ?? "Apply", exact: true }).click();
+  await expect(dialog).toBeHidden();
+  await expect(editor(page)).toBeFocused();
+  await expect.poll(o.read, PROMPTLY).not.toEqual(before);
+  const after = await o.read();
+  await page.keyboard.press("Control+Z");
+  await expect.poll(o.read, PROMPTLY).toEqual(before);
+  await page.keyboard.press("Control+Y");
+  await expect.poll(o.read, PROMPTLY).toEqual(after);
+  return after;
+}
 
 export { expect };

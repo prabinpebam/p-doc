@@ -2,6 +2,7 @@
 import type { JSONContent } from "@tiptap/core";
 import {
   AlignmentType,
+  Bookmark as DocxBookmark,
   BorderStyle,
   DeletedTextRun,
   Document,
@@ -15,6 +16,7 @@ import {
   HeadingLevel,
   ImageRun,
   InsertedTextRun,
+  InternalHyperlink,
   LeaderType,
   LevelFormat,
   LineRuleType,
@@ -42,6 +44,7 @@ import { PAPER, type PDocFile, type StyleDef } from "./format.ts";
 import { fromHTML } from "./convert.ts";
 import { nodeText } from "./outline.ts";
 import { notesListOf } from "./notes.ts";
+import { anchorsOfJSON, wordBookmarkName } from "./refs.ts";
 import { BORDER_SIDES, cleanLayout } from "./paragraph.ts";
 import { cleanCrop, dataImageParts, imageInfo } from "./image.ts";
 
@@ -71,6 +74,8 @@ interface Ctx {
   maxImageWidth: number;
   /** Word's id of each note (footnotes and endnotes count separately). */
   noteIds: Map<string, { kind: "footnote" | "endnote"; num: number }>;
+  /** Word's bookmark name of each heading and bookmark, by id. */
+  anchors: Map<string, string>;
 }
 
 function runs(nodes: JSONContent[] | undefined, ctx: Ctx, extra: { font?: string } = {}): ParagraphChild[] {
@@ -87,6 +92,11 @@ function runs(nodes: JSONContent[] | undefined, ctx: Ctx, extra: { font?: string
     if (n.type === "image") {
       const img = imageRun(n, ctx);
       if (img) out.push(img);
+      continue;
+    }
+    if (n.type === "bookmark") {
+      const name = ctx.anchors.get(String(n.attrs?.id ?? ""));
+      if (name) out.push(new DocxBookmark({ id: name, children: [] }));
       continue;
     }
     if (n.type === "noteRef") {
@@ -120,7 +130,10 @@ function runs(nodes: JSONContent[] | undefined, ctx: Ctx, extra: { font?: string
     else if (del) run = new DeletedTextRun({ ...opts, id: ctx.revision++, author: String(del.attrs?.author || "P-Doc"), date: String(del.attrs?.time || new Date().toISOString()) });
     else run = new TextRun(opts);
     const link = marks.find((m) => m.type === "link");
-    if (link && /^(https?:|mailto:)/i.test(String(link.attrs?.href ?? ""))) out.push(new ExternalHyperlink({ link: String(link.attrs!.href), children: [run] }));
+    const href = String(link?.attrs?.href ?? "");
+    const anchor = href.startsWith("#") ? ctx.anchors.get(href.slice(1)) : undefined;
+    if (anchor) out.push(new InternalHyperlink({ anchor, children: [run] }));
+    else if (link && /^(https?:|mailto:)/i.test(href)) out.push(new ExternalHyperlink({ link: href, children: [run] }));
     else out.push(run);
   }
   return out;
@@ -230,9 +243,12 @@ function blocks(nodes: JSONContent[] | undefined, ctx: Ctx, list?: { ref: string
         list = list && { ...list, ref: list.ref };
         break;
       }
-      case "heading":
-        out.push(new Paragraph({ ...paraOptions(n), heading: HEADING[Number(n.attrs?.level ?? 1) - 1], children: runs(n.content, ctx) }));
+      case "heading": {
+        const name = ctx.anchors.get(String(n.attrs?.id ?? ""));
+        const children = runs(n.content, ctx);
+        out.push(new Paragraph({ ...paraOptions(n), heading: HEADING[Number(n.attrs?.level ?? 1) - 1], children: name ? [new DocxBookmark({ id: name, children })] : children }));
         break;
+      }
       case "blockquote":
         for (const c of blocks(n.content, ctx)) {
           out.push(c);
@@ -324,7 +340,9 @@ export async function toDocx(doc: PDocFile): Promise<Uint8Array> {
   const p = doc.page;
   const paper = PAPER[p.size];
   const landscape = p.orientation === "landscape";
-  const ctx: Ctx = { doc, listInstance: 0, revision: 1, maxImageWidth: Math.round((((landscape ? paper.height : paper.width) - p.margins.left - p.margins.right) * 96)), noteIds: new Map() };
+  const ctx: Ctx = { doc, listInstance: 0, revision: 1, maxImageWidth: Math.round((((landscape ? paper.height : paper.width) - p.margins.left - p.margins.right) * 96)), noteIds: new Map(), anchors: new Map() };
+  const taken = new Set<string>();
+  for (const a of anchorsOfJSON(doc.content)) if (!ctx.anchors.has(a.id)) ctx.anchors.set(a.id, wordBookmarkName(a, taken));
   const footnotes: Record<string, { children: Paragraph[] }> = {};
   const endnotes: Record<string, { children: Paragraph[] }> = {};
   const notes = notesListOf(doc.content);
@@ -399,7 +417,7 @@ export async function fromDocx(data: Uint8Array): Promise<DocxImport> {
   );
   const warnings = result.messages.filter((m) => m.type === "warning").map((m) => m.message);
   // Images are blocks in P-Doc; Word wraps each in a paragraph, which would leave an empty one behind.
-  const html = wordNotes(result.value.replace(/<p>((?:<img [^>]*\/?>)+)<\/p>/g, "$1"));
+  const html = wordBookmarks(wordNotes(result.value.replace(/<p>((?:<img [^>]*\/?>)+)<\/p>/g, "$1")));
   return { content: orderNotes(fromHTML(html)), warnings };
 }
 
@@ -424,6 +442,20 @@ export function wordNotes(html: string): string {
   }
   body = body.replace(/<sup><a href="#(footnote|endnote)-(\d+)" id="(?:footnote|endnote)-ref-\d+">[^<]*<\/a><\/sup>/g, (_, kind: string, n: string) => `<sup data-type="note-ref" data-id="w${kind[0]}${n}" data-kind="${kind}"></sup>`);
   return notes ? `${body}<section data-type="notes">${notes}</section>` : body;
+}
+
+/**
+ * Word's bookmarks (mammoth writes each as an empty anchor): one at the start of a heading names the heading,
+ * Word's own hidden ones ("_Toc…", "_GoBack") are dropped unless a link goes to them, and the rest become bookmarks.
+ */
+export function wordBookmarks(html: string): string {
+  const linked = new Set([...html.matchAll(/href="#([^"]+)"/g)].map((m) => m[1]!));
+  html = html.replace(/<h([1-6])>((?:<a id="[^"]+"><\/a>)+)/g, (_, level: string, anchors: string) => {
+    const ids = [...anchors.matchAll(/id="([^"]+)"/g)].map((m) => m[1]!);
+    const id = ids.find((i) => linked.has(i)) ?? ids.find((i) => !i.startsWith("_")) ?? ids[0]!;
+    return `<h${level} id="${id}">`;
+  });
+  return html.replace(/<a id="([^"]+)"><\/a>/g, (_, id: string) => (id.startsWith("_") && !linked.has(id) ? "" : `<span data-type="bookmark" id="${id}" data-name="${id.replace(/_/g, " ").trim()}"></span>`));
 }
 
 /** Notes in the order P-Doc keeps them: footnotes, then endnotes, each in the order of their references. */
