@@ -9,6 +9,7 @@ import { cleanPage, parseDocument, type PDocFile } from "@p-doc/core";
 import { Library } from "./library.ts";
 import { exported, printDocument, savePdf } from "./output.ts";
 import { RecoveryStore, SettingsStore } from "./state.ts";
+import { Versions } from "./versions.ts";
 import { isDocRef, isSpace, type CreateRequest, type DocRef, type PrintRequest, type Recovered, type Settings } from "../shared/api.ts";
 
 // Isolation for tests and portable use: data and library folders from the environment.
@@ -39,6 +40,16 @@ let library: Library;
 let recovered: Recovered[] = [];
 let win: BrowserWindow | null = null;
 let closeAllowed = false;
+const versions = new Versions({
+  commit: (ref) => library.commitDoc(ref),
+  committed: (ref, sha) => {
+    log("version", ref, sha.slice(0, 12));
+    if (win && !win.webContents.isDestroyed()) win.webContents.send("pdoc:versions", ref);
+  },
+  failed: (ref, e) => log("version failed", ref, e),
+  pauseMs: Number(process.env.PDOC_VERSION_PAUSE_MS) || undefined,
+  maxMs: Number(process.env.PDOC_VERSION_MAX_MS) || undefined,
+});
 
 const identity = () => {
   const id = settings.get().identity;
@@ -164,6 +175,7 @@ function handlers(): void {
   h("library:list", () => library.list());
   h("library:create", async (req: CreateRequest) => {
     await library.ensure();
+    void versions.commitAll();
     const r = req ?? {};
     const page = r.page ?? settings.get().pageDefault;
     return library.create({
@@ -174,14 +186,28 @@ function handlers(): void {
       page: page ? cleanPage(page) : undefined,
     });
   });
-  h("library:open", (ref: DocRef) => library.read(asRef(ref)));
-  h("library:save", (ref: DocRef, doc: unknown) => library.write(asRef(ref), asDoc(doc)));
+  h("library:open", (ref: DocRef) => {
+    const r = asRef(ref);
+    // Switching documents makes a version of the ones left behind (U27).
+    void versions.commitExcept(r);
+    return library.read(r);
+  });
+  h("library:save", (ref: DocRef, doc: unknown) => {
+    const r = asRef(ref);
+    const s = library.write(r, asDoc(doc));
+    versions.changed(r);
+    return s;
+  });
   h("library:rename", (ref: DocRef, title: string) => library.rename(asRef(ref), String(title ?? "").slice(0, 300)));
   h("library:copy", (ref: DocRef) => library.copy(asRef(ref)));
-  h("library:remove", (ref: DocRef) => library.remove(asRef(ref)));
+  h("library:remove", (ref: DocRef) => {
+    versions.drop(asRef(ref));
+    return library.remove(asRef(ref));
+  });
   h("library:restore", (ref: DocRef) => library.restore(asRef(ref)));
   h("library:move", (ref: DocRef, to: unknown) => {
     if (!isSpace(to)) throw new Error("Unknown space");
+    versions.drop(asRef(ref));
     return library.move(asRef(ref), to);
   });
   h("library:showInFolder", (ref: DocRef) => shell.showItemInFolder(library.file(asRef(ref))));
@@ -193,6 +219,19 @@ function handlers(): void {
     recovered = [];
     return r;
   });
+  const sha = (s: unknown) => {
+    if (typeof s !== "string" || !/^[0-9a-f]{40}$/.test(s)) throw new Error("Not a version");
+    return s;
+  };
+  h("versions:list", (ref: DocRef) => library.history(asRef(ref)));
+  h("versions:at", (ref: DocRef, s: string) => library.versionAt(asRef(ref), sha(s)));
+  h("versions:name", (ref: DocRef, s: string, name: unknown) => library.nameVersion(asRef(ref), sha(s), typeof name === "string" ? name : ""));
+  h("versions:restore", (ref: DocRef, s: string) => {
+    versions.drop(asRef(ref));
+    return library.restoreVersion(asRef(ref), sha(s));
+  });
+  h("versions:copy", (ref: DocRef, s: string) => library.copyVersion(asRef(ref), sha(s)));
+  h("versions:commitNow", (ref: DocRef) => versions.commitIfWaiting(asRef(ref)));
   h("app:toggleFullScreen", () => {
     const on = !win?.isFullScreen();
     win?.setFullScreen(on);
@@ -230,7 +269,10 @@ function handlers(): void {
   on("recovery:clear", (ref: DocRef) => recovery.clear(asRef(ref)));
   on("app:closeReady", () => {
     closeAllowed = true;
-    void library.settle().finally(() => win?.close());
+    void versions
+      .commitAll()
+      .then(() => library.settle())
+      .finally(() => win?.close());
   });
   on("app:setTitleBar", (c: { color: string; symbolColor: string }) => {
     if (c && /^#[0-9a-f]{6}$/i.test(c.color) && /^#[0-9a-f]{6}$/i.test(c.symbolColor)) win?.setTitleBarOverlay({ color: c.color, symbolColor: c.symbolColor, height: 44 });
@@ -264,4 +306,6 @@ void app.whenReady().then(async () => {
   if (library.ready) recovered = applyRecovery();
   handlers();
   win = createWindow();
+  // Text saved but never made a version (a crash, a forced quit) gets one on the usual cadence.
+  if (library.ready) void library.unversioned().then((refs) => refs.forEach((r) => versions.changed(r)), (e) => log("unversioned failed", String(e)));
 });

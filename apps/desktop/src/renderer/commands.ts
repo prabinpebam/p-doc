@@ -10,6 +10,7 @@ import { copyDoc, deleteDoc } from "./ops.ts";
 import { downloadPdf, printDoc } from "./output.ts";
 import { flush, getEditor, newDoc, syncSelection, updateDoc } from "./session.ts";
 import { app, openDialog, showPanel, shownPanel, toast, togglePanel, updateSettings } from "./state.ts";
+import { nameCurrent, toggleHistory } from "./versions.ts";
 
 export interface Command {
   id: string;
@@ -151,6 +152,15 @@ const commands: Command[] = [
     run: () => void flush().then(() => app.get().save === "saved" && toast("Saved")),
   },
   { id: "file.settings", label: "Settings", keywords: "preferences options", global: true, run: () => openDialog({ kind: "settings" }) },
+  { id: "file.history", label: "See version history", keys: ["Ctrl+Alt+Shift+H"], keywords: "versions revisions restore compare", global: true, run: toggleHistory, enabled: hasDoc },
+  {
+    id: "file.nameVersion",
+    label: "Name current version",
+    keywords: "version tag milestone",
+    global: true,
+    run: () => void nameCurrent(),
+    enabled: () => hasDoc() && !!app.get().info?.git,
+  },
   { id: "file.pageSetup", label: "Page setup…", keywords: "paper margins orientation landscape portrait page colour size", global: true, run: () => openDialog({ kind: "pageSetup" }), enabled: hasDoc },
   { id: "file.pdf", label: "PDF document (.pdf)", keywords: "download export pdf save as", global: true, run: () => void downloadPdf(), enabled: hasEditor },
   { id: "file.print", label: "Print", keys: ["Ctrl+P"], global: true, run: () => void printDoc(), enabled: hasEditor },
@@ -182,6 +192,7 @@ const commands: Command[] = [
     checked: () => shownPanel(app.get()) === "library",
     run: () => togglePanel("library"),
   },
+  { id: "view.history", label: "Version history", keywords: "versions revisions", global: true, checked: () => app.get().history, run: toggleHistory, enabled: hasDoc },
   { id: "view.zoomIn", label: "Zoom in", keys: ["Ctrl+=", "Ctrl+Shift+="], global: true, run: zoomBy(1) },
   { id: "view.zoomOut", label: "Zoom out", keys: ["Ctrl+-"], global: true, run: zoomBy(-1) },
   { id: "view.zoomReset", label: "Actual size", keys: ["Ctrl+0"], global: true, run: () => void updateSettings({ zoom: 100 }) },
@@ -389,7 +400,23 @@ export const MENUS: Menu[] = [
     id: "file",
     label: "File",
     key: "F",
-    items: ["file.new", "file.library", "-", "file.copy", "file.rename", "file.move", "file.delete", "-", { label: "Download", items: ["file.pdf"] }, "file.pageSetup", "file.print", "-", "file.settings"],
+    items: [
+      "file.new",
+      "file.library",
+      "-",
+      "file.copy",
+      "file.rename",
+      "file.move",
+      "file.delete",
+      "-",
+      { label: "Version history", items: ["file.history", "file.nameVersion"] },
+      "-",
+      { label: "Download", items: ["file.pdf"] },
+      "file.pageSetup",
+      "file.print",
+      "-",
+      "file.settings",
+    ],
   },
   { id: "edit", label: "Edit", key: "E", items: ["edit.undo", "edit.redo", "-", "edit.cut", "edit.copy", "edit.paste", "edit.pasteText", "-", "edit.selectAll", "-", "edit.find", "edit.replace"] },
   {
@@ -399,6 +426,7 @@ export const MENUS: Menu[] = [
     items: [
       "view.outline",
       "view.library",
+      "view.history",
       "-",
       "view.pages",
       "view.pageless",

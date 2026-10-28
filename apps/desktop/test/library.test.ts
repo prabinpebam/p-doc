@@ -150,3 +150,112 @@ describe("library", () => {
     expect(await plain.commit("private", [summary.path], "x")).toBeNull();
   });
 });
+
+const para = (text: string) => ({ type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text }] }] });
+const textOf = (d: { content: unknown }) => JSON.stringify(d.content).match(/"text":"([^"]*)"/)?.[1];
+
+describe("versions", () => {
+  async function drafted() {
+    const { doc, summary } = await lib.create({ title: "Essay", content: para("one") });
+    lib.write(summary, { ...doc, content: para("two") });
+    const second = await lib.commitDoc(summary);
+    lib.write(summary, { ...doc, content: para("three") });
+    const third = await lib.commitDoc(summary);
+    return { doc, ref: summary, second: second!, third: third! };
+  }
+
+  it("makes a version of the saved state, and none when nothing changed", async () => {
+    const { ref, second, third } = await drafted();
+    expect(second).toMatch(/^[0-9a-f]{40}$/);
+    expect(third).not.toBe(second);
+    expect(await lib.commitDoc(ref)).toBeNull();
+    expect((await log(lib.dir("private")))[0]).toMatch(/^Edit Essay\|Test Writer/);
+  });
+
+  it("lists a document's versions newest first, with author and time, and nothing else's", async () => {
+    const { ref, second, third } = await drafted();
+    await lib.create({ title: "Other" });
+    const h = await lib.history(ref);
+    expect(h.map((v) => v.message)).toEqual(["Edit Essay", "Edit Essay", "Create Essay"]);
+    expect(h[0]).toMatchObject({ sha: third, author: "Test Writer", name: null, path: ref.path });
+    expect(h[1]!.sha).toBe(second);
+    expect(Number.isNaN(Date.parse(h[0]!.time))).toBe(false);
+  });
+
+  it("reads the document as it was in a version, and refuses other commits", async () => {
+    const { ref, second } = await drafted();
+    expect(textOf(await lib.versionAt(ref, second))).toBe("two");
+    const other = await lib.create({ title: "Other" });
+    const otherSha = (await lib.history(other.summary))[0]!.sha;
+    await expect(lib.versionAt(ref, otherSha)).rejects.toThrow(LibraryError);
+    await expect(lib.versionAt(ref, "HEAD")).rejects.toThrow(LibraryError);
+    await expect(lib.versionAt(ref, "--output=x" as never)).rejects.toThrow(LibraryError);
+  });
+
+  it("names a version with a tag, renames it, and removes the name", async () => {
+    const { ref, second } = await drafted();
+    await lib.nameVersion(ref, second, "  First   draft ");
+    expect((await lib.history(ref)).find((v) => v.sha === second)!.name).toBe("First draft");
+    await lib.nameVersion(ref, second, "Sent to editor");
+    expect((await lib.history(ref)).filter((v) => v.name).map((v) => v.name)).toEqual(["Sent to editor"]);
+    expect((await git(lib.dir("private"), ["tag"])).stdout.trim().split("\n")).toHaveLength(1);
+    await lib.nameVersion(ref, second, "");
+    expect((await lib.history(ref)).some((v) => v.name)).toBe(false);
+  });
+
+  it("restores an old version as a new version and keeps the ones in between", async () => {
+    const { doc, ref, second } = await drafted();
+    lib.write(ref, { ...doc, content: para("four, not yet a version") });
+    const back = await lib.restoreVersion(ref, second);
+    expect(textOf(back.doc)).toBe("two");
+    expect(back.doc.id).toBe(doc.id);
+    expect(textOf(lib.read(ref).doc)).toBe("two");
+    const h = await lib.history(ref);
+    expect(h[0]!.message).toMatch(/^Restore \d{4}-\d\d-\d\d \d\d:\d\d$/);
+    expect(h).toHaveLength(5);
+    expect(textOf(await lib.versionAt(ref, h[1]!.sha))).toBe("four, not yet a version");
+  });
+
+  it("makes a new document from an old version", async () => {
+    const { ref, second } = await drafted();
+    const copy = await lib.copyVersion(ref, second);
+    expect(copy.title).toBe("Copy of Essay");
+    expect(copy.path).not.toBe(ref.path);
+    const opened = lib.read(copy);
+    expect(textOf(opened.doc)).toBe("two");
+    expect(opened.doc.id).not.toBe(lib.read(ref).doc.id);
+    expect(textOf(lib.read(ref).doc)).toBe("three");
+    expect((await lib.history(copy))[0]!.message).toMatch(/^Copy Essay from /);
+  });
+
+  it("follows a document through the Bin and back", async () => {
+    const { ref, second } = await drafted();
+    const binned = await lib.remove(ref);
+    const back = await lib.restore(binned);
+    const h = await lib.history(back);
+    expect(h.map((v) => v.message).slice(0, 2)).toEqual(["Restore Essay from the Bin", "Delete Essay"]);
+    expect(textOf(await lib.versionAt(back, second))).toBe("two");
+  });
+
+  it("finds documents saved but never made a version, and nothing else", async () => {
+    const { doc, ref } = await drafted();
+    expect(await lib.unversioned()).toEqual([]);
+    lib.write(ref, { ...doc, content: para("left by a crash") });
+    writeFileSync(join(lib.dir("public"), "docs", "notes.txt"), "not a document");
+    const other = await lib.create({ title: "Other", space: "public" });
+    lib.write(other.summary, { ...other.doc, content: para("also left") });
+    const mine = { space: ref.space, path: ref.path };
+    const theirs = { space: "public", path: other.summary.path };
+    expect(await lib.unversioned()).toEqual([mine, theirs]);
+    await lib.commitDoc(ref);
+    expect(await lib.unversioned()).toEqual([theirs]);
+  });
+
+  it("has no versions without Git", async () => {
+    const plain = await Library.open(join(home, `plain-v-${n}`), { identity, git: null });
+    await plain.ensure();
+    const { summary } = await plain.create({ title: "Offline" });
+    expect(await plain.history(summary)).toEqual([]);
+    expect(await plain.commitDoc(summary)).toBeNull();
+  });
+});

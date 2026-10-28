@@ -92,6 +92,16 @@
       "min": 4.5
     },
     {
+      "fg": "color.insertion",
+      "bg": "color.diff-added",
+      "min": 4.5
+    },
+    {
+      "fg": "color.deletion",
+      "bg": "color.diff-removed",
+      "min": 4.5
+    },
+    {
       "fg": "color.page-text",
       "bg": "color.comment",
       "min": 4.5

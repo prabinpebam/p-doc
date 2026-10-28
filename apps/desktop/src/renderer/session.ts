@@ -151,6 +151,14 @@ export async function newDoc(req: CreateRequest = {}): Promise<void> {
   await refreshList();
 }
 
+/** Shows the open document afresh as it now is on disk (after restoring a version). */
+export function reloadDoc(o: Opened): void {
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = null;
+  show(o);
+  patchSummary(o.summary);
+}
+
 /** Renames the open document (or another one); the file name stays, the title changes. */
 export async function renameDoc(ref: DocRef, title: string): Promise<void> {
   const t = title.trim() || "Untitled document";

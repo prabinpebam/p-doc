@@ -170,13 +170,14 @@ Waits name their class from the perceived-performance skill: *instant* (< 100 ms
 
 ### 4.6 Versions (U28–U32)
 
-1. P-Doc commits a document when the writer pauses 60 s after a change, when the window closes or switches document, and at least every 10 minutes while typing. Message: "Edit *title*". *(background)*
-2. **File > Version history** (Ctrl+Alt+Shift+H) or a click on the save state opens the history panel: versions grouped by Today, Yesterday, then dates; each row shows time, author and name if named. Toggle **Only named versions**. *(responsive; skeleton rows)*
-3. Selecting a version shows it read-only with differences from the current text: added text highlighted green, removed text struck through red. A banner: "Viewing the version from *time*." with **Restore this version**, **Make a copy** and **Back to current**. *(in-flow)*
-4. **Restore this version** → confirm "Restore the version from *time*? The current version stays in history." → it becomes current as a new version "Restore *time*" (GD R-006).
-5. **Name this version** (row menu, or File > Version history > Name current version) → an inline field; saved as a Git tag; named versions show the name first.
+1. P-Doc commits a document when the writer pauses 60 s after a change, when the window closes or switches document, and at least every 10 minutes while typing. Message: "Edit *title*". Nothing is committed when the text is unchanged. *(background)*
+2. **File > Version history** (Ctrl+Alt+Shift+H), **View > Version history**, or a click on the save state in the title bar opens the history panel at the right (an overlay at narrow widths). Opening it commits the current text first, so the top row is always "**Current version** · *time*". Versions are grouped by Today, Yesterday, then dates; each row shows time, author and name if named. Toggle **Only named versions**. Focus starts on **Close version history**. *(responsive; skeleton rows)*
+3. Selecting a version shows it read-only over the page with differences **since that version**: text added since is highlighted green, text removed since is struck through red (decision: compare the old version to the current text, as Google Docs does). A banner: "Viewing the version from *time* (*name*)." with "Since then: *n* words added, *m* removed.", a legend, and **Restore this version**, **Make a copy** and **Back to current**. Selecting the top row, or Esc, goes back to the current text; Esc again closes the panel. *(in-flow)*
+4. **Restore this version** (banner or row menu) → confirm "Restore the version from *time*? The current version stays in history." → edits not yet in a version are committed first; the old text becomes current as a new version "Restore *YYYY-MM-DD HH:MM*", keeping the document's id and created date (GD R-006).
+5. **Name this version** (row menu, or File > Version history > Name current version) → an inline field (Enter saves, Esc cancels); saved as an annotated Git tag `pdoc/<file>/<sha>`; named versions show the name first. **Rename this version** and **Remove name** in the row menu.
+6. **Make a copy** (banner or row menu) → a new Private document "Copy of *title*" with that version's text, committed as "Copy *title* from *time*"; a toast offers **Open**.
 
-**Branches:** no versions yet → "No earlier versions yet. Versions are made as you write."; Git missing → banner "Install Git to keep versions."
+**Branches:** no versions yet → "No earlier versions yet. Versions are made as you write."; Only named with none named → "No named versions yet. Name one from its menu."; Git missing → "Install Git to keep versions."; the history can't be read → the error with the panel still usable.
 
 **Agent path:** `pdoc history <doc> --json`; `pdoc export <doc> --version <sha> --to md`.
 
@@ -340,3 +341,23 @@ Engineering notes:
 - Stored page setups go through `cleanPage` (unit `format`), so a hand-edited or older file falls back to defaults field by field.
 - Menus: Esc and the arrow keys work while a submenu is open but focus is still on its parent (opened by a click, or holding only disabled items).
 - `pnpm perf` measures spec §7's waits in the built app with isolated data and fails over budget. Baseline: [perf-baseline.json](perf-baseline.json).
+### Stage 3: Versions (built)
+
+What a person meets, beyond the flows above:
+
+- **Versions as you write.** A document becomes a version 60 s after the last change, when another document is opened or made, when the window closes, and at least every 10 minutes during long typing. A pause with no change makes nothing. Closing the window waits for its versions.
+- **History panel.** File > Version history, View > Version history, Ctrl+Alt+Shift+H, or a click on the save state. The top row is the text now ("Current version · *time*"); older rows are grouped Today, Yesterday, then by date, with the author. Each row's menu: Name (or Rename) this version, Remove name, Restore this version, Make a copy. **Only named versions** filters the list.
+- **Comparing.** Selecting an older row shows that version, read-only, over the page: green for text added since, red strikethrough for text removed since, a word count of both, and a legend. Esc or **Back to current** returns to the text; the editor can't be typed in while a version is shown.
+- **Restore.** Asks first. Unsaved edits become a version, then the old text comes back as a new version "Restore *date time*". Nothing in history is lost, and typing carries on in the restored text.
+- **Copy.** A new document "Copy of *title*" from that version; the toast's **Open** goes to it.
+- **No Git.** The panel says "Install Git to keep versions." and the document still saves.
+
+Engineering notes:
+
+- `main/versions.ts` (`Versions`) schedules commits per document with core's `VersionCadence` (unit `cadence`): a pause timer reset by each save, a maximum wait from the first unsaved change, `commitExcept` on switching, `commitAll` on close and new documents, `drop` on delete, move and restore. Unit `versions` uses fake timers. `PDOC_VERSION_PAUSE_MS` and `PDOC_VERSION_MAX_MS` shorten the cadence for tests.
+- `Library.history` uses `git log --follow`, so a document's history survives Bin and restore; names are annotated tags `refs/tags/pdoc/<file stem>/<sha12>` read with `for-each-ref`. Every sha from the renderer is checked to be 40 hex digits and in that document's history. Unit `library` covers commit-on-change only, history order, names, restore and copy.
+- The diff (`diffContent` in core) marks the old version's text with `pd-insertion`/`pd-deletion` marks tagged `data-id="diff"`, coloured with `color.diff-added` and `color.diff-removed` (contrast checked in `pnpm tokens`). `groupVersions` (unit `group`) makes the Today/Yesterday/date groups.
+- While a version is shown, the live editor stays mounted (hidden) so pagination keeps measuring, and is set read-only without an update event (`setEditable(false, false)`), so showing a version never saves.
+- Opening history commits only when the scheduler has changes waiting (`commitIfWaiting`), and reads the log and the tags in parallel: each Git process costs about 90 ms on Windows. At start, `Library.unversioned` (`git status`) hands documents saved but never committed (a crash) to the scheduler.
+- The start-up focus ("ready for typing") leaves the cursor alone if the person already focused the page.
+- e2e `versions` covers 3.1–3.6, including closing with unsaved text and running without Git.

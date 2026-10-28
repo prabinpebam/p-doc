@@ -335,6 +335,16 @@
   text-decoration: line-through;
 }
 
+/* Comparing a version with the current text (spec §4.6) */
+
+.pd-insertion[data-id="diff"] {
+  background: var(--color-diff-added);
+}
+
+.pd-deletion[data-id="diff"] {
+  background: var(--color-diff-removed);
+}
+
 .pd-comment {
   background: var(--color-comment);
 }

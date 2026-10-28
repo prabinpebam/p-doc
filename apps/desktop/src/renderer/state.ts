@@ -15,7 +15,8 @@ export type Dialog =
   | { kind: "pageSetup" }
   | { kind: "headerFooter" }
   | { kind: "rename"; ref: DocRef; title: string }
-  | { kind: "move"; ref: DocRef; title: string; to: Space };
+  | { kind: "move"; ref: DocRef; title: string; to: Space }
+  | { kind: "restoreVersion"; sha: string; time: string };
 
 export interface Toast {
   id: number;
@@ -46,6 +47,8 @@ export interface AppState {
   narrow: boolean;
   /** The left panel is open over the page in a narrow window. */
   peek: boolean;
+  /** The version history panel (V6) is open on the right. */
+  history: boolean;
   /** Bumped on each editor transaction, for views that follow the content (outline, counts). */
   tick: number;
   e2e: boolean;
@@ -68,6 +71,7 @@ export const app = createStore<AppState>({
   fullscreen: false,
   narrow: false,
   peek: false,
+  history: false,
   tick: 0,
   e2e: false,
 });

@@ -7,7 +7,9 @@ import { jumpToBlock } from "../editor/blocks.ts";
 import { geometry, pageLayout, setPageSetup, type Layout } from "../editor/pages.ts";
 import { attachEditor, changed, detachEditor, getEditor } from "../session.ts";
 import { app, openDialog, toast } from "../state.ts";
+import { history } from "../versions.ts";
 import { FindBar } from "./FindBar.tsx";
+import { VersionView } from "./HistoryPanel.tsx";
 
 /** The first page's header and the last page's footer; the ones between are drawn by sheet breaks. */
 function HfOverlay({ cls, which, page, pages }: { cls: string; which: "header" | "footer"; page: number; pages: number }) {
@@ -89,8 +91,9 @@ function DocEditor({ doc }: { doc: PDocFile }) {
 
   useEffect(() => {
     if (!editor) return;
-    // Focus the page at once: a new document is ready for typing (U1).
-    requestAnimationFrame(() => editor.isDestroyed || editor.commands.focus("start"));
+    // Focus the page at once: a new document is ready for typing (U1). If the person got there
+    // first (clicked or typed in the page), their cursor stays where it is.
+    requestAnimationFrame(() => editor.isDestroyed || editor.isFocused || editor.commands.focus("start"));
     return () => detachEditor(editor);
   }, [editor]);
 
@@ -123,6 +126,7 @@ export function PageArea() {
   const session = app.use((s) => s.session);
   const zoom = app.use((s) => s.settings?.zoom ?? 100);
   const layout = pageLayout.use((s) => s.layout);
+  const viewing = history.use((s) => s.viewing);
   const page = doc?.page ?? null;
   useEffect(() => setPageSetup(page), [page]);
   if (!doc) return <main className="canvas" aria-busy="true" />;
@@ -130,7 +134,9 @@ export function PageArea() {
   const paged = p.mode === "pages";
   const shown = paged ? layout : null;
   return (
-    <main className="canvas" data-region aria-label="Page">
+    <main className={`canvas${viewing ? " viewing" : ""}`} data-region aria-label="Page">
+      {/* While a version is shown, the live page stays laid out underneath, hidden and read-only. */}
+      {viewing ? <VersionView viewing={viewing} zoom={zoom} style={pageStyle({ ...doc, page: { ...p, mode: "pageless" } }, null)} /> : null}
       <FindBar />
       <div
         className="page-scroll"

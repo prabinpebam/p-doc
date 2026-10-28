@@ -11,14 +11,14 @@ What success means for the [spec](spec.md): the project's Definition of Done, ma
 
 | # | Promise | Done when | Evidence | Result |
 |---|---|---|---|---|
-| PD1 | P1 | Typing is on disk within 1 s of a pause, survives a forced quit (recovery), and every committed state is listed and restorable | e2e `autosave`, `recovery`, `versions`; unit `library` | Partial 2026-10-28: `autosave`, `recovery` and unit `library` pass; `versions` is stage 3 |
+| PD1 | P1 | Typing is on disk within 1 s of a pause, survives a forced quit (recovery), and every committed state is listed and restorable | e2e `autosave`, `recovery`, `versions`; unit `library` | Pass 2026-10-28: `autosave`, `recovery`, `versions` and unit `library` pass. Every committed state is listed in the history and restorable; text saved before a forced quit becomes a version on the next start |
 | PD2 | P2 | Every feature works with the network off and no account; documents are readable JSON in plain Git repositories | e2e suites run offline with no GitHub; unit `format` | Partial 2026-10-28: stage 1 runs offline with no account (`offline`); readable JSON (unit `format`) |
 | PD3 | P3 | Outline and table of contents follow heading changes with no manual step; every command is reachable by command search | e2e `outline`, `toc`, `command-search` | Pass 2026-10-28: `outline`, `command-search` and `toc` pass |
 | PD4 | P4 | A multi-page fixture has the same page count on screen and in the exported PDF (A1) | e2e `pagination` | Pass 2026-10-28: the 16-page fixture has the same page count on screen, in the print layout and in the PDF (A1 confirmed) |
 | PD5 | P5 | Accepting all gives the suggested text; rejecting all gives the original, exactly | unit `suggestions`; e2e `review` | |
 | PD6 | P6 | Nothing reaches the public repository without the Move to Public confirmation; new documents are private | e2e `privacy`; unit `library` | |
 | PD7 | The outcome is valuable | A fresh install reaches a first saved document in under a minute, offline or signed in | e2e `first-run` timing; owner try-it | |
-| PD8 | Nothing live breaks | No real GitHub, documents or settings of the owner are touched by tests; budgets in spec §7 hold | test isolation (W7); `pnpm perf` against `perf-baseline.json` | Partial 2026-10-28: every e2e run has its own data, library and empty Git config; unit `library` uses an empty Git config. `pnpm perf` within budget (keystroke p95 1.3 ms, repagination 2.7 ms, save 10 ms, open 100 pages 90 ms, cold start 0.55 s, 50-page PDF 0.3 s; [baseline](perf-baseline.json)); waits of stages 3, 5 and 6 are measured there |
+| PD8 | Nothing live breaks | No real GitHub, documents or settings of the owner are touched by tests; budgets in spec §7 hold | test isolation (W7); `pnpm perf` against `perf-baseline.json` | Partial 2026-10-28: every e2e run has its own data, library and empty Git config; unit `library` uses an empty Git config. `pnpm perf` within budget (keystroke p95 1.3 ms, repagination 2.7 ms, save 10 ms, open 100 pages 90 ms, cold start 0.55 s, 50-page PDF 0.3 s; [baseline](perf-baseline.json)); stage 3: version commit of 50 pages p95 0.44 s (budget 1 s), history of 500 versions p95 0.2 s (budget 0.3 s); waits of stages 5 and 6 are measured there |
 | PD9 | Docs | The spec's "As built" records what was built | Review | |
 
 ## 2. Stages
@@ -75,12 +75,12 @@ A person can see every version of a document, see what changed, name versions an
 
 | # | Done when | Evidence | Result |
 |---|---|---|---|
-| 3.1 | A version (commit) is made after a pause, on close and on switching document (U28) | e2e `versions`; unit `cadence` | |
-| 3.2 | The history lists versions grouped by day with author and time (U28) | e2e `versions`; unit `group` | |
-| 3.3 | Selecting a version shows it read-only with insertions and deletions marked (U29) | e2e `versions`; unit `diff` | |
-| 3.4 | Restore makes the old text current as a new version and keeps the rest (U30, GD R-006) | e2e `versions`; unit `library` | |
-| 3.5 | Naming a version stores a tag; the named filter shows only named versions (U31) | e2e `versions` | |
-| 3.6 | Make a copy of an old version creates a new document (U32) | e2e `versions` | |
+| 3.1 | A version (commit) is made after a pause, on close and on switching document (U28) | e2e `versions`; unit `cadence` | Pass 2026-10-28: e2e `versions` (a version after the pause, none while the text is unchanged, one on close, and one on the next start after a forced quit); unit `cadence`, `versions` (pause, maximum wait, switching, close, drop, only-when-waiting) and `library` (none when unchanged; finds unversioned documents). Found and fixed: typing straight after a start could land at the top of the document (the start-up focus moved a cursor the person had already placed) |
+| 3.2 | The history lists versions grouped by day with author and time (U28) | e2e `versions`; unit `group` | Pass 2026-10-28: e2e `versions` (opened from the save state and Ctrl+Alt+Shift+H; "Current version" on top; Today group; author; focus on Close; without Git "Install Git to keep versions."); unit `group`. History of 500 versions opens in 0.2 s (`pnpm perf`). Found and fixed: the first open ran four Git processes in a row (now the log and tags run together and no commit is made when nothing is waiting) |
+| 3.3 | Selecting a version shows it read-only with insertions and deletions marked (U29) | e2e `versions`; unit `diff` | Pass 2026-10-28: e2e `versions` (read-only, "Since then: 2 words added, 1 removed.", green insertion and red deletion, Esc back to current then closes the panel; at 800 × 600 the banner stays clear of the panel; screenshots reviewed); unit `diff`. Found and fixed: the banner squeezed its text at 1280 px and was covered by the panel at 800 px; showing a version set off a needless save |
+| 3.4 | Restore makes the old text current as a new version and keeps the rest (U30, GD R-006) | e2e `versions`; unit `library` | Pass 2026-10-28: e2e `versions` (confirm dialog, old text current, one more row, "Restore *date time*" commit, earlier versions kept, typing continues); unit `library` (edits not yet a version are kept first; id kept) |
+| 3.5 | Naming a version stores a tag; the named filter shows only named versions (U31) | e2e `versions` | Pass 2026-10-28: e2e `versions` (inline field, "First draft" shown, one `pdoc/*` tag, Only named versions shows just it); unit `library` (rename and remove the name) |
+| 3.6 | Make a copy of an old version creates a new document (U32) | e2e `versions` | Pass 2026-10-28: e2e `versions` ("Copy of Plan" in the library, toast **Open** opens it, original untouched); unit `library` |
 
 **Depends on:** Git on the machine (A2).
 

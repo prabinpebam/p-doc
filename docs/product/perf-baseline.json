@@ -6,54 +6,68 @@
       "wait": "Cold start to editable page",
       "budgetMs": 2000,
       "samples": 5,
-      "medianMs": 526,
-      "p95Ms": 554,
+      "medianMs": 450,
+      "p95Ms": 496,
       "note": "From launch to an editable page, including Playwright's connection"
     },
     "keystroke50": {
       "wait": "Keystroke to glyph, 50-page document",
       "budgetMs": 16,
       "samples": 100,
-      "medianMs": 0.8,
-      "p95Ms": 1.3,
+      "medianMs": 0.7,
+      "p95Ms": 1,
       "note": "Transaction, editor update and browser layout for one character; 47 pages"
     },
     "repaginate50": {
       "wait": "Repagination after an edit",
       "budgetMs": 16,
       "samples": 40,
-      "medianMs": 1.6,
-      "p95Ms": 2.7,
+      "medianMs": 1.5,
+      "p95Ms": 2.2,
       "note": "Measuring every block and redrawing the sheet breaks, 50 pages, alternating new lines and characters"
     },
     "save50": {
       "wait": "Save to disk after the debounce",
       "budgetMs": 300,
       "samples": 10,
-      "medianMs": 7.3,
-      "p95Ms": 10.1,
+      "medianMs": 6.1,
+      "p95Ms": 6.8,
       "note": "Serialising and writing a 50-page document"
     },
     "open100": {
       "wait": "Open a 100-page document from the library",
       "budgetMs": 500,
       "samples": 5,
-      "medianMs": 68,
-      "p95Ms": 89.9,
+      "medianMs": 52.6,
+      "p95Ms": 65.2,
       "note": "Read, parse, draw and lay out all 94 pages"
     },
     "pdf50": {
       "wait": "Export PDF, 50 pages",
       "budgetMs": 3000,
       "samples": 3,
-      "medianMs": 292.4,
-      "p95Ms": 305.6,
+      "medianMs": 260.9,
+      "p95Ms": 261.5,
       "note": "Print layout in a hidden window and the PDF written"
+    },
+    "versionCommit50": {
+      "wait": "Version commit",
+      "budgetMs": 1000,
+      "samples": 10,
+      "medianMs": 413.8,
+      "p95Ms": 444.7,
+      "note": "git add and commit of a changed 50-page document, from the renderer's request to its answer"
+    },
+    "history500": {
+      "wait": "Version history list",
+      "budgetMs": 300,
+      "samples": 5,
+      "medianMs": 75.8,
+      "p95Ms": 197.7,
+      "note": "From a click on the save state to all 500+ rows drawn: Git log, tags, grouping and rendering"
     }
   },
   "pending": [
-    "Version commit (stage 3)",
-    "Version history list, 500 versions (stage 3)",
     "Export .docx, 50 pages (stage 6)",
     "Sync never blocks typing (stage 5)"
   ]

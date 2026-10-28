@@ -3,6 +3,7 @@
  * its p95 is over; the numbers go to test-results/perf/results.json, and to
  * docs/product/perf-baseline.json when there is none yet or PDOC_PERF_UPDATE=1.
  */
+import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { cpus, tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -181,5 +182,75 @@ test("exporting a 50-page PDF", async () => {
       }),
     );
   record("pdf50", "Export PDF, 50 pages", 3000, samples, "Print layout in a hidden window and the PDF written");
+  await quit(l);
+});
+
+type Ref = { space: string; path: string };
+const pdocApi = (page: Page) => page.evaluate(() => (window as unknown as { __pdoc: { app: { get(): { current: Ref } } } }).__pdoc.app.get().current);
+
+test("a version commit of a 50-page document", async () => {
+  const l = await launch();
+  const { page } = l;
+  await load(page, bigDocument(50));
+  await settled(page);
+  await caretMid(page);
+  const ref = await pdocApi(page);
+  const samples = await page.evaluate(async (ref) => {
+    const w = window as unknown as { __pdoc: { getEditor(): { view: any }; perf: Perf }; pdoc: { versions: { commitNow(r: unknown): Promise<unknown> } } };
+    const view = w.__pdoc.getEditor().view;
+    const out: number[] = [];
+    for (let i = 0; i < 10; i++) {
+      view.dispatch(view.state.tr.insertText("v"));
+      await w.__pdoc.perf.flush();
+      const t = performance.now();
+      await w.pdoc.versions.commitNow(ref);
+      out.push(performance.now() - t);
+    }
+    return out;
+  }, ref);
+  record("versionCommit50", "Version commit", 1000, samples, "git add and commit of a changed 50-page document, from the renderer's request to its answer");
+  await quit(l);
+});
+
+test("the version history of a document with 500 versions", async () => {
+  const dirs = tempDirs();
+  const first = await launch({ dirs });
+  await first.page.keyboard.type("Version 0");
+  const ref = await pdocApi(first.page);
+  await quit(first);
+
+  // 500 commits of the document, an hour apart, written straight into the repository.
+  const repo = join(dirs.library, ref.space);
+  const env = { ...process.env, GIT_CONFIG_GLOBAL: dirs.gitConfig, GIT_CONFIG_NOSYSTEM: "1" };
+  const doc = JSON.parse(readFileSync(join(repo, ref.path), "utf8"));
+  const now = Math.floor(Date.now() / 1000);
+  let stream = "";
+  const data = (s: string) => `data ${Buffer.byteLength(s)}\n${s}\n`;
+  for (let i = 1; i <= 500; i++) {
+    const body = `${JSON.stringify({ ...doc, content: { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: `Version ${i}` }] }] } }, null, 2)}\n`;
+    const when = `${now - (500 - i) * 3600} +0000`;
+    stream += `commit refs/heads/main\nauthor Perf <perf@example.invalid> ${when}\ncommitter Perf <perf@example.invalid> ${when}\n${data(`Edit Untitled document ${i}`)}${i === 1 ? "from refs/heads/main^0\n" : ""}M 100644 inline ${ref.path}\n${data(body)}`;
+  }
+  execFileSync("git", ["-C", repo, "fast-import", "--quiet"], { input: stream, env });
+  execFileSync("git", ["-C", repo, "reset", "--hard", "--quiet"], { env });
+
+  const l = await launch({ dirs });
+  const { page } = l;
+  const samples: number[] = [];
+  for (let i = 0; i < 5; i++) {
+    samples.push(
+      await page.evaluate(async () => {
+        const t = performance.now();
+        (document.querySelector(".save-button") as HTMLButtonElement).click();
+        while (document.querySelectorAll("[data-testid=version-row]").length < 500) await new Promise((r) => requestAnimationFrame(r));
+        const ms = performance.now() - t;
+        (document.querySelector(".save-button") as HTMLButtonElement).click();
+        while (document.querySelector("#history-panel")) await new Promise((r) => requestAnimationFrame(r));
+        return ms;
+      }),
+    );
+  }
+  expect(await page.getByTestId("version-row").count()).toBe(0);
+  record("history500", "Version history list", 300, samples, "From a click on the save state to all 500+ rows drawn: Git log, tags, grouping and rendering");
   await quit(l);
 });

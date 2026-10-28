@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { DocumentText20Regular, Globe16Regular, LockClosed16Regular } from "@fluentui/react-icons";
 import { getEditor, renameDoc, focusEditor } from "../session.ts";
 import { app } from "../state.ts";
+import { toggleHistory } from "../versions.ts";
 
 const SAVE_TEXT = { saved: "Saved to this computer", saving: "Saving…", error: "Couldn't save. Retrying…" } as const;
 
@@ -55,9 +56,11 @@ export function TitleBar() {
             {current.space === "public" ? <Globe16Regular aria-hidden /> : <LockClosed16Regular aria-hidden />}
             {current.space === "public" ? "Public" : "Private"}
           </span>
-          <span className={`save-state ${save}`} role="status" aria-live="polite" data-testid="save-state">
-            {SAVE_TEXT[save]}
-          </span>
+          <button type="button" className="save-button" title="See version history (Ctrl+Alt+Shift+H)" aria-label="See version history" aria-describedby="save-state" onClick={toggleHistory}>
+            <span id="save-state" className={`save-state ${save}`} role="status" aria-live="polite" data-testid="save-state">
+              {SAVE_TEXT[save]}
+            </span>
+          </button>
         </>
       ) : (
         <span className="title-text">P-Doc</span>

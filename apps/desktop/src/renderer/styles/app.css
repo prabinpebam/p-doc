@@ -329,6 +329,23 @@ kbd {
   color: var(--color-negative);
 }
 
+.save-button {
+  display: inline-flex;
+  align-items: center;
+  height: var(--size-control-dense);
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .save-button:hover {
+    background: var(--color-hover);
+  }
+}
+
 .titlebar-fill {
   flex: 1;
 }
@@ -845,6 +862,113 @@ kbd {
 .page-scroll {
   flex: 1;
   overflow: auto;
+}
+
+/* Version history (V6): the right panel, and a version shown over the page */
+
+.right-panel {
+  display: flex;
+  flex-direction: column;
+  width: var(--size-panel-wide);
+  flex: none;
+  min-height: 0;
+  border-left: var(--border-hairline) solid var(--color-rule);
+  background: var(--color-bg);
+}
+
+.workspace.narrow .right-panel {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: 0;
+  z-index: var(--layer-overlay);
+  box-shadow: var(--shadow-popup);
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-2) var(--space-1) var(--space-3);
+}
+
+.panel-title {
+  flex: 1;
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+}
+
+.panel-filter {
+  padding: 0 var(--space-3);
+  font-size: var(--text-sm);
+}
+
+.panel-note {
+  padding: var(--space-2) var(--space-3);
+}
+
+.version-name {
+  font-weight: var(--weight-semibold);
+}
+
+.version-name-field {
+  width: 100%;
+}
+
+.skeleton-row {
+  height: var(--size-control);
+  margin-bottom: var(--space-1);
+  border-radius: var(--radius-sm);
+  background: var(--color-hover);
+  opacity: var(--opacity-disabled);
+}
+
+.canvas.viewing > .page-scroll {
+  visibility: hidden;
+}
+
+.version-view {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-canvas);
+}
+
+/* Narrow: the panel lies over the page, so the version shown stops at its edge. */
+.workspace.narrow:has(> .right-panel) .version-view {
+  inset-inline-end: var(--size-panel-wide);
+}
+
+.version-banner {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  border-bottom: var(--border-hairline) solid var(--color-rule);
+  background: var(--color-bg-raised);
+}
+
+.version-banner-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  flex: 1 1 var(--size-panel);
+  min-width: 0;
+}
+
+.version-banner-text ins,
+.version-banner-text del {
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+}
+
+.version-banner-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
 }
 
 /* Find bar (U10) */

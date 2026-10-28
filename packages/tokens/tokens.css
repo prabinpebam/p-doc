@@ -17,8 +17,10 @@
   --p-blue-500: #0b57d0;
   --p-blue-600: #0842a0;
   --p-blue-800: #1f3760;
+  --p-red-100: #fde4e1;
   --p-red-400: #ff8a80;
   --p-red-600: #b3261e;
+  --p-green-100: #dcf5e3;
   --p-green-400: #7bd88f;
   --p-green-700: #146c2e;
   --p-yellow-100: #fef3c7;
@@ -104,6 +106,8 @@
   --color-page-muted: var(--p-ink-500);
   --color-insertion: var(--p-green-700);
   --color-deletion: var(--p-red-600);
+  --color-diff-added: var(--p-green-100);
+  --color-diff-removed: var(--p-red-100);
   --color-comment: var(--p-yellow-100);
   --color-comment-active: var(--p-yellow-300);
   --color-match: var(--p-yellow-300);

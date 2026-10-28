@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { COMMANDS, MENU_PATH, MENUS, labelOf, shownChord } from "../commands.ts";
 import { moveDoc } from "../ops.ts";
+import { restoreVersion } from "../versions.ts";
 import { getEditor, renameDoc } from "../session.ts";
 import { app, closeDialog, updateSettings, type Dialog as DialogState } from "../state.ts";
 import type { Theme } from "../../shared/api.ts";
@@ -29,6 +30,8 @@ export function Dialogs() {
       return <Rename d={d} />;
     case "move":
       return <Move d={d} />;
+    case "restoreVersion":
+      return <RestoreVersion d={d} />;
     case "pageSetup":
       return <PageSetupDialog />;
     case "headerFooter":
@@ -480,6 +483,26 @@ function Move({ d }: { d: Extract<DialogState, { kind: "move" }> }) {
       }
     >
       <p>{toPublic ? "Anyone can read it and its history on GitHub from the next sync." : "Copies already synced stay in the public repository's history."}</p>
+    </Dialog>
+  );
+}
+
+function RestoreVersion({ d }: { d: Extract<DialogState, { kind: "restoreVersion" }> }) {
+  return (
+    <Dialog
+      title={`Restore the version from ${d.time}?`}
+      onClose={closeDialog}
+      onSubmit={() => void restoreVersion(d.sha, d.time)}
+      actions={
+        <>
+          <Cancel />
+          <button type="submit" className="btn primary" data-autofocus>
+            Restore
+          </button>
+        </>
+      }
+    >
+      <p>The current version stays in history.</p>
     </Dialog>
   );
 }

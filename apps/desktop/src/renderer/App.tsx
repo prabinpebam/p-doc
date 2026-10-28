@@ -7,9 +7,12 @@ import { layoutNow, pageLayout } from "./editor/pages.ts";
 import { downloadPdf } from "./output.ts";
 import { printDocument } from "./editor/print.ts";
 import { app, shownPanel, toast } from "./state.ts";
+import { backToCurrent, history, loadHistory } from "./versions.ts";
+import { sameRef } from "../shared/api.ts";
 import { CommandSearch } from "./ui/CommandSearch.tsx";
 import { Dialogs } from "./ui/Dialogs.tsx";
 import { FirstRun } from "./ui/FirstRun.tsx";
+import { HistoryPanel } from "./ui/HistoryPanel.tsx";
 import { LeftPanel } from "./ui/LeftPanel.tsx";
 import { MenuBar } from "./ui/MenuBar.tsx";
 import { PageArea } from "./ui/PageArea.tsx";
@@ -110,7 +113,8 @@ function onKey(e: KeyboardEvent): void {
     else if (s.find) {
       app.set({ find: null });
       focusEditor();
-    } else if (s.focus) app.set({ focus: false });
+    } else if (history.get().viewing) backToCurrent();
+    else if (s.focus) app.set({ focus: false });
   }
 }
 
@@ -131,6 +135,7 @@ export function App() {
   const panel = app.use(shownPanel);
   const narrow = app.use((s) => s.narrow);
   const hasDoc = app.use((s) => !!s.current);
+  const historyOpen = app.use((s) => s.history);
   useTheme();
 
   useEffect(() => {
@@ -148,11 +153,16 @@ export function App() {
     });
     const offClosing = window.pdoc.app.onClosing(handleClosing);
     const offFull = window.pdoc.app.onFullScreen((on) => app.set({ fullscreen: on }));
+    // A version made by the cadence shows up in an open history at once.
+    const offVersions = window.pdoc.versions.onChanged((ref) => {
+      if (app.get().history && sameRef(app.get().current, ref)) void loadHistory();
+    });
     window.addEventListener("keydown", onKeyCapture, true);
     window.addEventListener("keydown", onKey);
     return () => {
       offClosing();
       offFull();
+      offVersions();
       window.removeEventListener("keydown", onKeyCapture, true);
       window.removeEventListener("keydown", onKey);
     };
@@ -177,6 +187,7 @@ export function App() {
       <div className={`workspace${narrow ? " narrow" : ""}`}>
         {chrome && panel ? <LeftPanel /> : null}
         {hasDoc ? <PageArea /> : <main className="canvas" data-region aria-label="Page" />}
+        {chrome && hasDoc && historyOpen ? <HistoryPanel /> : null}
       </div>
       {chrome ? <StatusBar /> : null}
       {focus ? (

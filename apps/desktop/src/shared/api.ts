@@ -82,6 +82,19 @@ export interface PdfResult {
   pages: number;
 }
 
+/** One version (commit) of a document (U28). */
+export interface VersionEntry {
+  sha: string;
+  /** ISO time of the commit. */
+  time: string;
+  author: string;
+  message: string;
+  /** The name given with "Name this version", or null (U31). */
+  name: string | null;
+  /** The document's path in that version (it moves to `.bin/` and back). */
+  path: string;
+}
+
 export interface PDocApi {
   output: {
     /** Asks where, then writes the print document as a PDF; null when the person cancels. */
@@ -118,6 +131,23 @@ export interface PDocApi {
     clear(ref: DocRef): void;
     /** Copies left by a run that ended before saving; taking them removes them. */
     take(): Promise<Recovered[]>;
+  };
+  /** A document's versions (spec §4.6). */
+  versions: {
+    /** Newest first; empty without Git. */
+    list(ref: DocRef): Promise<VersionEntry[]>;
+    /** The document as it was in a version. */
+    at(ref: DocRef, sha: string): Promise<PDocFile>;
+    /** Names a version; an empty name removes the name. */
+    name(ref: DocRef, sha: string, name: string): Promise<void>;
+    /** Makes the version current as a new version; returns the document as it now is. */
+    restore(ref: DocRef, sha: string): Promise<Opened>;
+    /** A new document from a version. */
+    copy(ref: DocRef, sha: string): Promise<DocSummary>;
+    /** Makes a version of the saved state now; null when it already is one. */
+    commitNow(ref: DocRef): Promise<string | null>;
+    /** A version was made by the cadence (after a pause, on switching documents). */
+    onChanged(cb: (ref: DocRef) => void): () => void;
   };
   app: {
     /** The main process asks before the window closes; the renderer saves, then calls closeReady. */

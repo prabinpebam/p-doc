@@ -8,7 +8,14 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, s
 import { dirname, join } from "node:path";
 import { createDocument, documentPath, parseDocument, serializeDocument, newId, type PDocFile } from "@p-doc/core";
 import { git, gitSupported, gitVersion } from "./git.ts";
-import { DOC_PATH, isDocRef, type CreateRequest, type DocRef, type DocSummary, type Identity, type Opened, type Space } from "../shared/api.ts";
+import { DOC_PATH, isDocRef, type CreateRequest, type DocRef, type DocSummary, type Identity, type Opened, type Space, type VersionEntry } from "../shared/api.ts";
+
+/** "2026-10-28 14:05" in local time, for version messages. */
+export function localTime(iso: string): string {
+  const d = new Date(iso);
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
 
 export const SPACES: Space[] = ["private", "public"];
 
@@ -217,7 +224,7 @@ export class Library {
   commit(space: Space, paths: string[], message: string): Promise<string | null> {
     if (!this.versioned) return Promise.resolve(null);
     const dir = this.dir(space);
-    const run = async () => {
+    return this.queue(space, async () => {
       if (!existsSync(join(dir, ".git"))) return null;
       // One at a time: a path that is neither on disk nor tracked (a file put there by hand, then
       // moved) is no error. Only P-Doc stages, so the index holds just these paths.
@@ -226,10 +233,121 @@ export class Library {
       if (staged.code === 0) return null;
       await git(dir, ["commit", "-q", "-m", message], { identity: this.identity() });
       return (await git(dir, ["rev-parse", "HEAD"])).stdout.trim();
-    };
+    });
+  }
+
+  /** Runs Git work on a repository after the work already queued there. */
+  private queue<T>(space: Space, run: () => Promise<T>): Promise<T> {
     const next = (this.queues.get(space) ?? Promise.resolve()).then(run, run);
     this.queues.set(space, next.catch(() => null));
     return next;
+  }
+
+  /** Makes a version of a document's saved state ("Edit *title*"); null when nothing changed. */
+  async commitDoc(ref: DocRef): Promise<string | null> {
+    if (!existsSync(this.file(ref))) return null;
+    const { doc } = this.read(ref);
+    return this.commit(ref.space, [ref.path], `Edit ${doc.title}`);
+  }
+
+  /** The name a document's version tags share: its file name, which stays through Bin and back. */
+  private tagPrefix(ref: DocRef): string {
+    return `pdoc/${ref.path.replace(/^(docs|\.bin)\//, "").replace(/\.pdoc\.json$/, "")}/`;
+  }
+
+  /** Documents saved but not yet a version (left by a crash or a forced quit). Empty without Git. */
+  async unversioned(): Promise<DocRef[]> {
+    if (!this.versioned) return [];
+    const out: DocRef[] = [];
+    for (const space of SPACES) {
+      const dir = this.dir(space);
+      if (!existsSync(join(dir, ".git"))) continue;
+      const r = await this.queue(space, () => git(dir, ["status", "--porcelain", "-z", "--untracked-files=all", "--", "docs"]));
+      for (const entry of r.stdout.split("\0")) {
+        const path = entry.slice(3);
+        if (DOC_PATH.test(path) && path.startsWith("docs/") && existsSync(join(dir, ...path.split("/")))) out.push({ space, path });
+      }
+    }
+    return out;
+  }
+
+  /** Every version of a document, newest first, with names (U28, U31). Empty without Git. */
+  async history(ref: DocRef): Promise<VersionEntry[]> {
+    this.file(ref);
+    if (!this.versioned) return [];
+    const dir = this.dir(ref.space);
+    if (!existsSync(join(dir, ".git"))) return [];
+    return this.queue(ref.space, async () => {
+      const [r, tags] = await Promise.all([
+        git(dir, ["log", "--follow", "--name-only", "--format=%x1e%H%x1f%aI%x1f%an%x1f%s", "--", ref.path], { ok: [0, 128] }),
+        git(dir, ["for-each-ref", `refs/tags/${this.tagPrefix(ref)}`, "--format=%(*objectname)%1f%(contents:subject)%1e"]),
+      ]);
+      if (r.code) return [];
+      const names = new Map<string, string>();
+      for (const t of tags.stdout.split("\x1e")) {
+        const [sha, name] = t.trim().split("\x1f");
+        if (sha && name) names.set(sha, name);
+      }
+      const out: VersionEntry[] = [];
+      for (const rec of r.stdout.split("\x1e")) {
+        const [head, ...rest] = rec.split("\n");
+        const [sha, time, author, message] = (head ?? "").split("\x1f");
+        if (!sha || !time) continue;
+        const path = rest.map((s) => s.trim()).find(Boolean) ?? ref.path;
+        out.push({ sha, time, author: author ?? "", message: message ?? "", name: names.get(sha) ?? null, path });
+      }
+      return out;
+    });
+  }
+
+  private async version(ref: DocRef, sha: unknown): Promise<VersionEntry> {
+    if (typeof sha !== "string" || !/^[0-9a-f]{40}$/.test(sha)) throw new LibraryError("Not a version");
+    const v = (await this.history(ref)).find((x) => x.sha === sha);
+    if (!v) throw new LibraryError("Not a version of this document");
+    return v;
+  }
+
+  /** The document as it was in a version. */
+  async versionAt(ref: DocRef, sha: string): Promise<PDocFile> {
+    const v = await this.version(ref, sha);
+    const r = await git(this.dir(ref.space), ["show", `${v.sha}:${v.path}`]);
+    return parseDocument(r.stdout);
+  }
+
+  /** Names a version (an annotated Git tag); an empty name removes it (U31). */
+  async nameVersion(ref: DocRef, sha: string, name: string): Promise<void> {
+    const v = await this.version(ref, sha);
+    const clean = name.replace(/\s+/g, " ").trim().slice(0, 100);
+    const tag = `${this.tagPrefix(ref)}${v.sha.slice(0, 12)}`;
+    const dir = this.dir(ref.space);
+    await this.queue(ref.space, async () => {
+      if (clean) await git(dir, ["tag", "-f", "-a", tag, v.sha, "-m", clean], { identity: this.identity() });
+      else await git(dir, ["tag", "-d", tag], { ok: [0, 1] });
+    });
+  }
+
+  /**
+   * Makes an old version current as a new version "Restore *time*"; the versions in between stay in
+   * history (U30, GD R-006). Unsaved-as-version edits are kept as a version first.
+   */
+  async restoreVersion(ref: DocRef, sha: string): Promise<Opened> {
+    const v = await this.version(ref, sha);
+    const old = await this.versionAt(ref, v.sha);
+    await this.commitDoc(ref);
+    const cur = this.read(ref).doc;
+    this.write(ref, { ...old, id: cur.id, created: cur.created });
+    await this.commit(ref.space, [ref.path], `Restore ${localTime(v.time)}`);
+    return this.read(ref);
+  }
+
+  /** A new document from an old version (U32). */
+  async copyVersion(ref: DocRef, sha: string): Promise<DocSummary> {
+    const old = await this.versionAt(ref, sha);
+    const copy: PDocFile = { ...old, id: newId(), title: `Copy of ${old.title}`, created: new Date().toISOString() };
+    const to = { space: ref.space, path: this.freePath(ref.space, copy) };
+    const s = this.write(to, copy);
+    await this.commit(ref.space, [to.path], `Copy ${old.title} from ${localTime((await this.version(ref, sha)).time)}`);
+    return s;
   }
 
   /** Waits for every queued commit. */

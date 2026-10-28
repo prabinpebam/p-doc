@@ -35,6 +35,15 @@ const api: PDocApi = {
     showRoot: call("library:showRoot"),
   } as PDocApi["library"],
   recovery: { put: send("recovery:put"), clear: send("recovery:clear"), take: call("recovery:take") } as PDocApi["recovery"],
+  versions: {
+    list: call("versions:list"),
+    at: call("versions:at"),
+    name: call("versions:name"),
+    restore: call("versions:restore"),
+    copy: call("versions:copy"),
+    commitNow: call("versions:commitNow"),
+    onChanged: (cb) => listen("versions", cb),
+  } as PDocApi["versions"],
   app: {
     onClosing: (cb) => listen("closing", cb),
     closeReady: send("app:closeReady"),
