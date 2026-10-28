@@ -47,6 +47,7 @@ type Perf = {
   openDoc(r: unknown): Promise<void>;
   newDoc(): Promise<void>;
   downloadPdf(): Promise<void>;
+  downloadAs(kind: string): Promise<void>;
   reviewScan(): number;
 };
 
@@ -210,6 +211,25 @@ test("exporting a 50-page PDF", async () => {
       }),
     );
   record("pdf50", "Export PDF, 50 pages", 3000, samples, "Print layout in a hidden window and the PDF written");
+  await quit(l);
+});
+
+test("exporting a 50-page Word document", async () => {
+  const saveDir = mkdtempSync(join(tmpdir(), "pdoc-perf-"));
+  const l = await launch({ env: { PDOC_SAVE_DIR: saveDir } });
+  const { page } = l;
+  await load(page, bigDocument(50));
+  await settled(page);
+  const samples: number[] = [];
+  for (let i = 0; i < 5; i++)
+    samples.push(
+      await page.evaluate(async () => {
+        const t = performance.now();
+        await (window as unknown as { __pdoc: { perf: Perf } }).__pdoc.perf.downloadAs("docx");
+        return performance.now() - t;
+      }),
+    );
+  record("docx50", "Export .docx, 50 pages", 3000, samples, "From the renderer's request to the .docx written");
   await quit(l);
 });
 

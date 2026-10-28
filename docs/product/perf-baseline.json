@@ -1,6 +1,6 @@
 {
   "measured": "2026-10-28",
-  "machine": "13th Gen Intel(R) Core(TM) i9-13900K × 32",
+  "machine": "13th Gen Intel(R) Core(TM) i9-13900K \u00d7 32",
   "metrics": {
     "coldStart": {
       "wait": "Cold start to editable page",
@@ -81,6 +81,14 @@
       "medianMs": 0.6,
       "p95Ms": 0.8,
       "note": "Keystroke to glyph in a 50-page document during 4 syncs to a local fake GitHub (1398 ms each), each pushing a new version"
+    },
+    "docx50": {
+      "wait": "Export .docx, 50 pages",
+      "budgetMs": 3000,
+      "samples": 5,
+      "medianMs": 14.7,
+      "p95Ms": 34.1,
+      "note": "From the renderer's request to the .docx written"
     }
   },
   "pending": [

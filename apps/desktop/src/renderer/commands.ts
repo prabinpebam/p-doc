@@ -7,7 +7,7 @@ import { defaultStyles, STYLE_LABELS, TEXT_WIDTH, type PageSetup, type StyleKey,
 import type { Theme } from "../shared/api.ts";
 import { applyStyle, clearBlockDirectFormatting, currentStyle, indent, insertAtomBlock, setBlockAttrs, currentBlock, styleFromSelection } from "./editor/blocks.ts";
 import { copyDoc, deleteDoc } from "./ops.ts";
-import { downloadPdf, printDoc } from "./output.ts";
+import { downloadAs, downloadPdf, openFromFile, printDoc } from "./output.ts";
 import { flush, getEditor, newDoc, syncSelection, updateDoc } from "./session.ts";
 import { app, openDialog, showPanel, shownPanel, toast, togglePanel, updateSettings } from "./state.ts";
 import { nameCurrent, toggleHistory } from "./versions.ts";
@@ -177,6 +177,11 @@ const commands: Command[] = [
   },
   { id: "file.pageSetup", label: "Page setup…", keywords: "paper margins orientation landscape portrait page colour size", global: true, run: () => openDialog({ kind: "pageSetup" }), enabled: hasDoc },
   { id: "file.pdf", label: "PDF document (.pdf)", keywords: "download export pdf save as", global: true, run: () => void downloadPdf(), enabled: hasEditor },
+  { id: "file.docx", label: "Microsoft Word (.docx)", keywords: "download export word docx save as", global: true, run: () => void downloadAs("docx"), enabled: hasEditor },
+  { id: "file.md", label: "Markdown (.md)", keywords: "download export markdown md save as", global: true, run: () => void downloadAs("md"), enabled: hasEditor },
+  { id: "file.html", label: "Web page (.html)", keywords: "download export html web page save as", global: true, run: () => void downloadAs("html"), enabled: hasEditor },
+  { id: "file.txt", label: "Plain text (.txt)", keywords: "download export text txt save as", global: true, run: () => void downloadAs("txt"), enabled: hasEditor },
+  { id: "file.openFile", label: "Open from file…", keys: ["Ctrl+Shift+O"], keywords: "import upload word docx markdown html text", global: true, run: () => void openFromFile() },
   { id: "file.print", label: "Print", keys: ["Ctrl+P"], global: true, run: () => void printDoc(), enabled: hasEditor },
 
   // Edit
@@ -454,6 +459,7 @@ export const MENUS: Menu[] = [
     items: [
       "file.new",
       "file.library",
+      "file.openFile",
       "-",
       "file.copy",
       "file.rename",
@@ -463,7 +469,7 @@ export const MENUS: Menu[] = [
       { label: "Version history", items: ["file.history", "file.nameVersion"] },
       "file.sync",
       "-",
-      { label: "Download", items: ["file.pdf"] },
+      { label: "Download", items: ["file.docx", "file.pdf", "file.md", "file.html", "file.txt"] },
       "file.pageSetup",
       "file.print",
       "-",

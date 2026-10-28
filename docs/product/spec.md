@@ -152,7 +152,7 @@ Waits name their class from the perceived-performance skill: *instant* (< 100 ms
 2. **File > Page setup** dialog: Pages or Pageless; Orientation (Portrait, Landscape); Paper size (Letter, Legal, A4, A5, Tabloid); Margins top, bottom, left, right (inches or cm by locale); Page colour; **Set as default**, **Cancel**, **Apply**. *(instant; pages reflow in-flow)*
 3. **Insert > Header and footer**: header and footer text fields with "Different first page", and the tokens "Page number" and "Page count". They repeat on every page.
 4. **File > Print** (Ctrl+P) prints the pages as shown. **File > Download > PDF** writes a PDF with the same paper, margins, header, footer and breaks. *(in-flow; "Making PDF…")*
-5. **File > Download > Word (.docx), Markdown (.md), Web page (.html), Plain text (.txt)** → save dialog → file written → toast "Saved *name*" with **Show in folder**.
+5. **File > Download > Microsoft Word (.docx), Markdown (.md), Web page (.html), Plain text (.txt)** → save dialog → file written → toast "Saved *name*" with **Show in folder**.
 
 **Branches:** export fails → toast "Couldn't export: *reason*." with **Try again**.
 
@@ -233,7 +233,7 @@ apps/desktop          Electron app
   src/renderer        React 19 UI; TipTap 3 editor; ui/{primitives,components,patterns}
 packages/core         pure TypeScript: document format, outline, TOC, diff, conversions (docx, md, html, txt), suggestions, version grouping
 packages/tokens       DTCG design tokens → CSS variables (light and dark)
-packages/cli          `pdoc` command line over core and the library
+apps/desktop/src/cli  `pdoc` command line over core and the library (shares main's Electron-free modules)
 ```
 
 - **Document format** (`*.pdoc.json`, UTF-8, pretty-printed so Git diffs read well): `{ format: "p-doc", version: 1, id, title, created, page: { mode, size, orientation, margins, color, textWidth, header, footer, differentFirstPage }, styles: { normal, title, subtitle, heading1..4 }, content: <ProseMirror JSON>, comments: [ { id, author, created, body, resolved, replies[] } ] }`. Suggestions are marks in `content` (`insertion`, `deletion`, with id, author, time); comment anchors are `comment` marks with the thread id. Images are embedded data URLs up to 2 MB each (O4).
@@ -273,10 +273,10 @@ Failure words: "Couldn't save. Retrying…"; "P-Doc can't write to *folder*. You
 |---|---|---|---|---|---|---|---|---|
 | A1 | Block-level pagination in the live editor matches print/PDF closely enough | Feasibility | High (P4) | e2e `pagination` 2026-10-28: a 16-page fixture with a manual break, table, quote and a code block taller than a page has the same pages on screen, in the print layout and in the PDF | A multi-page fixture has the same page count on screen and in the PDF | Stage 2 e2e comparing screen pages with PDF pages | O2 | Confirmed |
 | A2 | Git is present or installable on writers' machines | Feasibility | High (P1) | Focus Notes has the same requirement | First run finds Git ≥ 2.40 or the writer installs it | First-run Git check | Bundle Git | Open |
-| A3 | Writers accept documents stored as JSON rather than .docx | Desirability | Medium (P2) | Focus Notes uses plain files; JSON diffs well | Writers use export when they need .docx | Ask after stage 6 | Native .docx storage | Open |
+| A3 | Writers accept documents stored as JSON rather than .docx | Desirability | Medium (P2) | Focus Notes uses plain files; JSON diffs well. Stage 6: a .docx round-trips (export then Open from file keeps headings, emphasis, links, lists and tables; unit `export-docx`, e2e `import-export`), so a Word file is one command away | Writers use export when they need .docx | Ask the owner after a week of use | Native .docx storage | Partly settled: the technical half holds; the owner's use settles the rest |
 | A4 | Insert/delete suggestions cover review needs without formatting tracking | Usability | Medium (P5) | Docs and Word track formatting (W R-003) | Reviewing a fixture with text edits feels complete | Try-it in stage 4 | Add format suggestions | Open: e2e `review` and `comments` review a fixture of text edits end to end; the owner's try-it settles it |
 | A5 | Research never alters third-party documents | Ethics | High | Anonymous visitors to the public doc are in Suggesting | The rig never types or clicks in the page | Review `research/rig` | — | Held |
-| A6 | Embedded images up to 2 MB keep files workable in Git | Viability | Low | GitHub warns at 50 MB per file | A 100-page fixture with 20 images stays under 20 MB | Measure in stage 6 | Store images beside the file | Open |
+| A6 | Embedded images up to 2 MB keep files workable in Git | Viability | Medium (P1, P2) | Measured 2026-10-28 (`PDOC_MEASURE=1` unit `a6-measure`): 100 pages with 20 images at the 2 MB cap make a 54 MB file (over GitHub's 50 MB warning) and 454 MB of Git objects after 11 versions (40 MB once packed); 20 typical 300 KB images make 8.5 MB and 67 MB. Every version stores the whole file again | A 100-page fixture with 20 images stays under 20 MB | Measure in stage 6 | Store images beside the file | Disproved: images move beside the document, each stored once (O4, stage P0) |
 | A7 | A clear warning before Move to Public prevents accidental publishing | Usability | High (P6) | None | No move without the confirmation; tests prove it | e2e | Two-step confirmation | Open |
 
 ## 10. Decisions
@@ -286,7 +286,7 @@ Failure words: "Couldn't save. Retrying…"; "P-Doc can't write to *folder*. You
 | O1 | Editor engine | TipTap/ProseMirror · Lexical · own contenteditable | TipTap 3 (Focus Notes uses it; transactions fit suggestions) | TipTap 3.31.4 |
 | O2 | Pagination | Block-level page breaks with spacers · CSS paged media engine | Block-level spacers (one editable surface); a block taller than a page overflows its page | Block-level (A1 confirmed in stage 2) |
 | O3 | Per-section orientation and headers (W R-001, W R-002) | Sections in v1 · whole-document page setup | Whole-document in v1 | Working default: whole-document |
-| O4 | Images | Embedded data URLs · files beside the document | Embedded, 2 MB cap | Embedded |
+| O4 | Images | Embedded data URLs · files beside the document | Files beside the document, stored once by content (A6 disproved embedding) | Beside the document (stage P0) |
 | O5 | Two repositories or one with a private submodule (Focus Notes) | Two sibling repositories · submodule | Two sibling repositories (simpler moves, no submodule state) | Two repositories |
 | O6 | Formatting changes in Suggesting | Track · apply directly | Apply directly in v1 (A4) | Apply directly |
 | O7 | Storage format | JSON · .docx · Markdown | JSON (lossless, diffable) with exports | JSON |
@@ -422,3 +422,27 @@ Engineering notes:
 - Docs screenshots: `PDOC_CAPTURE=1 npx playwright test screens` (in `apps/desktop`) writes `docs/product/screens/`.
 - `pnpm perf` adds "Sync (typing while it runs)": a key per frame in a 50-page document during 4 syncs to the fake GitHub, each pushing a version (budget 16 ms; p95 0.8 ms).
 - Known limitations: offline during setup doesn't retry by itself (Settings > Finish connecting does); a version's name syncs, but removing one doesn't reach the other computer; a dirty open document keeps its edits over a change from GitHub (the change is in Version history).
+
+### Stage 6: Import and export (built)
+
+What a person meets, beyond the flows above:
+
+- **File > Download.** Microsoft Word (.docx), PDF document (.pdf), Markdown (.md), Web page (.html) and Plain text (.txt). Each asks where to save (Downloads first) and says "Saved *name*" with **Show in folder**; a failure says "Couldn't export: *reason*" with **Try again**. Word keeps suggestions as Word's tracked changes; the other formats carry the text as it reads with every suggestion accepted.
+
+  ![Download](screens/v11-download.png)
+
+- **File > Open from file… (Ctrl+Shift+O)** and **a file dropped on the window.** A .docx, .md, .html, .txt or .pdoc.json becomes a new Private document titled from the file name, and opens: "Importing…" then "Opened *title*". Word parts P-Doc can't keep are named: "Imported. Some parts (text boxes, embedded objects) were left out." A .pdoc.json comes in whole with a new id, so it never replaces the document it was copied from. Images dropped on the page still go into the page; anything else is refused with "P-Doc can open .docx, .md, .html, .txt and .pdoc.json files." Files over 50 MB are refused before they are read.
+
+  ![Opened from file](screens/v12-opened-from-file.png)
+
+- **The `pdoc` command line** (U38), for scripts and agents, over the same library as the window: `pdoc setup --offline [--library <dir>]`, `new "Title" [--public]`, `list [--bin]`, `history <doc>`, `export <doc> --to docx|md|html|txt [--version <sha>] [--out <file>]` (text formats print when `--out` is left out), `import <file>`. A document is named by its id, its first 8 characters, its path or its title. `--json` prints one JSON value, errors included. Exit codes: 0 done, 1 usage, 2 no such document (or more than one: the matches are listed), 3 a person must act (`{"needs":"sign-in"}` from `setup` without `--offline`), 4 failed. In development it runs as `pnpm pdoc …`; the installed command comes with Install.
+
+Engineering notes:
+
+- `apps/desktop/src/main/files.ts` is Electron-free and shared by the window and the CLI: `exportBytes`, `readFile` (kind by extension, BOM stripped, 50 MB cap, mammoth warnings turned into the parts left out), and `importInto` (a new private document, or `Library.adopt` for a whole .pdoc.json).
+- A dropped file's bytes travel to main (`output:importData`); its path never does. Open from file reads the path main itself chose in the dialog. `PDOC_OPEN_FILE` stands in for the dialog in tests (only with `PDOC_E2E`).
+- Settings gained `library`: the library folder. The app records its default (Documents\P-Doc, wherever Documents points) on start, so the CLI finds the same folder when Documents is redirected; only `pdoc setup --library` changes it. The app's data folder is pinned to `%APPDATA%\P-Doc` (`PDOC_USER_DATA` for tests), the same in development and installed.
+- Progress toasts ("Making PDF…", "Importing…") give way to their result instead of standing beside it.
+- `pnpm perf` adds "Export .docx, 50 pages" (budget 3 s; p95 34 ms).
+- A6 measured: embedded images make files and history too big (§9). Images move beside the document before the image features of the parity stages build on them.
+- Known limitations: the packaged app has Electron's run-as-node fuse off, so the installed `pdoc` command is part of Install; the CLI and the window each queue their own commits, so a CLI command during a version commit can meet Git's index lock and fail with exit 4 (run it again).

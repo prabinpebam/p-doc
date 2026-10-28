@@ -14,7 +14,8 @@
     "typecheck": "tsc -p tsconfig.json",
     "e2e": "playwright test",
     "perf": "playwright test --config playwright.perf.config.ts",
-    "package": "pnpm run build && electron-builder --publish never"
+    "package": "pnpm run build && electron-builder --publish never",
+    "pdoc": "node out/main/cli.mjs"
   },
   "devDependencies": {
     "@electron/fuses": "1.8.0",

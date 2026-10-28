@@ -6,7 +6,7 @@
 
 <aside class="slate-tldr">
   <p class="slate-tldr__label">TL;DR</p>
-  <p>Research is done (Google Docs observed with Stagehand, Word from its documentation). The <a href="product/spec.md">spec</a> and <a href="product/definition-of-done.md">Definitions of Done</a> are written. Stages 1, Write offline, 2, Pages and print, 3, Versions, 4, Review, and 5, GitHub and first run, are built and pass every DoD row (27 end-to-end journeys, 118 unit tests, performance within budget). Pages on screen match the PDF page for page, which confirms the riskiest assumption (A1). Every document has a version history (compare, name, restore, copy) and can be reviewed: suggest changes, comment, accept or reject. Connect GitHub sets up a private and a public repository and keeps them in sync; a document reaches the public one only after you confirm. Stage 6, Import and export, is under way. This page shows where each stage stands.</p>
+  <p>Research is done (Google Docs observed with Stagehand, Word from its documentation). The <a href="product/spec.md">spec</a> and <a href="product/definition-of-done.md">Definitions of Done</a> are written. Stages 1, Write offline, 2, Pages and print, 3, Versions, 4, Review, and 5, GitHub and first run, are built and pass every DoD row, as is 6, Import and export (28 end-to-end journeys, 126 unit tests, performance within budget). Pages on screen match the PDF page for page, which confirms the riskiest assumption (A1). Every document has a version history (compare, name, restore, copy) and can be reviewed: suggest changes, comment, accept or reject. Connect GitHub sets up a private and a public repository and keeps them in sync; a document reaches the public one only after you confirm. Word, Markdown, web pages and text come in and go out, and the <code>pdoc</code> command line works on the same library. This page shows where each stage stands.</p>
 </aside>
 
 <h2>Build status</h2>
@@ -21,7 +21,7 @@
     <tr><td>3 Versions</td><td>U28–U32</td><td><span class="slate-badge slate-badge--success">Done</span></td><td>DoD 3.1–3.6 pass; e2e <code>versions</code> (3 journeys); 500-version history opens in 0.2 s</td></tr>
     <tr><td>4 Review</td><td>U21–U27</td><td><span class="slate-badge slate-badge--success">Done</span></td><td>DoD 4.1–4.6 and PD5 pass; e2e <code>review</code> and <code>comments</code>; accept-all and reject-all exact</td></tr>
     <tr><td>5 GitHub and first run</td><td>U34–U37</td><td><span class="slate-badge slate-badge--success">Done</span></td><td>DoD 5.1–5.6 and PD6 pass against a fake GitHub; e2e <code>github</code> (3 journeys); typing never waits for sync. 5.7 (real GitHub) needs the owner. Screens in <a href="product/spec.md">spec</a> §11, Stage 5</td></tr>
-    <tr><td>6 Import and export</td><td>U16–U18, U38</td><td><span class="slate-badge slate-badge--info">In progress</span></td><td>—</td></tr>
+    <tr><td>6 Import and export</td><td>U16–U18, U38</td><td><span class="slate-badge slate-badge--success">Done</span></td><td>DoD 6.1–6.5 pass; e2e <code>import-export</code>; unit <code>cli</code>; a .docx round-trips; 50-page .docx in 34 ms. A6 disproved: images move beside the document</td></tr>
     <tr><td>7 Install</td><td>Packaged app</td><td><span class="slate-badge">Not started</span></td><td>—</td></tr>
   </tbody>
 </table>

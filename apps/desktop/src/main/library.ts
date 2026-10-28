@@ -170,6 +170,15 @@ export class Library {
     return { doc, summary };
   }
 
+  /** A new document from a whole P-Doc file (File > Open from file): a fresh id, so it never collides with the original. */
+  async adopt(source: PDocFile, space: Space = "private"): Promise<Opened> {
+    const doc: PDocFile = { ...structuredClone(source), id: newId(), created: new Date().toISOString() };
+    const ref = { space, path: this.freePath(space, doc) };
+    const summary = this.write(ref, doc);
+    await this.commit(space, [ref.path], `Import ${doc.title}`);
+    return { doc, summary };
+  }
+
   async rename(ref: DocRef, title: string): Promise<DocSummary> {
     const { doc } = this.read(ref);
     const old = doc.title;

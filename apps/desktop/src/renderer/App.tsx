@@ -4,7 +4,8 @@ import { chordOf } from "./lib/keys.ts";
 import { commandForChord, COMMANDS, runCommand } from "./commands.ts";
 import { flush, getEditor, handleClosing, ipcMessage, loadConfig, newDoc, openDoc, refreshList, focusEditor, snapshot, syncSelection } from "./session.ts";
 import { layoutNow, pageLayout } from "./editor/pages.ts";
-import { downloadPdf } from "./output.ts";
+import { downloadAs, downloadPdf, importDropped, listenImporting } from "./output.ts";
+import { importKind } from "@p-doc/core";
 import { printDocument } from "./editor/print.ts";
 import { app, shownPanel, toast } from "./state.ts";
 import { backToCurrent, history, loadHistory } from "./versions.ts";
@@ -45,6 +46,7 @@ async function start(): Promise<void> {
           openDoc,
           newDoc,
           downloadPdf,
+          downloadAs,
           // What the title bar's count and the Review panel read after each edit.
           reviewScan: () => {
             const e = getEditor();
@@ -176,6 +178,23 @@ export function App() {
       if (app.get().settings?.github?.connected) void loadSync();
     });
     const offSync = window.pdoc.sync.onChanged((e) => void applySync(e));
+    const offImporting = listenImporting();
+    // A document file dropped anywhere is opened as a new document; image drops the editor took stay in the page.
+    const onDragOver = (e: DragEvent) => {
+      if (e.dataTransfer?.types.includes("Files")) e.preventDefault();
+    };
+    const onDrop = (e: DragEvent) => {
+      if (!e.dataTransfer?.types.includes("Files")) return;
+      const taken = e.defaultPrevented;
+      // Never let the window navigate to a dropped file.
+      e.preventDefault();
+      if (taken || app.get().phase !== "ready") return;
+      const file = [...e.dataTransfer.files].find((f) => importKind(f.name));
+      if (file) void importDropped(file);
+      else toast("P-Doc can open .docx, .md, .html, .txt and .pdoc.json files.", { tone: "error" });
+    };
+    window.addEventListener("dragover", onDragOver);
+    window.addEventListener("drop", onDrop);
     window.addEventListener("keydown", onKeyCapture, true);
     window.addEventListener("keydown", onKey);
     return () => {
@@ -183,6 +202,9 @@ export function App() {
       offFull();
       offVersions();
       offSync();
+      offImporting();
+      window.removeEventListener("dragover", onDragOver);
+      window.removeEventListener("drop", onDrop);
       window.removeEventListener("keydown", onKeyCapture, true);
       window.removeEventListener("keydown", onKey);
     };

@@ -2,22 +2,25 @@
  * P-Doc's main process: one editor window, the library on disk, and a typed IPC surface. The
  * renderer has no Node; every argument from it is checked here (spec §6, Security).
  */
-import { app, BrowserWindow, ipcMain, Menu, nativeTheme, shell, type MenuItemConstructorOptions } from "electron";
-import { appendFileSync, existsSync, mkdirSync } from "node:fs";
-import { join } from "node:path";
-import { cleanPage, parseDocument, type PDocFile } from "@p-doc/core";
+import { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, shell, type MenuItemConstructorOptions, type OpenDialogOptions } from "electron";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, statSync } from "node:fs";
+import { basename, join } from "node:path";
+import { cleanPage, importKind, parseDocument, type PDocFile } from "@p-doc/core";
 import { Library } from "./library.ts";
-import { exported, printDocument, savePdf } from "./output.ts";
+import { exported, exportDocument, printDocument, savePdf } from "./output.ts";
+import { ImportError, importInto, isExportKind, MAX_IMPORT } from "./files.ts";
 import { RecoveryStore, SettingsStore } from "./state.ts";
 import { Versions } from "./versions.ts";
 import { Account, SignInError } from "./account.ts";
 import { GitHubError } from "./github.ts";
 import { planRepos, runSetup, SetupError } from "./setup.ts";
 import { Sync, SyncProblem } from "./sync.ts";
-import { DEFAULT_REPOS, isDocRef, isRepoName, isSpace, type CreateRequest, type DocRef, type PrintRequest, type Recovered, type Settings, type Space } from "../shared/api.ts";
+import { DEFAULT_REPOS, isDocRef, isRepoName, isSpace, type CreateRequest, type DocRef, type Imported, type PrintRequest, type Recovered, type Settings, type Space } from "../shared/api.ts";
 
-// Isolation for tests and portable use: data and library folders from the environment.
+// Isolation for tests and portable use: data and library folders from the environment. Otherwise the data
+// folder is %APPDATA%\P-Doc in development and when installed, so the `pdoc` CLI finds the same settings.
 if (process.env.PDOC_USER_DATA) app.setPath("userData", process.env.PDOC_USER_DATA);
+else app.setPath("userData", join(app.getPath("appData"), "P-Doc"));
 const dataDir = app.getPath("userData");
 const logDir = join(dataDir, "logs");
 
@@ -39,7 +42,7 @@ if (!app.requestSingleInstanceLock()) {
 
 const settings = new SettingsStore(dataDir);
 const recovery = new RecoveryStore(dataDir);
-const libraryRoot = () => process.env.PDOC_LIBRARY || join(app.getPath("documents"), "P-Doc");
+const libraryRoot = () => process.env.PDOC_LIBRARY || settings.get().library || join(app.getPath("documents"), "P-Doc");
 let library: Library;
 let recovered: Recovered[] = [];
 let win: BrowserWindow | null = null;
@@ -343,6 +346,36 @@ function handlers(): void {
   h("app:version", () => app.getVersion());
   h("output:pdf", (req: PrintRequest) => savePdf(win, req));
   h("output:print", (req: PrintRequest) => printDocument(req));
+  h("output:export", (doc: unknown, kind: unknown) => {
+    if (!isExportKind(kind)) throw new Error("Unknown format");
+    return exportDocument(win, asDoc(doc), kind);
+  });
+  const importBytes = async (name: string, data: Uint8Array): Promise<Imported> => {
+    void versions.commitAll();
+    const r = await importInto(library, name, data, settings.get().pageDefault);
+    log("import", { kind: importKind(name), leftOut: r.leftOut });
+    return r;
+  };
+  h("output:importFile", async () => {
+    let file: string | undefined;
+    // Tests name the file instead of answering a dialog.
+    if (process.env.PDOC_E2E && process.env.PDOC_OPEN_FILE) file = process.env.PDOC_OPEN_FILE;
+    else {
+      const opts: OpenDialogOptions = { title: "Open from file", properties: ["openFile"], filters: [{ name: "Documents", extensions: ["docx", "md", "markdown", "html", "htm", "txt", "json"] }] };
+      const res = win ? await dialog.showOpenDialog(win, opts) : await dialog.showOpenDialog(opts);
+      if (res.canceled || !res.filePaths[0]) return null;
+      file = res.filePaths[0];
+    }
+    if (statSync(file).size > MAX_IMPORT) throw new ImportError("This file is larger than 50 MB.");
+    send("importing");
+    return importBytes(basename(file), new Uint8Array(readFileSync(file)));
+  });
+  h("output:importData", (name: unknown, data: unknown) => {
+    if (typeof name !== "string" || !name || name.length > 260) throw new Error("Not a file");
+    const bytes = data instanceof Uint8Array ? data : data instanceof ArrayBuffer ? new Uint8Array(data) : null;
+    if (!bytes) throw new Error("Not a file");
+    return importBytes(basename(name), bytes);
+  });
   h("output:showFile", (path: unknown) => {
     if (typeof path === "string" && exported.has(path) && existsSync(path)) shell.showItemInFolder(path);
   });
@@ -399,6 +432,8 @@ nativeTheme.on("updated", () => win?.setTitleBarOverlay({ ...themeColors(), heig
 
 void app.whenReady().then(async () => {
   nativeTheme.themeSource = settings.get().theme;
+  // Recorded so the pdoc CLI finds the same folder when Documents is redirected (OneDrive, a policy).
+  if (!process.env.PDOC_LIBRARY && !settings.get().library) settings.setLibrary(libraryRoot());
   library = await Library.open(libraryRoot(), { identity, changed: () => sync.soonAfterVersion() });
   log("start", { version: app.getVersion(), library: library.root, git: library.gitVersion });
   if (library.ready) recovered = applyRecovery();

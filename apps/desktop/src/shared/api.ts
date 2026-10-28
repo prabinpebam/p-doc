@@ -45,6 +45,8 @@ export interface Settings {
   last: DocRef | null;
   /** The GitHub connection: no token, only who and where (the token stays in Git's helper). */
   github: GitHubLink | null;
+  /** The library folder chosen with `pdoc setup --library`; null for Documents\P-Doc. Never set by the window. */
+  library: string | null;
 }
 
 export type FirstRunStep = "welcome" | "git" | "signIn" | "identity" | "repos" | "done";
@@ -171,6 +173,21 @@ export interface PdfResult {
   pages: number;
 }
 
+/** File > Download formats besides PDF (U17). */
+export type ExportKind = "docx" | "md" | "html" | "txt";
+export const EXPORT_KINDS: readonly ExportKind[] = ["docx", "md", "html", "txt"];
+
+export interface ExportResult {
+  path: string;
+}
+
+/** A file opened with File > Open from file or dropped on the window (U18). */
+export interface Imported {
+  opened: Opened;
+  /** Parts left out, for "Imported. Some parts … were left out."; empty when everything came in. */
+  leftOut: string[];
+}
+
 /** One version (commit) of a document (U28). */
 export interface VersionEntry {
   sha: string;
@@ -192,6 +209,14 @@ export interface PDocApi {
     print(req: PrintRequest): Promise<boolean>;
     /** Shows an exported file in the system file manager. */
     showFile(path: string): Promise<void>;
+    /** Asks where, then writes the document as Word, Markdown, a web page or plain text; null when cancelled. */
+    export(doc: PDocFile, kind: ExportKind): Promise<ExportResult | null>;
+    /** Asks for a file, then makes a new Private document from it; null when cancelled. */
+    importFile(): Promise<Imported | null>;
+    /** A new Private document from a file dropped on the window (its bytes, never its path). */
+    importData(name: string, data: Uint8Array): Promise<Imported>;
+    /** Open from file: the dialog has closed and the file is being read. */
+    onImporting(cb: () => void): () => void;
   };
   settings: {
     get(): Promise<Settings>;

@@ -17,7 +17,15 @@ const listen = (channel: string, cb: (...args: never[]) => void) => {
 };
 
 const api: PDocApi = {
-  output: { pdf: call("output:pdf"), print: call("output:print"), showFile: call("output:showFile") } as PDocApi["output"],
+  output: {
+    pdf: call("output:pdf"),
+    print: call("output:print"),
+    showFile: call("output:showFile"),
+    export: call("output:export"),
+    importFile: call("output:importFile"),
+    importData: call("output:importData"),
+    onImporting: (cb) => listen("importing", cb),
+  } as PDocApi["output"],
   settings: { get: call("settings:get"), set: call("settings:set") } as PDocApi["settings"],
   library: {
     info: call("library:info"),

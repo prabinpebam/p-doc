@@ -95,10 +95,12 @@ export const app = createStore<AppState>({
 });
 
 let toastId = 0;
-export function toast(text: string, o: Omit<Toast, "id" | "text"> = {}): void {
+/** Shows a toast; returns its id, so a "…" toast can be dismissed when its result is shown. */
+export function toast(text: string, o: Omit<Toast, "id" | "text"> = {}): number {
   const id = ++toastId;
   app.set((s) => ({ toasts: [...s.toasts, { id, text, ...o }].slice(-3) }));
   setTimeout(() => dismissToast(id), o.action ? 8000 : 5000);
+  return id;
 }
 export const dismissToast = (id: number) => app.set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) }));
 

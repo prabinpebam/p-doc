@@ -159,6 +159,16 @@ export async function newDoc(req: CreateRequest = {}): Promise<void> {
   await refreshList();
 }
 
+/** Opens a document main has just made (an import), after saving the one on screen. */
+export async function openMade(make: () => Promise<Opened | null>): Promise<Opened | null> {
+  await flush();
+  const o = await make();
+  if (!o) return null;
+  show(o);
+  await refreshList();
+  return o;
+}
+
 /** Shows the open document afresh as it now is on disk (after restoring a version). */
 export function reloadDoc(o: Opened): void {
   if (saveTimer) clearTimeout(saveTimer);

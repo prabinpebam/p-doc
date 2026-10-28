@@ -34,7 +34,7 @@ The spec and its Definitions of Done. Assumptions are tracked there (A1–A7).
 | I3 | Stage 3 Versions | 3.1–3.6 | vitest with temp repos; e2e; `pnpm perf` | Done |
 | I4 | Stage 4 Review | 4.1–4.6 | vitest; e2e; `pnpm perf` | Done |
 | I5 | Stage 5 GitHub and first run | 5.1–5.6 | vitest with fake API and bare repos; e2e | Done |
-| I6 | Stage 6 Import and export, CLI | 6.1–6.5 | vitest | In progress |
+| I6 | Stage 6 Import and export, CLI | 6.1–6.5 | vitest; e2e; `pnpm perf` | Done |
 | I7 | Stage 7 Install | 7.1–7.2 | `pnpm package`; packaged smoke e2e | Not started |
 
 **Try it:** each stage's "Try it" in the Definitions of Done.
@@ -67,5 +67,6 @@ The spec and its Definitions of Done. Assumptions are tracked there (A1–A7).
 | I3 | Done 2026-10-28 | 20 e2e journeys pass with `--repeat-each=2` (`versions` also 3 of 3); 93 unit tests; `pnpm typecheck`; `pnpm lint:design` clean; `pnpm perf` within every budget, including version commit (p95 0.44 s) and a 500-version history (p95 0.2 s). DoD 3.1–3.6 and PD1 Pass; screenshots of the comparison at 1280 and 800 px reviewed |
 | I4 | Done 2026-10-28 | 24 e2e journeys pass (`review`, `comments`, `layout` also 2 of 2; `toc` 5 of 5 after hardening its caret clicks); 99 unit tests; `pnpm typecheck`; `pnpm lint:design` clean; `pnpm perf` within every budget, including the review list on 50 pages (p95 0.2 ms). DoD 4.1–4.6 and PD5 Pass; review panel and Original markup screenshots reviewed |
 | I5 | Done 2026-10-28 | 27 e2e journeys pass (`github` and `first-run` also 2 of 2); 118 unit tests (`github`: 19 against a fake GitHub with smart-HTTP bare repositories and a fake credential helper); `pnpm typecheck`; `pnpm lint:design` clean; `pnpm perf` within every budget, including typing during a sync (p95 0.8 ms). DoD 5.1–5.6 and PD6 Pass; 5.7 needs the owner. Screens in `docs/product/screens` reviewed. Found and fixed on review: "Saved · synced" was missing from the title bar; Welcome focused Use offline; Settings said "Finish connecting" after Sign out; an open File menu kept Sync now disabled; a status answer could undo a sync's final event |
+| I6 | Done 2026-10-28 | 28 e2e journeys pass (`import-export` new: Download in every format, Open from file of the downloaded .docx, a dropped .md, a refused .zip, then the built `pdoc list --json`); 126 unit tests (`cli`: 8); `pnpm typecheck`; `pnpm perf` within every budget, including a 50-page .docx export (p95 34 ms). DoD 6.1–6.5 Pass. A6 measured and disproved (54 MB file, 454 MB of Git objects after 11 versions at the 2 MB cap): images move beside the document. Found and fixed: "Importing…" and "Making PDF…" stayed beside their result; the CLI couldn't have found the library when Documents is redirected (the app now records it) |
 
 **Not checked:** live Word UI and signed-in Google Docs surfaces (no test accounts).

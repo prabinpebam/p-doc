@@ -1,6 +1,6 @@
 /** App state in the data folder, never in the repositories: settings and recovery copies. */
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync } from "node:fs";
-import { join } from "node:path";
+import { isAbsolute, join } from "node:path";
 import { userInfo } from "node:os";
 import { cleanPage, parseDocument, serializeDocument, type PDocFile } from "@p-doc/core";
 import { writeAtomic, SPACES } from "./library.ts";
@@ -13,7 +13,7 @@ export function defaultSettings(): Settings {
   } catch {
     // No user name on this system.
   }
-  return { version: 1, firstRun: "pending", firstRunStep: "welcome", theme: "system", zoom: 100, identity: { name, email: "" }, spelling: true, leftPanel: "outline", compact: false, pageDefault: null, last: null, github: null };
+  return { version: 1, firstRun: "pending", firstRunStep: "welcome", theme: "system", zoom: 100, identity: { name, email: "" }, spelling: true, leftPanel: "outline", compact: false, pageDefault: null, last: null, github: null, library: null };
 }
 
 const STEPS: FirstRunStep[] = ["welcome", "git", "signIn", "identity", "repos", "done"];
@@ -26,6 +26,8 @@ function cleanLink(l: unknown): GitHubLink | null {
   for (const s of SPACES) if (isRepoName(v.names?.[s])) names[s] = v.names[s];
   return { login: v.login, names, connected: v.connected === true, auto: v.auto !== false };
 }
+
+const cleanLibrary = (v: unknown): string | null => (typeof v === "string" && isAbsolute(v) && v.length < 1000 ? v : null);
 
 export class SettingsStore {
   private value: Settings;
@@ -40,11 +42,18 @@ export class SettingsStore {
     } catch {
       // A damaged settings file: start from the defaults.
     }
-    this.value = { ...d, ...read, version: 1, identity: { ...d.identity, ...(read.identity ?? {}) }, github: cleanLink(read.github), firstRunStep: STEPS.includes(read.firstRunStep as FirstRunStep) ? read.firstRunStep! : "welcome" };
+    this.value = { ...d, ...read, version: 1, identity: { ...d.identity, ...(read.identity ?? {}) }, github: cleanLink(read.github), firstRunStep: STEPS.includes(read.firstRunStep as FirstRunStep) ? read.firstRunStep! : "welcome", library: cleanLibrary(read.library) };
   }
 
   get(): Settings {
     return structuredClone(this.value);
+  }
+
+  /** The library folder (`pdoc setup --library`); the window can't change it. */
+  setLibrary(dir: string | null): Settings {
+    this.value = { ...this.value, library: cleanLibrary(dir) };
+    writeAtomic(this.file, `${JSON.stringify(this.value, null, 2)}\n`);
+    return this.get();
   }
 
   set(patch: Partial<Settings>): Settings {

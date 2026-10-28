@@ -1,6 +1,7 @@
 /** Screenshots for the docs site (docs/product/screens), not a test: PDOC_CAPTURE=1 npx playwright test screens */
 import { execFileSync } from "node:child_process";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { editor, expect, launch, quit, tempDirs, test } from "./helpers.ts";
 import { fakeHelperConfig, startFakeGitHub } from "../test/fakes/fake-github.ts";
@@ -54,4 +55,31 @@ test("capture stage 5 screens", async () => {
   await shot("v10-settings-github");
   await quit(l);
   await fake.close();
+});
+
+test("capture stage 6 screens", async () => {
+  test.skip(process.env.PDOC_CAPTURE !== "1", "Docs screenshots: PDOC_CAPTURE=1 npx playwright test screens");
+  mkdirSync(out, { recursive: true });
+  const saveDir = mkdtempSync(join(tmpdir(), "pdoc-shots-"));
+  const l = await launch({ env: { PDOC_SAVE_DIR: saveDir, PDOC_OPEN_FILE: join(saveDir, "Quarterly plan.docx") } });
+  const { page } = l;
+  await page.setViewportSize({ width: 1100, height: 720 });
+  const shot = (n: string) => page.screenshot({ path: join(out, `${n}.png`) });
+  await page.locator("#doc-title").fill("Quarterly plan");
+  await page.keyboard.press("Enter");
+  await page.keyboard.type("Goals");
+  await page.keyboard.press("Control+Alt+1");
+  await page.keyboard.press("End");
+  await page.keyboard.press("Enter");
+  await page.keyboard.type("We ship in May, with the brief and the schedule agreed.");
+  await page.getByRole("menuitem", { name: "File" }).click();
+  await page.getByRole("menuitem", { name: /^Download/ }).click();
+  await expect(page.getByRole("menuitem", { name: /^Microsoft Word/ })).toBeVisible();
+  await shot("v11-download");
+  await page.getByRole("menuitem", { name: /^Microsoft Word/ }).click();
+  await expect(page.getByText("Saved Quarterly plan.docx")).toBeVisible();
+  await page.keyboard.press("Control+Shift+O");
+  await expect(page.getByText("Opened Quarterly plan")).toBeVisible();
+  await shot("v12-opened-from-file");
+  await quit(l);
 });

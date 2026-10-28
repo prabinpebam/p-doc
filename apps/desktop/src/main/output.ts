@@ -5,7 +5,9 @@
 import { app, BrowserWindow, dialog } from "electron";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import type { PdfResult, PrintRequest } from "../shared/api.ts";
+import type { PDocFile } from "@p-doc/core";
+import { EXPORTS, exportBytes } from "./files.ts";
+import type { ExportKind, ExportResult, PdfResult, PrintRequest } from "../shared/api.ts";
 
 const MAX_HTML = 200 * 1024 * 1024;
 
@@ -62,17 +64,28 @@ async function withDocument<T>(r: PrintRequest, fn: (w: BrowserWindow) => Promis
   }
 }
 
+/** Where to write a download: asked in a save dialog (tests set PDOC_SAVE_DIR); null when cancelled. */
+async function savePath(parent: BrowserWindow | null, name: string, title: string, filter: { name: string; extensions: string[] }): Promise<string | null> {
+  if (process.env.PDOC_SAVE_DIR) return join(process.env.PDOC_SAVE_DIR, name);
+  const opts = { title, defaultPath: join(app.getPath("downloads"), name), filters: [filter] };
+  const res = parent ? await dialog.showSaveDialog(parent, opts) : await dialog.showSaveDialog(opts);
+  return res.canceled || !res.filePath ? null : res.filePath;
+}
+
+/** File > Download as Word, Markdown, a web page or plain text (U17). */
+export async function exportDocument(parent: BrowserWindow | null, doc: PDocFile, kind: ExportKind): Promise<ExportResult | null> {
+  const { ext, label } = EXPORTS[kind];
+  const path = await savePath(parent, fileName(doc.title, ext), `Download ${label}`, { name: label, extensions: [ext] });
+  if (!path) return null;
+  await writeFile(path, await exportBytes(doc, kind));
+  exported.add(path);
+  return { path };
+}
+
 export async function savePdf(parent: BrowserWindow | null, req: PrintRequest): Promise<PdfResult | null> {
   const r = check(req);
-  const name = fileName(r.title, "pdf");
-  let path: string;
-  if (process.env.PDOC_SAVE_DIR) path = join(process.env.PDOC_SAVE_DIR, name);
-  else {
-    const opts = { title: "Download PDF", defaultPath: join(app.getPath("downloads"), name), filters: [{ name: "PDF document", extensions: ["pdf"] }] };
-    const res = parent ? await dialog.showSaveDialog(parent, opts) : await dialog.showSaveDialog(opts);
-    if (res.canceled || !res.filePath) return null;
-    path = res.filePath;
-  }
+  const path = await savePath(parent, fileName(r.title, "pdf"), "Download PDF", { name: "PDF document", extensions: ["pdf"] });
+  if (!path) return null;
   const pdf = await withDocument(r, (w) =>
     w.webContents.printToPDF({
       pageSize: { width: r.size.width, height: r.size.height },
