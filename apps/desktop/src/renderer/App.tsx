@@ -2,7 +2,10 @@
 import { useEffect } from "react";
 import { chordOf } from "./lib/keys.ts";
 import { commandForChord, COMMANDS, runCommand } from "./commands.ts";
-import { getEditor, handleClosing, ipcMessage, loadConfig, newDoc, openDoc, refreshList, focusEditor, syncSelection } from "./session.ts";
+import { flush, getEditor, handleClosing, ipcMessage, loadConfig, newDoc, openDoc, refreshList, focusEditor, snapshot, syncSelection } from "./session.ts";
+import { layoutNow, pageLayout } from "./editor/pages.ts";
+import { downloadPdf } from "./output.ts";
+import { printDocument } from "./editor/print.ts";
 import { app, shownPanel, toast } from "./state.ts";
 import { CommandSearch } from "./ui/CommandSearch.tsx";
 import { Dialogs } from "./ui/Dialogs.tsx";
@@ -17,7 +20,23 @@ import { Toolbar } from "./ui/Toolbar.tsx";
 
 async function start(): Promise<void> {
   await loadConfig();
-  if (app.get().e2e) Object.defineProperty(window, "__pdoc", { value: { app, getEditor, commands: () => [...COMMANDS.keys()] }, configurable: true });
+  if (app.get().e2e)
+    Object.defineProperty(window, "__pdoc", {
+      value: {
+        app,
+        getEditor,
+        commands: () => [...COMMANDS.keys()],
+        layout: () => pageLayout.get().layout,
+        printRequest: () => {
+          const e = getEditor();
+          const d = snapshot();
+          return e && d ? printDocument(d, e.view).request : null;
+        },
+        // The pieces `pnpm perf` times (spec §7).
+        perf: { layoutNow, flush, openDoc, newDoc, downloadPdf },
+      },
+      configurable: true,
+    });
   const [settings, info] = await Promise.all([window.pdoc.settings.get(), window.pdoc.library.info()]);
   app.set({ settings, info });
   if (settings.firstRun === "pending" || !info.ready) {

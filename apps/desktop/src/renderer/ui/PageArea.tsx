@@ -1,12 +1,24 @@
-/** The page area (V4): the grey canvas and the page with the live editor. Stage 1 shows one continuous sheet. */
+/** The page area (V4): the grey canvas and the page with the live editor, laid out as sheets in Pages mode. */
 import { useEffect, type CSSProperties } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
-import { pageInches, styleCss, TEXT_WIDTH, CSS_PX_PER_INCH, type PDocFile } from "@p-doc/core";
+import { headerFooterText, styleCss, TEXT_WIDTH, CSS_PX_PER_INCH, type PDocFile } from "@p-doc/core";
 import { editorExtensions, insertImageFiles } from "../editor/setup.ts";
 import { jumpToBlock } from "../editor/blocks.ts";
+import { geometry, pageLayout, setPageSetup, type Layout } from "../editor/pages.ts";
 import { attachEditor, changed, detachEditor, getEditor } from "../session.ts";
-import { app, toast } from "../state.ts";
+import { app, openDialog, toast } from "../state.ts";
 import { FindBar } from "./FindBar.tsx";
+
+/** The first page's header and the last page's footer; the ones between are drawn by sheet breaks. */
+function HfOverlay({ cls, which, page, pages }: { cls: string; which: "header" | "footer"; page: number; pages: number }) {
+  const p = app.use((s) => s.doc?.page);
+  if (!p) return null;
+  return (
+    <div className={`${cls} pd-hf`} data-hf={which} data-page={page} data-align={which === "header" ? p.headerAlign : p.footerAlign}>
+      <span className="pd-hf-text">{headerFooterText(p, which, page, pages)}</span>
+    </div>
+  );
+}
 
 let tickQueued = false;
 /** Views that follow the content re-render at most once a frame. */
@@ -85,20 +97,24 @@ function DocEditor({ doc }: { doc: PDocFile }) {
   return <EditorContent editor={editor} className="pd-editor" />;
 }
 
-function pageStyle(doc: PDocFile): CSSProperties {
+function pageStyle(doc: PDocFile, layout: Layout | null): CSSProperties {
   const p = doc.page;
-  const { width, height } = pageInches(p);
   const px = (inches: number) => `${Math.round(inches * CSS_PX_PER_INCH)}px`;
   const pageless = p.mode === "pageless";
   const tw = TEXT_WIDTH[p.textWidth];
+  const g = geometry(p);
+  const span = layout ? layout.sheets.reduce((n, s) => n + s.span, 0) : 1;
   return {
-    "--page-width": pageless ? (tw ? `${tw + 2 * CSS_PX_PER_INCH * 0.5}px` : "100%") : px(width),
-    "--page-height": pageless ? "auto" : px(height),
-    "--page-pad-top": pageless ? px(0.5) : px(p.margins.top),
-    "--page-pad-bottom": pageless ? px(0.5) : px(p.margins.bottom),
-    "--page-pad-left": pageless ? px(0.5) : px(p.margins.left),
-    "--page-pad-right": pageless ? px(0.5) : px(p.margins.right),
+    "--page-width": pageless ? (tw ? `${tw + 2 * CSS_PX_PER_INCH * 0.5}px` : "100%") : `${g.width}px`,
+    "--page-height": pageless ? "auto" : `${g.height}px`,
+    "--page-pad-top": pageless ? px(0.5) : `${g.top}px`,
+    "--page-pad-bottom": pageless ? px(0.5) : `${g.bottom}px`,
+    "--page-pad-left": pageless ? px(0.5) : `${g.left}px`,
+    "--page-pad-right": pageless ? px(0.5) : `${g.right}px`,
     "--page-color": p.color,
+    "--doc-font": doc.styles.normal.fontFamily,
+    "--sheets": layout?.sheets.length ?? 1,
+    "--fill-height": `${span * g.content}px`,
   } as CSSProperties;
 }
 
@@ -106,7 +122,13 @@ export function PageArea() {
   const doc = app.use((s) => s.doc);
   const session = app.use((s) => s.session);
   const zoom = app.use((s) => s.settings?.zoom ?? 100);
+  const layout = pageLayout.use((s) => s.layout);
+  const page = doc?.page ?? null;
+  useEffect(() => setPageSetup(page), [page]);
   if (!doc) return <main className="canvas" aria-busy="true" />;
+  const p = doc.page;
+  const paged = p.mode === "pages";
+  const shown = paged ? layout : null;
   return (
     <main className="canvas" data-region aria-label="Page">
       <FindBar />
@@ -122,8 +144,21 @@ export function PageArea() {
       >
         <style>{styleCss(doc.styles, ".page .pd-content")}</style>
         <div className="page-stack" style={{ zoom: zoom / 100 }}>
-          <article className={`page${doc.page.mode === "pageless" ? " pageless" : ""}`} style={pageStyle(doc)} data-testid="page">
+          <article
+            className={`page${paged ? " paged" : " pageless"}`}
+            style={pageStyle(doc, shown)}
+            data-testid="page"
+            data-pages={shown?.pages}
+            onDoubleClick={(e) => {
+              if ((e.target as HTMLElement).closest("[data-hf]")) {
+                e.preventDefault();
+                openDialog({ kind: "headerFooter" });
+              }
+            }}
+          >
+            {shown && <HfOverlay cls="page-head" which="header" page={1} pages={shown.pages} />}
             <DocEditor key={session} doc={doc} />
+            {shown && <HfOverlay cls="page-foot" which="footer" page={shown.pages} pages={shown.pages} />}
           </article>
         </div>
       </div>

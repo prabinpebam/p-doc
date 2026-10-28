@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { paginate } from "../src/index.ts";
+import { paginate, sheetsOf } from "../src/index.ts";
 
 describe("paginate", () => {
   it("keeps blocks that fit on one page", () => {
@@ -26,6 +26,19 @@ describe("paginate", () => {
     const r = paginate([{ height: 100 }, { height: 1200 }, { height: 100 }], 500);
     expect(r.pageOf).toEqual([1, 2, 4]);
     expect(r.pages).toBe(4);
+  });
+
+  it("groups blocks into sheets; a sheet a tall block overflows covers several pages", () => {
+    expect(sheetsOf(paginate([{ height: 100 }, { height: 1200 }, { height: 100 }], 500))).toEqual([
+      { start: 0, end: 1, page: 1, span: 1 },
+      { start: 1, end: 3, page: 2, span: 3 },
+    ]);
+    expect(sheetsOf(paginate([{ height: 300 }, { height: 300 }, { height: 300 }], 500))).toEqual([
+      { start: 0, end: 1, page: 1, span: 1 },
+      { start: 1, end: 2, page: 2, span: 1 },
+      { start: 2, end: 3, page: 3, span: 1 },
+    ]);
+    expect(sheetsOf(paginate([], 500))).toEqual([{ start: 0, end: 0, page: 1, span: 1 }]);
   });
 
   it("counts many pages", () => {

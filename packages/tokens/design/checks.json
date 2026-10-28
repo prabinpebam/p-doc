@@ -125,6 +125,11 @@
       "fg": "color.page-text",
       "bg": "color.page-selection",
       "min": 4.5
+    },
+    {
+      "fg": "color.page-text",
+      "bg": "color.page-code",
+      "min": 4.5
     }
   ]
 }

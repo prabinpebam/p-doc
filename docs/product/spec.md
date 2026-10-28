@@ -148,7 +148,7 @@ Waits name their class from the perceived-performance skill: *instant* (< 100 ms
 
 ### 4.4 Lay out pages, print and export (U13–U17)
 
-1. **View > Pages / Pageless**. Pageless has no page edges and a text width from **View > Text width** (Narrow 640 px, Medium 800 px, Wide 960 px, Full). Headers, footers and page numbers are hidden, not deleted (GD R-003).
+1. **View > Pages / Pageless**. Pageless has no page edges and a text width from **View > Text width** (Narrow 640 px, Medium 800 px, Wide 960 px, Full width), with half an inch of space either side of the text. Text width is greyed out in Pages, where the paper sets the width. Headers, footers and page numbers are hidden, not deleted (GD R-003), and printing or a PDF from Pageless has none.
 2. **File > Page setup** dialog: Pages or Pageless; Orientation (Portrait, Landscape); Paper size (Letter, Legal, A4, A5, Tabloid); Margins top, bottom, left, right (inches or cm by locale); Page colour; **Set as default**, **Cancel**, **Apply**. *(instant; pages reflow in-flow)*
 3. **Insert > Header and footer**: header and footer text fields with "Different first page", and the tokens "Page number" and "Page count". They repeat on every page.
 4. **File > Print** (Ctrl+P) prints the pages as shown. **File > Download > PDF** writes a PDF with the same paper, margins, header, footer and breaks. *(in-flow; "Making PDF…")*
@@ -270,7 +270,7 @@ Failure words: "Couldn't save. Retrying…"; "P-Doc can't write to *folder*. You
 
 | # | Assumption or risk | Kind | Impact if wrong | Evidence today | Criterion | Cheapest check | Changes | Status |
 |---|---|---|---|---|---|---|---|---|
-| A1 | Block-level pagination in the live editor matches print/PDF closely enough | Feasibility | High (P4) | None | A multi-page fixture has the same page count on screen and in the PDF | Stage 2 e2e comparing screen pages with PDF pages | O2 | Open |
+| A1 | Block-level pagination in the live editor matches print/PDF closely enough | Feasibility | High (P4) | e2e `pagination` 2026-10-28: a 16-page fixture with a manual break, table, quote and a code block taller than a page has the same pages on screen, in the print layout and in the PDF | A multi-page fixture has the same page count on screen and in the PDF | Stage 2 e2e comparing screen pages with PDF pages | O2 | Confirmed |
 | A2 | Git is present or installable on writers' machines | Feasibility | High (P1) | Focus Notes has the same requirement | First run finds Git ≥ 2.40 or the writer installs it | First-run Git check | Bundle Git | Open |
 | A3 | Writers accept documents stored as JSON rather than .docx | Desirability | Medium (P2) | Focus Notes uses plain files; JSON diffs well | Writers use export when they need .docx | Ask after stage 6 | Native .docx storage | Open |
 | A4 | Insert/delete suggestions cover review needs without formatting tracking | Usability | Medium (P5) | Docs and Word track formatting (W R-003) | Reviewing a fixture with text edits feels complete | Try-it in stage 4 | Add format suggestions | Open |
@@ -283,7 +283,7 @@ Failure words: "Couldn't save. Retrying…"; "P-Doc can't write to *folder*. You
 | # | Question | Options | Recommendation | Decided |
 |---|---|---|---|---|
 | O1 | Editor engine | TipTap/ProseMirror · Lexical · own contenteditable | TipTap 3 (Focus Notes uses it; transactions fit suggestions) | TipTap 3.31.4 |
-| O2 | Pagination | Block-level page breaks with spacers · CSS paged media engine | Block-level spacers (one editable surface); a block taller than a page overflows its page | Working default: block-level |
+| O2 | Pagination | Block-level page breaks with spacers · CSS paged media engine | Block-level spacers (one editable surface); a block taller than a page overflows its page | Block-level (A1 confirmed in stage 2) |
 | O3 | Per-section orientation and headers (W R-001, W R-002) | Sections in v1 · whole-document page setup | Whole-document in v1 | Working default: whole-document |
 | O4 | Images | Embedded data URLs · files beside the document | Embedded, 2 MB cap | Embedded |
 | O5 | Two repositories or one with a private submodule (Focus Notes) | Two sibling repositories · submodule | Two sibling repositories (simpler moves, no submodule state) | Two repositories |
@@ -318,3 +318,25 @@ Engineering notes (for whoever builds the next stage):
 - Library writes are atomic and retried on Windows' transient `EPERM`/`EACCES`/`EBUSY`; unit `write-atomic`.
 - The library runs one commit queue per repository; unit `library` covers create, save without a version, rename, copy, Bin and restore (including a name taken meanwhile), move both ways, refusal of paths outside the library, unreadable files, the queue, and Git missing.
 - Tests never touch the owner's Git, GitHub, documents or settings: each run has its own data and library folders and an empty Git config.
+
+### Stage 2: Pages and print (built)
+
+What a person meets, beyond the flows above:
+
+- **Pages.** Each page is a sheet of the chosen paper (Letter, Legal, A4, A5, Tabloid; portrait or landscape) with its margins and page colour, on a grey canvas with a gap between sheets. A block that doesn't fit on the rest of a page starts the next one; a block taller than a whole page (a long code block or table) starts at the top of a page and runs on, as in Word. A page break always starts a new sheet. The status bar shows "Page *n* of *count*" for the page in view. Zooming scales the sheets but keeps the layout.
+- **Pageless.** One long sheet, no page edges, with the text width from View > Text width. Text width is greyed out in Pages. Headers, footers and page breaks stay in the document and come back with View > Pages.
+- **Page setup** (File > Page setup). Pages or Pageless, orientation, paper size, margins in inches or centimetres by locale, and page colour. A negative margin says "Enter a margin of 0 or more."; margins wider than the page say "The margins leave no room for text. Make them smaller." and Apply waits until they're fixed. **Set as default** makes new documents (Ctrl+N) use this setup and says "New documents will use this page setup."
+- **Header and footer** (Insert > Header and footer, or a double-click on a header or footer). Text for each, alignment left, centre or right, **Page number** and **Page count** buttons that insert `{page}` and `{pages}`, and **Different first page** with its own header and footer. Cancel leaves the document as it was.
+- **Table of contents.** Lists Heading 1–3 with the page each starts on. Entries and page numbers follow as headings are typed, added or pushed onto another page, with no refresh step. A click on an entry puts the cursor at that heading.
+- **Print and PDF.** File > Print (Ctrl+P) and File > Download > PDF lay out exactly what is on screen: same sheets, breaks, headers and footers. The PDF shows "Making PDF…", then "Saved *name*.pdf · *n* pages" with **Show in folder**; failures say "Couldn't make the PDF: *reason*." or "Couldn't print: *reason*." Pageless prints as flowing text with no headers or footers.
+- **Moving around.** Ctrl+Home and Ctrl+End go to the start and end of the document across page breaks (Shift extends the selection).
+- **Code.** Code blocks and inline code sit on a light grey of their own (`color.page-code`), so they no longer look selected.
+
+Engineering notes:
+
+- Pagination (`editor/pages.ts`) measures each top-level block after drawing, feeds the heights to `paginate` and `sheetsOf` in core, and draws sheet breaks as widgets between blocks (footer, gap, next header). It settles within half a pixel, so drawing the breaks never sets off another layout.
+- ProseMirror's `Decoration.eq` ignores a decoration's spec. The table of contents' page numbers therefore travel in the decoration's attributes, and its decorations are rebuilt on every change, because a node decoration is lost when the node is replaced.
+- Print and PDF render the print HTML (`editor/print.ts`) in a hidden window with the same CSS, so screen and paper share one layout. e2e `pagination` checks screen, print and PDF page counts on a 16-page fixture.
+- Stored page setups go through `cleanPage` (unit `format`), so a hand-edited or older file falls back to defaults field by field.
+- Menus: Esc and the arrow keys work while a submenu is open but focus is still on its parent (opened by a click, or holding only disabled items).
+- `pnpm perf` measures spec §7's waits in the built app with isolated data and fails over budget. Baseline: [perf-baseline.json](perf-baseline.json).

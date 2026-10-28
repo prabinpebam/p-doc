@@ -3,10 +3,11 @@
  * keyboard handler all read it, so a command is reachable from each the same way (PD3, U11).
  */
 import type { Editor } from "@tiptap/core";
-import { defaultStyles, STYLE_LABELS, type StyleKey } from "@p-doc/core";
+import { defaultStyles, STYLE_LABELS, TEXT_WIDTH, type PageSetup, type StyleKey, type TextWidth } from "@p-doc/core";
 import type { Theme } from "../shared/api.ts";
 import { applyStyle, clearBlockDirectFormatting, currentStyle, indent, insertAtomBlock, setBlockAttrs, currentBlock, styleFromSelection } from "./editor/blocks.ts";
 import { copyDoc, deleteDoc } from "./ops.ts";
+import { downloadPdf, printDoc } from "./output.ts";
 import { flush, getEditor, newDoc, syncSelection, updateDoc } from "./session.ts";
 import { app, openDialog, showPanel, shownPanel, toast, togglePanel, updateSettings } from "./state.ts";
 
@@ -37,6 +38,11 @@ export interface Menu {
 
 const ed = () => getEditor();
 const hasEditor = () => !!getEditor();
+const hasDoc = () => !!app.get().doc;
+const setPage = (patch: Partial<PageSetup>) => {
+  const d = app.get().doc;
+  if (d && Object.entries(patch).some(([k, v]) => d.page[k as keyof PageSetup] !== v)) updateDoc({ page: { ...d.page, ...patch } });
+};
 const withEditor = (fn: (e: Editor) => void) => () => {
   const e = ed();
   if (e) fn(e);
@@ -145,6 +151,9 @@ const commands: Command[] = [
     run: () => void flush().then(() => app.get().save === "saved" && toast("Saved")),
   },
   { id: "file.settings", label: "Settings", keywords: "preferences options", global: true, run: () => openDialog({ kind: "settings" }) },
+  { id: "file.pageSetup", label: "Page setup…", keywords: "paper margins orientation landscape portrait page colour size", global: true, run: () => openDialog({ kind: "pageSetup" }), enabled: hasDoc },
+  { id: "file.pdf", label: "PDF document (.pdf)", keywords: "download export pdf save as", global: true, run: () => void downloadPdf(), enabled: hasEditor },
+  { id: "file.print", label: "Print", keys: ["Ctrl+P"], global: true, run: () => void printDoc(), enabled: hasEditor },
 
   // Edit
   { id: "edit.undo", label: "Undo", keys: ["Ctrl+Z"], run: chain((c) => c.undo()), enabled: () => !!ed()?.can().undo() },
@@ -179,6 +188,19 @@ const commands: Command[] = [
   { id: "view.focus", label: "Focus view", keys: ["Ctrl+Alt+Shift+F"], global: true, checked: () => app.get().focus, run: () => app.set((s) => ({ focus: !s.focus })) },
   { id: "view.compact", label: "Compact mode", keys: ["Ctrl+Shift+F"], global: true, checked: () => !!app.get().settings?.compact, run: () => void updateSettings({ compact: !app.get().settings?.compact }) },
   { id: "view.fullScreen", label: "Full screen", keys: ["F11"], global: true, checked: () => app.get().fullscreen, run: () => void window.pdoc.app.toggleFullScreen() },
+  { id: "view.pages", label: "Pages", keywords: "print layout page view", global: true, checked: () => app.get().doc?.page.mode === "pages", run: () => setPage({ mode: "pages" }), enabled: hasDoc },
+  { id: "view.pageless", label: "Pageless", keywords: "web layout continuous", global: true, checked: () => app.get().doc?.page.mode === "pageless", run: () => setPage({ mode: "pageless" }), enabled: hasDoc },
+  ...(Object.keys(TEXT_WIDTH) as TextWidth[]).map(
+    (w): Command => ({
+      id: `view.width.${w}`,
+      label: TEXT_WIDTH[w] ? `${w[0]!.toUpperCase()}${w.slice(1)} (${TEXT_WIDTH[w]} px)` : "Full width",
+      keywords: "text width pageless",
+      global: true,
+      checked: () => app.get().doc?.page.textWidth === w,
+      run: () => setPage({ textWidth: w }),
+      enabled: () => app.get().doc?.page.mode === "pageless",
+    }),
+  ),
   ...(["light", "dark", "system"] as Theme[]).map(
     (t): Command => ({
       id: `view.theme.${t}`,
@@ -199,6 +221,7 @@ const commands: Command[] = [
   { id: "insert.hr", label: "Horizontal line", keywords: "rule divider", run: chain((c) => c.setHorizontalRule()), enabled: hasEditor },
   { id: "insert.pageBreak", label: "Page break", keys: ["Ctrl+Enter"], run: withEditor((e) => insertAtomBlock(e, "pageBreak")), enabled: hasEditor },
   { id: "insert.toc", label: "Table of contents", keywords: "toc contents", run: withEditor((e) => insertAtomBlock(e, "tableOfContents")), enabled: hasEditor },
+  { id: "insert.headerFooter", label: "Header and footer", keywords: "page number count footer header", global: true, run: () => openDialog({ kind: "headerFooter" }), enabled: hasDoc },
   { id: "insert.special", label: "Special characters…", keywords: "symbol emoji character", run: () => openDialog({ kind: "specialChars" }), enabled: hasEditor },
 
   // Format > Text
@@ -362,7 +385,12 @@ export function labelOf(c: Command): string {
 }
 
 export const MENUS: Menu[] = [
-  { id: "file", label: "File", key: "F", items: ["file.new", "file.library", "-", "file.copy", "file.rename", "file.move", "file.delete", "-", "file.settings"] },
+  {
+    id: "file",
+    label: "File",
+    key: "F",
+    items: ["file.new", "file.library", "-", "file.copy", "file.rename", "file.move", "file.delete", "-", { label: "Download", items: ["file.pdf"] }, "file.pageSetup", "file.print", "-", "file.settings"],
+  },
   { id: "edit", label: "Edit", key: "E", items: ["edit.undo", "edit.redo", "-", "edit.cut", "edit.copy", "edit.paste", "edit.pasteText", "-", "edit.selectAll", "-", "edit.find", "edit.replace"] },
   {
     id: "view",
@@ -371,6 +399,10 @@ export const MENUS: Menu[] = [
     items: [
       "view.outline",
       "view.library",
+      "-",
+      "view.pages",
+      "view.pageless",
+      { label: "Text width", items: ["view.width.narrow", "view.width.medium", "view.width.wide", "view.width.full"] },
       "-",
       { label: "Zoom", items: ["view.zoomIn", "view.zoomOut", "view.zoomReset"] },
       "view.focus",
@@ -384,7 +416,7 @@ export const MENUS: Menu[] = [
     id: "insert",
     label: "Insert",
     key: "I",
-    items: ["insert.image", { label: "Table", items: ["insert.table2", "insert.table3", "insert.table4", "insert.table5"] }, "insert.link", "insert.hr", "insert.pageBreak", "insert.toc", "insert.special"],
+    items: ["insert.image", { label: "Table", items: ["insert.table2", "insert.table3", "insert.table4", "insert.table5"] }, "insert.link", "insert.hr", "insert.pageBreak", "insert.toc", "insert.headerFooter", "insert.special"],
   },
   {
     id: "format",

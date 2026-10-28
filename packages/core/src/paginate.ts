@@ -50,4 +50,26 @@ export function paginate(blocks: BlockBox[], pageContentHeight: number): Paginat
   return { pageOf, starts, pages: page, push };
 }
 
+/** A run of blocks laid out on one sheet: one page, or several when a tall block overflows its page. */
+export interface Sheet {
+  /** First block index. */
+  start: number;
+  /** One past the last block index. */
+  end: number;
+  /** Page number (1-based) of the sheet's first page. */
+  page: number;
+  /** Pages the sheet covers. */
+  span: number;
+}
+
+export function sheetsOf(p: Pagination): Sheet[] {
+  const n = p.pageOf.length;
+  return p.starts.map((start, k) => {
+    const end = p.starts[k + 1] ?? n;
+    const page = p.pageOf[start] ?? 1;
+    const nextPage = k + 1 < p.starts.length ? (p.pageOf[p.starts[k + 1]!] ?? page + 1) : p.pages + 1;
+    return { start, end, page, span: Math.max(1, nextPage - page) };
+  });
+}
+
 export const CSS_PX_PER_INCH = 96;

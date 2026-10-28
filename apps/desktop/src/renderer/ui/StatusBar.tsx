@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import { Add20Regular, CloudOff16Regular, Subtract20Regular } from "@fluentui/react-icons";
 import { runCommand } from "../commands.ts";
 import { getEditor } from "../session.ts";
+import { pageLayout } from "../editor/pages.ts";
 import { app, openDialog } from "../state.ts";
 
 export function countWords(text: string): number {
@@ -13,11 +14,18 @@ export function countWords(text: string): number {
 export function StatusBar() {
   app.use((s) => s.tick);
   const zoom = app.use((s) => s.settings?.zoom ?? 100);
+  const layout = pageLayout.use((s) => s.layout);
   const editor = getEditor();
   const docRef = editor?.state.doc;
   const words = useMemo(() => (docRef ? countWords(docRef.textBetween(0, docRef.content.size, " ", " ")) : 0), [docRef]);
+  const page = layout && editor ? (layout.pageOf[editor.state.selection.$from.index(0)] ?? 1) : null;
   return (
     <footer className="statusbar" data-region aria-label="Status">
+      {layout && page != null && (
+        <span className="status-item" data-testid="page-indicator">
+          Page {page} of {layout.pages}
+        </span>
+      )}
       <button type="button" className="status-btn" onClick={() => openDialog({ kind: "wordCount" })} title="Word count (Ctrl+Shift+C)" data-testid="word-total">
         {words === 1 ? "1 word" : `${words.toLocaleString()} words`}
       </button>

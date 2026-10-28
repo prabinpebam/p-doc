@@ -205,6 +205,49 @@ textarea {
   gap: var(--space-4);
 }
 
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: var(--space-3);
+}
+
+.form-grid.wide-first {
+  grid-template-columns: 2fr 1fr;
+}
+
+.form-row.inline {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+fieldset.plain {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+fieldset.plain:disabled {
+  opacity: var(--opacity-disabled);
+}
+
+.swatch-input {
+  width: var(--size-control-dense);
+  height: var(--size-control-dense);
+  padding: 0;
+  border: var(--border-hairline) solid var(--color-rule);
+  border-radius: var(--radius-sm);
+  background: transparent;
+}
+
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
 kbd {
   font-family: var(--font-ui);
   font-size: var(--text-sm);

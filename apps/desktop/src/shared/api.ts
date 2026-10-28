@@ -67,7 +67,30 @@ export interface CreateRequest {
   page?: PageSetup;
 }
 
+export interface PrintRequest {
+  /** The print document (print.ts): self-contained HTML that runs no script. */
+  html: string;
+  title: string;
+  /** Paper size in inches (the page as drawn on screen, so sheets fill pages exactly). */
+  size: { width: number; height: number };
+  /** Inches; 0 in Pages mode, where each sheet draws its own margins. */
+  margins: { top: number; bottom: number; left: number; right: number };
+}
+
+export interface PdfResult {
+  path: string;
+  pages: number;
+}
+
 export interface PDocApi {
+  output: {
+    /** Asks where, then writes the print document as a PDF; null when the person cancels. */
+    pdf(req: PrintRequest): Promise<PdfResult | null>;
+    /** The system print dialog for the print document; false when cancelled or it failed. */
+    print(req: PrintRequest): Promise<boolean>;
+    /** Shows an exported file in the system file manager. */
+    showFile(path: string): Promise<void>;
+  };
   settings: {
     get(): Promise<Settings>;
     set(patch: Partial<Omit<Settings, "version">>): Promise<Settings>;

@@ -2,7 +2,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { userInfo } from "node:os";
-import { parseDocument, serializeDocument, type PDocFile } from "@p-doc/core";
+import { cleanPage, parseDocument, serializeDocument, type PDocFile } from "@p-doc/core";
 import { writeAtomic } from "./library.ts";
 import { isDocRef, type DocRef, type Recovered, type Settings } from "../shared/api.ts";
 
@@ -45,7 +45,7 @@ export class SettingsStore {
     if (typeof patch.spelling === "boolean") next.spelling = patch.spelling;
     if (patch.leftPanel === null || patch.leftPanel === "library" || patch.leftPanel === "outline") next.leftPanel = patch.leftPanel;
     if (typeof patch.compact === "boolean") next.compact = patch.compact;
-    if (patch.pageDefault === null || (patch.pageDefault && typeof patch.pageDefault === "object")) next.pageDefault = patch.pageDefault;
+    if (patch.pageDefault === null || (patch.pageDefault && typeof patch.pageDefault === "object")) next.pageDefault = patch.pageDefault ? cleanPage(patch.pageDefault) : null;
     if (patch.last === null || isDocRef(patch.last)) next.last = patch.last;
     this.value = next;
     writeAtomic(this.file, `${JSON.stringify(next, null, 2)}\n`);

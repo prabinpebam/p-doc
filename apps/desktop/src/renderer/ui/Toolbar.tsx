@@ -8,6 +8,7 @@ import {
   Image20Regular,
   Link20Regular,
   MoreHorizontal20Regular,
+  Print20Regular,
   Search20Regular,
   Subtract20Regular,
   Add20Regular,
@@ -348,6 +349,7 @@ export function Toolbar() {
     <>
         <Btn id="edit.undo" icon={<ArrowUndo20Regular />} />
         <Btn id="edit.redo" icon={<ArrowRedo20Regular />} />
+        <Btn id="file.print" icon={<Print20Regular />} />
     </>,
     <>
         <select

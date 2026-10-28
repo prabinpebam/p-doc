@@ -7,6 +7,7 @@ import { app, closeDialog, updateSettings, type Dialog as DialogState } from "..
 import type { Theme } from "../../shared/api.ts";
 import { Dialog } from "./Dialog.tsx";
 import { countWords } from "./StatusBar.tsx";
+import { HeaderFooterDialog, PageSetupDialog } from "./PageDialogs.tsx";
 
 export function Dialogs() {
   const d = app.use((s) => s.dialog);
@@ -28,6 +29,10 @@ export function Dialogs() {
       return <Rename d={d} />;
     case "move":
       return <Move d={d} />;
+    case "pageSetup":
+      return <PageSetupDialog />;
+    case "headerFooter":
+      return <HeaderFooterDialog />;
   }
 }
 

@@ -8,6 +8,7 @@ export type PaperSize = "letter" | "legal" | "a4" | "a5" | "tabloid";
 export type Orientation = "portrait" | "landscape";
 export type PageMode = "pages" | "pageless";
 export type TextWidth = "narrow" | "medium" | "wide" | "full";
+export type HfAlign = "left" | "center" | "right";
 
 /** Paper sizes in inches (portrait). */
 export const PAPER: Record<PaperSize, { label: string; width: number; height: number }> = {
@@ -40,6 +41,8 @@ export interface PageSetup {
   /** Header and footer text; `{page}` and `{pages}` stand for the page number and count. */
   header: string;
   footer: string;
+  headerAlign: HfAlign;
+  footerAlign: HfAlign;
   differentFirstPage: boolean;
   firstHeader: string;
   firstFooter: string;
@@ -129,6 +132,8 @@ export function defaultPage(locale?: string): PageSetup {
     textWidth: "medium",
     header: "",
     footer: "",
+    headerAlign: "left",
+    footerAlign: "center",
     differentFirstPage: false,
     firstHeader: "",
     firstFooter: "",
@@ -169,6 +174,32 @@ export function createDocument(o: CreateOptions = {}): PDocFile {
 export class FormatError extends Error {}
 
 /** Reads a document, filling settings a writer of an earlier P-Doc left out. Throws FormatError. */
+/** A page setup from a file or another process: known values kept, anything else the default. */
+export function cleanPage(raw: unknown): PageSetup {
+  const d = defaultPage();
+  const p = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+  const m = (p.margins && typeof p.margins === "object" ? p.margins : {}) as Record<string, unknown>;
+  const pick = <T extends string>(v: unknown, ok: readonly T[], def: T): T => (ok.includes(v as T) ? (v as T) : def);
+  const inches = (v: unknown, def: number) => (typeof v === "number" && Number.isFinite(v) && v >= 0 && v <= 10 ? v : def);
+  const text = (v: unknown, def: string) => (typeof v === "string" ? v.slice(0, 500) : def);
+  const aligns = ["left", "center", "right"] as const;
+  return {
+    mode: pick(p.mode, ["pages", "pageless"], d.mode),
+    size: pick(p.size, Object.keys(PAPER) as PaperSize[], d.size),
+    orientation: pick(p.orientation, ["portrait", "landscape"], d.orientation),
+    margins: { top: inches(m.top, d.margins.top), bottom: inches(m.bottom, d.margins.bottom), left: inches(m.left, d.margins.left), right: inches(m.right, d.margins.right) },
+    color: typeof p.color === "string" && /^#[0-9a-f]{6}$/i.test(p.color) ? p.color : d.color,
+    textWidth: pick(p.textWidth, Object.keys(TEXT_WIDTH) as TextWidth[], d.textWidth),
+    header: text(p.header, d.header),
+    footer: text(p.footer, d.footer),
+    headerAlign: pick(p.headerAlign, aligns, d.headerAlign),
+    footerAlign: pick(p.footerAlign, aligns, d.footerAlign),
+    differentFirstPage: typeof p.differentFirstPage === "boolean" ? p.differentFirstPage : d.differentFirstPage,
+    firstHeader: text(p.firstHeader, d.firstHeader),
+    firstFooter: text(p.firstFooter, d.firstFooter),
+  };
+}
+
 export function parseDocument(text: string): PDocFile {
   let raw: unknown;
   try {
@@ -189,7 +220,7 @@ export function parseDocument(text: string): PDocFile {
     id: d.id,
     title: typeof d.title === "string" && d.title.trim() ? d.title : "Untitled document",
     created: typeof d.created === "string" ? d.created : new Date(0).toISOString(),
-    page: { ...defaultPage(), ...(d.page ?? {}), margins: { ...defaultPage().margins, ...(d.page?.margins ?? {}) } },
+    page: cleanPage(d.page),
     styles,
     content: d.content as JSONContent,
     comments: Array.isArray(d.comments) ? d.comments : [],

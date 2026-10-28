@@ -13,12 +13,12 @@ What success means for the [spec](spec.md): the project's Definition of Done, ma
 |---|---|---|---|---|
 | PD1 | P1 | Typing is on disk within 1 s of a pause, survives a forced quit (recovery), and every committed state is listed and restorable | e2e `autosave`, `recovery`, `versions`; unit `library` | Partial 2026-10-28: `autosave`, `recovery` and unit `library` pass; `versions` is stage 3 |
 | PD2 | P2 | Every feature works with the network off and no account; documents are readable JSON in plain Git repositories | e2e suites run offline with no GitHub; unit `format` | Partial 2026-10-28: stage 1 runs offline with no account (`offline`); readable JSON (unit `format`) |
-| PD3 | P3 | Outline and table of contents follow heading changes with no manual step; every command is reachable by command search | e2e `outline`, `toc`, `command-search` | Partial 2026-10-28: `outline` and `command-search` pass; `toc` is stage 2 |
-| PD4 | P4 | A multi-page fixture has the same page count on screen and in the exported PDF (A1) | e2e `pagination` | |
+| PD3 | P3 | Outline and table of contents follow heading changes with no manual step; every command is reachable by command search | e2e `outline`, `toc`, `command-search` | Pass 2026-10-28: `outline`, `command-search` and `toc` pass |
+| PD4 | P4 | A multi-page fixture has the same page count on screen and in the exported PDF (A1) | e2e `pagination` | Pass 2026-10-28: the 16-page fixture has the same page count on screen, in the print layout and in the PDF (A1 confirmed) |
 | PD5 | P5 | Accepting all gives the suggested text; rejecting all gives the original, exactly | unit `suggestions`; e2e `review` | |
 | PD6 | P6 | Nothing reaches the public repository without the Move to Public confirmation; new documents are private | e2e `privacy`; unit `library` | |
 | PD7 | The outcome is valuable | A fresh install reaches a first saved document in under a minute, offline or signed in | e2e `first-run` timing; owner try-it | |
-| PD8 | Nothing live breaks | No real GitHub, documents or settings of the owner are touched by tests; budgets in spec §7 hold | test isolation (W7); `pnpm perf` against `perf-baseline.json` | Partial 2026-10-28: every e2e run has its own data, library and empty Git config; unit `library` uses an empty Git config. `pnpm perf` is stage 2 |
+| PD8 | Nothing live breaks | No real GitHub, documents or settings of the owner are touched by tests; budgets in spec §7 hold | test isolation (W7); `pnpm perf` against `perf-baseline.json` | Partial 2026-10-28: every e2e run has its own data, library and empty Git config; unit `library` uses an empty Git config. `pnpm perf` within budget (keystroke p95 1.3 ms, repagination 2.7 ms, save 10 ms, open 100 pages 90 ms, cold start 0.55 s, 50-page PDF 0.3 s; [baseline](perf-baseline.json)); waits of stages 3, 5 and 6 are measured there |
 | PD9 | Docs | The spec's "As built" records what was built | Review | |
 
 ## 2. Stages
@@ -57,12 +57,12 @@ A person can lay a document out on real pages, or write pageless, and print or e
 
 | # | Done when | Evidence | Result |
 |---|---|---|---|
-| 2.1 | Pages mode shows page sheets of the chosen size and margins with blocks moved to the next page when they don't fit (U13, U14) | e2e `pagination`; unit `paginate` | |
-| 2.2 | Pageless hides page edges, headers and footers without deleting them; text width applies (U13, GD R-003) | e2e `pageless` | |
-| 2.3 | Header and footer repeat with page number and count; different first page works (U15) | e2e `header-footer` | |
-| 2.4 | The PDF has the same page count as the screen for the fixture (U16, A1) | e2e `pagination` (PDF page count) | |
-| 2.5 | The table of contents updates when a heading changes, with no refresh step (U9) | e2e `toc`; unit `toc` | |
-| 2.6 | Set as default makes new documents use the page setup | e2e `page-setup` | |
+| 2.1 | Pages mode shows page sheets of the chosen size and margins with blocks moved to the next page when they don't fit (U13, U14) | e2e `pagination`; unit `paginate` | Pass 2026-10-28: e2e `pagination` (every block inside its sheet on a 16-page fixture; a page break starts a sheet; a code block taller than a page starts a sheet and runs on; "Page *n* of *count*"; zoom 150% keeps the layout; screenshots reviewed); unit `paginate`. Fixed: code blocks looked selected (new token `color.page-code`) |
+| 2.2 | Pageless hides page edges, headers and footers without deleting them; text width applies (U13, GD R-003) | e2e `pageless` | Pass 2026-10-28: e2e `pageless` (no breaks, headers or page indicator; Narrow and Medium widths measured, Full width fills; print and PDF without headers; back to Pages restores them). Fixed: Esc did nothing with a submenu open and focus on its parent; "Full" renamed "Full width" |
+| 2.3 | Header and footer repeat with page number and count; different first page works (U15) | e2e `header-footer` | Pass 2026-10-28: e2e `header-footer` (`{page}` and `{pages}` on every page, alignment, Cancel, double-click to edit, different first page, saved in the file and in the print layout) |
+| 2.4 | The PDF has the same page count as the screen for the fixture (U16, A1) | e2e `pagination` (PDF page count) | Pass 2026-10-28: e2e `pagination` (PDF page count equals the screen's; the print layout in a hidden window has the same sheets) |
+| 2.5 | The table of contents updates when a heading changes, with no refresh step (U9) | e2e `toc`; unit `toc` | Pass 2026-10-28: e2e `toc`, 7 of 7 runs (renaming, a new heading, text pushing a chapter to a later page and undo, all with no refresh; a click jumps); unit `toc`. Fixed: page numbers vanished after a heading edit and didn't update when they changed |
+| 2.6 | Set as default makes new documents use the page setup | e2e `page-setup` | Pass 2026-10-28: e2e `page-setup` (landscape, A4, margins, colour, both validation messages; Set as default, then Ctrl+N has the setup); unit `format` (`cleanPage`) |
 
 **Depends on:** nothing outside the product.
 

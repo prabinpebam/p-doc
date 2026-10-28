@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createDocument, defaultPaper, documentPath, FormatError, headerFooterText, parseDocument, schema, serializeDocument, slug } from "../src/index.ts";
+import { cleanPage, createDocument, defaultPage, defaultPaper, documentPath, FormatError, headerFooterText, parseDocument, schema, serializeDocument, slug } from "../src/index.ts";
 
 describe("format", () => {
   it("round-trips a document through readable, pretty-printed JSON", () => {
@@ -8,6 +8,16 @@ describe("format", () => {
     expect(text).toContain('\n  "format": "p-doc"');
     expect(text.endsWith("\n")).toBe(true);
     expect(parseDocument(text)).toEqual(doc);
+  });
+
+  it("cleans a stored page setup: keeps valid values, replaces bad ones with defaults", () => {
+    const d = defaultPage();
+    const good = cleanPage({ mode: "pageless", size: "a4", orientation: "landscape", margins: { top: 0.5, bottom: 2, left: 1.25, right: 0 }, color: "#FFF8E1", textWidth: "narrow", header: "{title}", footerAlign: "right", differentFirstPage: true, firstFooter: "x" });
+    expect(good).toMatchObject({ mode: "pageless", size: "a4", orientation: "landscape", margins: { top: 0.5, bottom: 2, left: 1.25, right: 0 }, color: "#FFF8E1", textWidth: "narrow", header: "{title}", footerAlign: "right", differentFirstPage: true, firstFooter: "x" });
+    const bad = cleanPage({ mode: "scroll", size: "a0", orientation: 1, margins: { top: -1, bottom: 11, left: Number.NaN, right: "1" }, color: "red", textWidth: "huge", header: 5, headerAlign: "justify", differentFirstPage: "yes", footer: "f".repeat(900) });
+    expect(bad).toEqual({ ...d, footer: "f".repeat(500) });
+    expect(cleanPage(null)).toEqual(d);
+    expect(cleanPage("nonsense")).toEqual(d);
   });
 
   it("fills settings an older writer left out", () => {

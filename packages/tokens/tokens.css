@@ -109,6 +109,7 @@
   --color-match: var(--p-yellow-300);
   --color-match-current: var(--p-yellow-500);
   --color-page-selection: var(--p-blue-100);
+  --color-page-code: var(--p-ink-50);
   --color-text: light-dark(var(--p-ink-900), var(--p-ink-50));
   --color-text-muted: light-dark(var(--p-ink-700), var(--p-ink-300));
   --color-bg: light-dark(var(--p-ink-50), var(--p-ink-900));

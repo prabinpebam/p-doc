@@ -1,10 +1,11 @@
 /** The live editor's extensions: the shared schema plus placeholder, TOC sync, suggestions, find and image files. */
 import { commands, Extension, type AnyExtension } from "@tiptap/core";
-import { Plugin } from "@tiptap/pm/state";
+import { Plugin, Selection, TextSelection } from "@tiptap/pm/state";
 import type { EditorView } from "@tiptap/pm/view";
 import { Placeholder, TrailingNode } from "@tiptap/extensions";
 import { extensions, Suggest, TocSync } from "@p-doc/core";
 import { FindHighlight } from "./find.ts";
+import { Pages } from "./pages.ts";
 
 export const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
 
@@ -80,10 +81,29 @@ const SyncFocus = Extension.create({
   },
 });
 
+/**
+ * Ctrl+Home and Ctrl+End go to the start and end of the document (Shift extends the selection), as in
+ * Word. Done here because the browser's own move stops at the sheet breaks drawn between pages.
+ */
+const DocEnds = Extension.create({
+  name: "docEnds",
+  addKeyboardShortcuts() {
+    const go = (end: boolean, extend: boolean) => () => {
+      const { state, view } = this.editor;
+      const target = end ? Selection.atEnd(state.doc) : Selection.atStart(state.doc);
+      const sel = extend ? TextSelection.between(state.selection.$anchor, target.$head) : target;
+      view.dispatch(state.tr.setSelection(sel).scrollIntoView());
+      return true;
+    };
+    return { "Mod-Home": go(false, false), "Mod-End": go(true, false), "Mod-Shift-Home": go(false, true), "Mod-Shift-End": go(true, true) };
+  },
+});
+
 export function editorExtensions(o: { author: string; onImageTooLarge: () => void }): AnyExtension[] {
   return extensions({
     extra: [
       SyncFocus,
+      DocEnds,
       // As in Word and Google Docs, a table, rule, break, image or code block is never the last block.
       TrailingNode.configure({ node: "paragraph", notAfter: ["paragraph", "heading", "blockquote", "bulletList", "orderedList", "taskList"] }),
       Placeholder.configure({ placeholder: "Start writing" }),
@@ -91,6 +111,7 @@ export function editorExtensions(o: { author: string; onImageTooLarge: () => voi
       Suggest.configure({ author: o.author }),
       FindHighlight,
       ImageFiles(o.onImageTooLarge),
+      Pages,
     ],
   });
 }

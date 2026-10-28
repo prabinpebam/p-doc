@@ -3,12 +3,13 @@
  * renderer has no Node; every argument from it is checked here (spec §6, Security).
  */
 import { app, BrowserWindow, ipcMain, Menu, nativeTheme, shell, type MenuItemConstructorOptions } from "electron";
-import { appendFileSync, mkdirSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
-import { parseDocument, type PDocFile } from "@p-doc/core";
+import { cleanPage, parseDocument, type PDocFile } from "@p-doc/core";
 import { Library } from "./library.ts";
+import { exported, printDocument, savePdf } from "./output.ts";
 import { RecoveryStore, SettingsStore } from "./state.ts";
-import { isDocRef, isSpace, type CreateRequest, type DocRef, type Recovered, type Settings } from "../shared/api.ts";
+import { isDocRef, isSpace, type CreateRequest, type DocRef, type PrintRequest, type Recovered, type Settings } from "../shared/api.ts";
 
 // Isolation for tests and portable use: data and library folders from the environment.
 if (process.env.PDOC_USER_DATA) app.setPath("userData", process.env.PDOC_USER_DATA);
@@ -164,11 +165,13 @@ function handlers(): void {
   h("library:create", async (req: CreateRequest) => {
     await library.ensure();
     const r = req ?? {};
+    const page = r.page ?? settings.get().pageDefault;
     return library.create({
       title: typeof r.title === "string" ? r.title.slice(0, 300) : undefined,
       space: isSpace(r.space) ? r.space : "private",
       content: r.content ? asDoc({ format: "p-doc", version: 1, id: "x", content: r.content }).content : undefined,
-      page: r.page ?? settings.get().pageDefault ?? undefined,
+      // Checked and completed like a file's page setup (older defaults lack newer fields).
+      page: page ? cleanPage(page) : undefined,
     });
   });
   h("library:open", (ref: DocRef) => library.read(asRef(ref)));
@@ -203,6 +206,11 @@ function handlers(): void {
     return shell.openPath(logDir).then(() => undefined);
   });
   h("app:version", () => app.getVersion());
+  h("output:pdf", (req: PrintRequest) => savePdf(win, req));
+  h("output:print", (req: PrintRequest) => printDocument(req));
+  h("output:showFile", (path: unknown) => {
+    if (typeof path === "string" && exported.has(path) && existsSync(path)) shell.showItemInFolder(path);
+  });
   h("app:config", () => ({
     saveDelayMs: Number(process.env.PDOC_SAVE_DELAY_MS) || 800,
     recoveryDelayMs: Number(process.env.PDOC_RECOVERY_DELAY_MS) || 300,

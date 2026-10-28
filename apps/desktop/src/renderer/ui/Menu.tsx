@@ -61,7 +61,17 @@ export function MenuList({ items, label, onClose, onSide, onBack, className, sty
   };
 
   const onKeyDown = (e: KeyboardEvent) => {
-    if (open != null) return;
+    if (open != null) {
+      const sub = ref.current?.querySelector(":scope > .menu-slot > .menu.sub");
+      if (sub?.contains(e.target as Node)) return;
+      // The submenu is open but focus stayed here (it opened on a click, or nothing in it can be chosen).
+      setOpen(null);
+      if (e.key === "Escape" || e.key === "ArrowLeft") {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+    }
     const it = items[active];
     switch (e.key) {
       case "ArrowDown":

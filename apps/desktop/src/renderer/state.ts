@@ -12,6 +12,8 @@ export type Dialog =
   | { kind: "specialChars" }
   | { kind: "settings" }
   | { kind: "about" }
+  | { kind: "pageSetup" }
+  | { kind: "headerFooter" }
   | { kind: "rename"; ref: DocRef; title: string }
   | { kind: "move"; ref: DocRef; title: string; to: Space };
 

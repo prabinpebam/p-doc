@@ -7,12 +7,16 @@
   padding: var(--c-page-gap) var(--space-4) var(--space-12);
 }
 
-.page {
+.page,
+.print-doc {
   --doc-list-indent: 1.5em;
   --doc-cell-pad: 0.25em 0.5em;
   --doc-gap: 0.75em;
   --doc-code-pad: 0.1em 0.3em;
   --doc-toc-indent: 1.5em;
+}
+
+.page {
   width: var(--page-width);
   max-width: 100%;
   min-height: var(--page-height);
@@ -28,15 +32,106 @@
   box-shadow: none;
 }
 
+/*
+ * Pages mode (U13): the page keeps its paper width, and the article is as tall as its sheets.
+ * Sheet breaks inside the text draw the rest of each page, its footer, the gap and the next header.
+ */
+.page.paged {
+  position: relative;
+  max-width: none;
+  min-height: calc(var(--fill-height) + var(--sheets) * (var(--page-pad-top) + var(--page-pad-bottom)) + (var(--sheets) - 1) * var(--c-page-gap));
+}
+
+.pd-sheet-break {
+  margin: 0 calc(-1 * var(--page-pad-right)) 0 calc(-1 * var(--page-pad-left));
+  cursor: default;
+  user-select: none;
+}
+
+.pd-sheet-fill {
+  height: var(--fill);
+}
+
+.pd-sheet-foot,
+.page-foot,
+.print-foot {
+  height: var(--page-pad-bottom);
+}
+
+.pd-sheet-head,
+.page-head,
+.print-head {
+  height: var(--page-pad-top);
+}
+
+.pd-sheet-gap {
+  height: var(--c-page-gap);
+  margin: 0 calc(-1 * var(--space-2));
+  background: var(--color-canvas);
+}
+
+.page-head,
+.page-foot {
+  position: absolute;
+  left: 0;
+  right: 0;
+}
+
+.page-head {
+  top: 0;
+}
+
+.page-foot {
+  bottom: 0;
+}
+
+.pd-hf {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0 var(--page-pad-right) 0 var(--page-pad-left);
+  color: var(--color-page-muted);
+  font-family: var(--doc-font, inherit);
+  font-size: var(--text-sm);
+  white-space: pre;
+  overflow: hidden;
+}
+
+.pd-hf[data-align="center"] {
+  justify-content: center;
+}
+
+.pd-hf[data-align="right"] {
+  justify-content: flex-end;
+}
+
+.page .pd-hf {
+  cursor: default;
+}
+
 .focus .page-stack {
   padding-top: var(--space-12);
 }
 
+/*
+ * Blocks stack without margin collapsing, as in Word and Google Docs: the space between two
+ * paragraphs is one's space after plus the next one's space before, and pages add up exactly.
+ */
 .pd-content {
+  display: flex;
+  flex-direction: column;
   outline: none;
   min-height: 100%;
   caret-color: var(--color-page-text);
   overflow-wrap: break-word;
+}
+
+.pd-content > * {
+  min-width: 0;
+}
+
+.pd-content > :is(ul, ol, blockquote, pre, hr, .tableWrapper, table, .pd-toc) {
+  margin-top: 0;
 }
 
 .pd-content ::selection {
@@ -96,14 +191,14 @@
 .pd-content code {
   padding: var(--doc-code-pad);
   border-radius: var(--radius-sm);
-  background: var(--color-page-selection);
+  background: var(--color-page-code);
   font-family: Consolas, "Cascadia Mono", monospace;
 }
 
 .pd-content pre {
   padding: var(--doc-gap);
   border-radius: var(--radius-sm);
-  background: var(--color-page-selection);
+  background: var(--color-page-code);
   font-family: Consolas, "Cascadia Mono", monospace;
   white-space: pre-wrap;
 }
@@ -175,10 +270,16 @@
   border-top: var(--border-hairline) solid var(--color-page-muted);
 }
 
-/* A page break shows as a dashed rule until pages are laid out (stage 2). */
+/* A page break is a dashed rule in Pageless; with pages, the next block simply starts a page. */
 .pd-page-break {
   margin: var(--doc-gap) 0;
   border-top: var(--border-hairline) dashed var(--color-page-muted);
+}
+
+.paged .pd-page-break {
+  height: 0;
+  margin: 0;
+  border: 0;
 }
 
 .pd-toc {
@@ -189,6 +290,23 @@
   list-style: none;
   margin: 0;
   padding-left: 0;
+}
+
+.pd-toc li {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-1);
+}
+
+.pd-toc-dots {
+  flex: 1;
+  min-width: var(--space-4);
+  border-bottom: var(--border-hairline) dotted var(--color-page-muted);
+}
+
+.pd-toc-page {
+  flex: none;
+  font-variant-numeric: tabular-nums;
 }
 
 .pd-toc .pd-toc-l2 {
@@ -227,4 +345,47 @@
 
 .pd-match-current {
   background: var(--color-match-current);
+}
+
+/* Print and PDF (U16): one section per sheet, the size of the page (or pages) it shows on screen. */
+.print-body {
+  margin: 0;
+  color-scheme: light;
+}
+
+.print-flow .pd-page-break {
+  height: 0;
+  margin: 0;
+  border: 0;
+  break-after: page;
+}
+
+.print-doc {
+  width: var(--page-width);
+  background: var(--page-color, var(--color-page));
+  color: var(--color-page-text);
+  print-color-adjust: exact;
+}
+
+.print-sheet {
+  display: flex;
+  flex-direction: column;
+  height: var(--sheet-height);
+  overflow: hidden;
+  break-after: page;
+}
+
+.print-sheet:last-child {
+  break-after: auto;
+}
+
+.print-sheet > .pd-content {
+  flex: 1;
+  min-height: 0;
+  padding: 0 var(--page-pad-right) 0 var(--page-pad-left);
+}
+
+.print-head,
+.print-foot {
+  flex: none;
 }
