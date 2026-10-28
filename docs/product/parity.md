@@ -4,7 +4,7 @@ What Google Docs and Microsoft Word can do, and what P-Doc does about each. Ever
 
 > **TL;DR.**
 > - **Sources:** the research knowledge bases (`GD F-###`, 42 Google Docs features observed or documented; `W F-###`, 30 Word features from documentation), widened with Word's and Docs' full menus for the power features the inventories group together.
-> - **Result:** 146 capabilities. 42 Have, 81 Add (U39–U80, stages 7–16), 8 Later, 15 Skip.
+> - **Result:** 149 capabilities. 43 Have, 82 Add (U39–U80, stages 7–16), 9 Later, 15 Skip. (Three image rows added during stage 7: drag to move, top-and-bottom wrap, and the other wrap modes.)
 > - **Cut line:** everything marked Add is in this release, power-user features included; Later waits for the owner's use to show it's needed; Skip conflicts with a promise or a non-goal.
 > - **Order:** images beside the document first (A6 failed, so the format changes before anything builds on it), then the daily writing tools, then the layout features with pagination risks (each stage proves its risk first), then review, references, navigation and files. Install moves to last (stage 17).
 > - **Audited:** 2026-10-28, after stage 6.
@@ -67,6 +67,9 @@ What Google Docs and Microsoft Word can do, and what P-Doc does about each. Ever
 | Large images (over 2 MB) | yes | yes | Add | U39 | 7 | Cap rises to 20 MB once images are beside the document |
 | Resize with handles, keep proportions, reset size | F-011 | yes | Add | U40 | 7 |  |
 | Align and wrap: in line (break text), wrap left or right | F-011 | yes | Add | U40 | 7 | Wrap paginates with its paragraph (A9) |
+| Move an image by dragging it | yes | yes | Add | U40 | 7 | Cut and paste also moves it |
+| Wrap top and bottom | — | yes | Have | U40 | 7 | The same as In line with text |
+| Wrap tight or through, behind or in front of text, fixed position on the page | yes | yes | Later |  |  | Needs positioning on the page that pagination (A9) doesn't model; square wrap covers most uses |
 | Crop and reset crop | F-011 | yes | Add | U40 | 7 | Non-destructive; .docx keeps it |
 | Replace image, alt text | F-011 | yes | Add | U40 | 7 | Alt text feeds the accessibility check |
 | Images from the web or a URL | F-011 | yes | Skip |  |  | Needs the network (P2); paste covers it |

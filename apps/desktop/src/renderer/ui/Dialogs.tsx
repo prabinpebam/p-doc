@@ -5,12 +5,16 @@ import { moveDoc } from "../ops.ts";
 import { restoreVersion } from "../versions.ts";
 import { deleteComment } from "../review.ts";
 import { getEditor, renameDoc } from "../session.ts";
+import { sameRef } from "../../shared/api.ts";
+import { eachImage } from "@p-doc/core";
+import type { JSONContent } from "@tiptap/core";
 import { app, closeDialog, updateSettings, type Dialog as DialogState } from "../state.ts";
 import type { Theme } from "../../shared/api.ts";
 import { Dialog } from "./Dialog.tsx";
 import { countWords } from "./StatusBar.tsx";
 import { HeaderFooterDialog, PageSetupDialog } from "./PageDialogs.tsx";
 import { ConnectDialog, GitHubSection, SyncProblemDialog } from "./GitHubSettings.tsx";
+import { ImageAltDialog, ImageOptionsDialog } from "./ImageDialogs.tsx";
 
 export function Dialogs() {
   const d = app.use((s) => s.dialog);
@@ -44,6 +48,10 @@ export function Dialogs() {
       return <ConnectDialog />;
     case "syncProblem":
       return <SyncProblemDialog />;
+    case "imageAlt":
+      return <ImageAltDialog />;
+    case "imageOptions":
+      return <ImageOptionsDialog />;
   }
 }
 
@@ -470,8 +478,31 @@ function Rename({ d }: { d: Extract<DialogState, { kind: "rename" }> }) {
   );
 }
 
+/** The different pictures in content. */
+function imageCount(content: JSONContent | undefined): number {
+  const srcs = new Set<string>();
+  eachImage(content, (n) => {
+    if (n.attrs?.src) srcs.add(String(n.attrs.src));
+  });
+  return srcs.size;
+}
+
 function Move({ d }: { d: Extract<DialogState, { kind: "move" }> }) {
   const toPublic = d.to === "public";
+  const [images, setImages] = useState(0);
+  useEffect(() => {
+    if (!toPublic) return;
+    const e = getEditor();
+    if (e && sameRef(app.get().current, d.ref)) return setImages(imageCount(e.getJSON()));
+    let live = true;
+    window.pdoc.library.open(d.ref).then(
+      (o) => live && setImages(imageCount(o.doc.content)),
+      () => undefined,
+    );
+    return () => {
+      live = false;
+    };
+  }, [d.ref, toPublic]);
   const submit = () => {
     closeDialog();
     void moveDoc(d.ref, d.to);
@@ -491,6 +522,7 @@ function Move({ d }: { d: Extract<DialogState, { kind: "move" }> }) {
       }
     >
       <p>{toPublic ? "Anyone can read it and its history on GitHub from the next sync." : "Copies already synced stay in the public repository's history."}</p>
+      {toPublic && images ? <p data-testid="move-images">{images === 1 ? "Its image becomes public too." : `Its ${images} images become public too.`}</p> : null}
     </Dialog>
   );
 }

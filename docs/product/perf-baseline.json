@@ -6,64 +6,64 @@
       "wait": "Cold start to editable page",
       "budgetMs": 2000,
       "samples": 5,
-      "medianMs": 428,
-      "p95Ms": 438,
-      "note": "From launch to an editable page, including Playwright's connection"
+      "medianMs": 538,
+      "p95Ms": 552,
+      "note": "From launch to an editable page, including Playwright's connection. The stage 6 build measured beside it the same day has a median of about 500 ms (428 ms in an earlier run), so the rise is the machine's, not the app's"
     },
     "keystroke50": {
       "wait": "Keystroke to glyph, 50-page document",
       "budgetMs": 16,
       "samples": 100,
       "medianMs": 0.6,
-      "p95Ms": 0.8,
+      "p95Ms": 0.9,
       "note": "Transaction, editor update and browser layout for one character; 47 pages"
     },
     "repaginate50": {
       "wait": "Repagination after an edit",
       "budgetMs": 16,
       "samples": 40,
-      "medianMs": 1.5,
-      "p95Ms": 1.8,
+      "medianMs": 2.1,
+      "p95Ms": 2.9,
       "note": "Measuring every block and redrawing the sheet breaks, 50 pages, alternating new lines and characters"
     },
     "save50": {
       "wait": "Save to disk after the debounce",
       "budgetMs": 300,
       "samples": 10,
-      "medianMs": 5.3,
-      "p95Ms": 7.6,
+      "medianMs": 8.6,
+      "p95Ms": 10.1,
       "note": "Serialising and writing a 50-page document"
     },
     "open100": {
       "wait": "Open a 100-page document from the library",
       "budgetMs": 500,
       "samples": 5,
-      "medianMs": 53.3,
-      "p95Ms": 62,
+      "medianMs": 56.3,
+      "p95Ms": 68,
       "note": "Read, parse, draw and lay out all 94 pages"
     },
     "pdf50": {
       "wait": "Export PDF, 50 pages",
       "budgetMs": 3000,
       "samples": 3,
-      "medianMs": 252.8,
-      "p95Ms": 260.4,
+      "medianMs": 286.1,
+      "p95Ms": 287,
       "note": "Print layout in a hidden window and the PDF written"
     },
     "versionCommit50": {
       "wait": "Version commit",
       "budgetMs": 1000,
       "samples": 10,
-      "medianMs": 400.5,
-      "p95Ms": 514.8,
+      "medianMs": 484.8,
+      "p95Ms": 657.5,
       "note": "git add and commit of a changed 50-page document, from the renderer's request to its answer"
     },
     "history500": {
       "wait": "Version history list",
       "budgetMs": 300,
       "samples": 5,
-      "medianMs": 67.2,
-      "p95Ms": 179.6,
+      "medianMs": 68.5,
+      "p95Ms": 194.3,
       "note": "From a click on the save state to all 500+ rows drawn: Git log, tags, grouping and rendering"
     },
     "review50": {
@@ -77,22 +77,34 @@
     "keystrokeSync50": {
       "wait": "Sync (typing while it runs)",
       "budgetMs": 16,
-      "samples": 967,
+      "samples": 1101,
       "medianMs": 0.6,
       "p95Ms": 0.8,
-      "note": "Keystroke to glyph in a 50-page document during 4 syncs to a local fake GitHub (1398 ms each), each pushing a new version"
+      "note": "Keystroke to glyph in a 50-page document during 4 syncs to a local fake GitHub (1607 ms each), each pushing a new version"
     },
     "docx50": {
       "wait": "Export .docx, 50 pages",
       "budgetMs": 3000,
       "samples": 5,
-      "medianMs": 14.7,
-      "p95Ms": 34.1,
+      "medianMs": 16.3,
+      "p95Ms": 38.8,
       "note": "From the renderer's request to the .docx written"
+    },
+    "open100Images": {
+      "wait": "Open a 100-page document with 20 images",
+      "budgetMs": 500,
+      "samples": 5,
+      "medianMs": 65.7,
+      "p95Ms": 90.2,
+      "note": "Read, parse, draw and lay out all 104 pages with 20 images of about 2 MB stored beside the document; images fade in"
+    },
+    "insertImage20": {
+      "wait": "Insert a 20 MB image",
+      "budgetMs": 300,
+      "samples": 5,
+      "medianMs": 89.6,
+      "p95Ms": 118.8,
+      "note": "From paste to the picture decoded on the page: reading the file, hashing and writing it beside the document, and drawing it"
     }
-  },
-  "pending": [
-    "Export .docx, 50 pages (stage 6)",
-    "Sync never blocks typing (stage 5)"
-  ]
+  }
 }

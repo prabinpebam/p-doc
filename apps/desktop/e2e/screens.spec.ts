@@ -3,6 +3,7 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { png, prose } from "./fixtures.ts";
 import { editor, expect, launch, quit, tempDirs, test } from "./helpers.ts";
 import { fakeHelperConfig, startFakeGitHub } from "../test/fakes/fake-github.ts";
 
@@ -81,5 +82,44 @@ test("capture stage 6 screens", async () => {
   await page.keyboard.press("Control+Shift+O");
   await expect(page.getByText("Opened Quarterly plan")).toBeVisible();
   await shot("v12-opened-from-file");
+  await quit(l);
+});
+
+test("capture stage 7 screens", async () => {
+  test.skip(process.env.PDOC_CAPTURE !== "1", "Docs screenshots: PDOC_CAPTURE=1 npx playwright test screens");
+  mkdirSync(out, { recursive: true });
+  const l = await launch();
+  const { page } = l;
+  await page.setViewportSize({ width: 1100, height: 720 });
+  const shot = (n: string) => page.screenshot({ path: join(out, `${n}.png`) });
+  await page.locator("#doc-title").fill("Field notes");
+  await page.keyboard.press("Enter");
+  await page.keyboard.type("The estuary in spring");
+  await page.keyboard.press("Control+Alt+1");
+  await page.keyboard.press("End");
+  await page.keyboard.press("Enter");
+  await page.keyboard.type(prose(110, 3));
+  await page.keyboard.press("Enter");
+  await page.keyboard.type(prose(90, 5));
+  await page.keyboard.press("Control+Home");
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Home");
+  const bytes = png(300, 200, [60, 140, 120]);
+  await page.evaluate((b64) => {
+    const dt = new DataTransfer();
+    dt.items.add(new File([Uint8Array.from(atob(b64), (c) => c.charCodeAt(0))], "Estuary.png", { type: "image/png" }));
+    document.querySelector(".pd-content")!.dispatchEvent(new ClipboardEvent("paste", { clipboardData: dt, bubbles: true, cancelable: true }));
+  }, bytes.toString("base64"));
+  const pic = editor(page).locator(".pd-img").first();
+  await expect(pic).toBeVisible();
+  await pic.locator("img").click();
+  const bar = page.getByTestId("image-bar");
+  await bar.locator('[data-command="image.wrapLeft"]').click();
+  await expect(pic).toHaveAttribute("data-wrap", "left");
+  await shot("v13-image-bar");
+  await bar.locator('[data-command="image.crop"]').click();
+  await expect(pic).toHaveClass(/is-cropping/);
+  await shot("v14-crop");
+  await page.keyboard.press("Escape");
   await quit(l);
 });

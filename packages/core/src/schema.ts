@@ -9,7 +9,7 @@ import Highlight from "@tiptap/extension-highlight";
 import TextAlign from "@tiptap/extension-text-align";
 import Subscript from "@tiptap/extension-subscript";
 import Superscript from "@tiptap/extension-superscript";
-import Image from "@tiptap/extension-image";
+import { PImage } from "./image.ts";
 import { TableKit } from "@tiptap/extension-table";
 import { TaskList, TaskItem } from "@tiptap/extension-list";
 
@@ -31,7 +31,7 @@ export const BlockFormat = Extension.create({
           spaceBefore: {
             default: null,
             parseHTML: (el) => numberAttr(el.getAttribute("data-space-before")),
-            renderHTML: (a) => (a.spaceBefore != null ? { "data-space-before": a.spaceBefore, style: `margin-top: ${a.spaceBefore}pt` } : {}),
+            renderHTML: (a) => (a.spaceBefore != null ? { "data-space-before": a.spaceBefore, style: `padding-top: ${a.spaceBefore}pt` } : {}),
           },
           spaceAfter: {
             default: null,
@@ -176,6 +176,10 @@ export const TableOfContents = Node.create({
 export interface SchemaOptions {
   /** Extra extensions for the live editor (placeholder, plugins). */
   extra?: AnyExtension[];
+  /** The URL an image's stored `src` is drawn from (the window maps asset paths to its scheme). */
+  resolveImage?: (src: string) => string;
+  /** The image node to use instead of the plain one (the window's adds handles and the crop frame). */
+  image?: AnyExtension;
 }
 
 /** The extensions that define P-Doc's content. */
@@ -191,7 +195,7 @@ export function extensions(options: SchemaOptions = {}): AnyExtension[] {
     TextAlign.configure({ types: [...TEXTBLOCKS] }),
     Subscript,
     Superscript,
-    Image.configure({ allowBase64: true, inline: false }),
+    options.image ?? (options.resolveImage ? PImage.configure({ resolve: options.resolveImage }) : PImage),
     TableKit.configure({ table: { resizable: false } }),
     TaskList,
     TaskItem.configure({ nested: true }),

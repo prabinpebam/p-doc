@@ -5,8 +5,9 @@
 import { app, BrowserWindow, dialog } from "electron";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import type { PDocFile } from "@p-doc/core";
+import { dataImageUrl, type PDocFile } from "@p-doc/core";
 import { EXPORTS, exportBytes } from "./files.ts";
+import type { Library } from "./library.ts";
 import type { ExportKind, ExportResult, PdfResult, PrintRequest } from "../shared/api.ts";
 
 const MAX_HTML = 200 * 1024 * 1024;
@@ -43,10 +44,21 @@ export function pdfPages(pdf: Buffer): number {
   return counts.length ? Math.max(...counts) : 0;
 }
 
-async function withDocument<T>(r: PrintRequest, fn: (w: BrowserWindow) => Promise<T>): Promise<T> {
+// A transparent pixel where an image's file is missing (the print window loads nothing from outside).
+const BLANK = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
+
+/** The print document with the window's image URLs replaced by the images themselves. */
+export function inlineAssetUrls(html: string, library: Library): string {
+  return html.replace(/pdoc-asset:\/\/a\/([0-9a-f]{64}\.(?:png|jpg|gif|webp|svg|bmp))/g, (_m, name: string) => {
+    const got = library.readAsset(`assets/${name}`);
+    return got ? dataImageUrl(got.mime, got.bytes) : BLANK;
+  });
+}
+
+async function withDocument<T>(r: PrintRequest, library: Library, fn: (w: BrowserWindow) => Promise<T>): Promise<T> {
   const dir = await mkdtemp(join(app.getPath("temp"), "p-doc-print-"));
   const file = join(dir, "document.html");
-  await writeFile(file, r.html, "utf8");
+  await writeFile(file, inlineAssetUrls(r.html, library), "utf8");
   const w = new BrowserWindow({
     show: false,
     webPreferences: { partition: "p-doc-print", javascript: false, sandbox: true, contextIsolation: true, nodeIntegration: false, webviewTag: false, spellcheck: false },
@@ -73,20 +85,20 @@ async function savePath(parent: BrowserWindow | null, name: string, title: strin
 }
 
 /** File > Download as Word, Markdown, a web page or plain text (U17). */
-export async function exportDocument(parent: BrowserWindow | null, doc: PDocFile, kind: ExportKind): Promise<ExportResult | null> {
+export async function exportDocument(parent: BrowserWindow | null, doc: PDocFile, kind: ExportKind, library: Library): Promise<ExportResult | null> {
   const { ext, label } = EXPORTS[kind];
   const path = await savePath(parent, fileName(doc.title, ext), `Download ${label}`, { name: label, extensions: [ext] });
   if (!path) return null;
-  await writeFile(path, await exportBytes(doc, kind));
+  await writeFile(path, await exportBytes(doc, kind, { library, space: "private" }));
   exported.add(path);
   return { path };
 }
 
-export async function savePdf(parent: BrowserWindow | null, req: PrintRequest): Promise<PdfResult | null> {
+export async function savePdf(parent: BrowserWindow | null, req: PrintRequest, library: Library): Promise<PdfResult | null> {
   const r = check(req);
   const path = await savePath(parent, fileName(r.title, "pdf"), "Download PDF", { name: "PDF document", extensions: ["pdf"] });
   if (!path) return null;
-  const pdf = await withDocument(r, (w) =>
+  const pdf = await withDocument(r, library, (w) =>
     w.webContents.printToPDF({
       pageSize: { width: r.size.width, height: r.size.height },
       margins: { top: r.margins.top, bottom: r.margins.bottom, left: r.margins.left, right: r.margins.right },
@@ -100,9 +112,9 @@ export async function savePdf(parent: BrowserWindow | null, req: PrintRequest): 
   return { path, pages: pdfPages(pdf) };
 }
 
-export async function printDocument(req: PrintRequest): Promise<boolean> {
+export async function printDocument(req: PrintRequest, library: Library): Promise<boolean> {
   const r = check(req);
-  return withDocument(r, async (w) => {
+  return withDocument(r, library, async (w) => {
     // Tests check the document renders; they never reach a printer.
     if (process.env.PDOC_E2E) return true;
     const microns = (inches: number) => Math.round(inches * 25400);

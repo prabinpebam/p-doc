@@ -11,11 +11,14 @@ import pageCss from "../styles/page.css?inline";
 import { geometry, layoutNow } from "./pages.ts";
 
 // The editor's own state: selection, find highlights, the empty-document placeholder.
-const EDITOR_ONLY = ["ProseMirror-selectednode", "selectedCell", "pd-match", "pd-match-current", "has-focus", "is-empty", "is-editor-empty"];
+const EDITOR_ONLY = ["ProseMirror-selectednode", "selectedCell", "pd-match", "pd-match-current", "has-focus", "is-empty", "is-editor-empty", "is-cropping", "is-resizing"];
+// Drawn only on screen: resize handles, the crop frame, and an image whose file is missing (exports skip it).
+const SCREEN_ONLY = ".column-resize-handle, .pd-img-handle, .pd-crop, .pd-img-missing, .pd-img.is-missing";
 
 /** A block's HTML without the editor's own state (selection, find highlights, resize handles). */
 function blockHtml(node: Node | null): string {
   if (!(node instanceof HTMLElement)) return "";
+  if (node.matches(".pd-img.is-missing")) return "";
   const c = node.cloneNode(true) as HTMLElement;
   for (const x of [c, ...c.querySelectorAll<HTMLElement>("*")]) {
     x.removeAttribute("contenteditable");
@@ -23,7 +26,7 @@ function blockHtml(node: Node | null): string {
     x.removeAttribute("data-placeholder");
     x.classList.remove(...EDITOR_ONLY);
   }
-  for (const x of c.querySelectorAll(".column-resize-handle")) x.remove();
+  for (const x of c.querySelectorAll(SCREEN_ONLY)) x.remove();
   return c.outerHTML;
 }
 

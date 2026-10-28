@@ -19,7 +19,9 @@ export type Dialog =
   | { kind: "restoreVersion"; sha: string; time: string }
   | { kind: "deleteComment"; thread: string; reply: string | null }
   | { kind: "connect" }
-  | { kind: "syncProblem" };
+  | { kind: "syncProblem" }
+  | { kind: "imageAlt" }
+  | { kind: "imageOptions" };
 
 /** Editing, Suggesting or Viewing (U21, U27). */
 export type Mode = "editing" | "suggesting" | "viewing";
@@ -42,6 +44,8 @@ export interface AppState {
   current: DocSummary | null;
   /** The open document without its live content (title, page, styles, comments): content lives in the editor. */
   doc: PDocFile | null;
+  /** Why the open document can't be changed (made by a newer P-Doc, or gone from under it), or null. */
+  locked: string | null;
   /** Changes whenever another document opens, so the editor (and its undo history) is made fresh. */
   session: number;
   save: SaveState;
@@ -75,6 +79,7 @@ export const app = createStore<AppState>({
   docs: [],
   current: null,
   doc: null,
+  locked: null,
   session: 0,
   save: "saved",
   dialog: null,
@@ -111,8 +116,8 @@ export async function updateSettings(patch: Partial<Omit<Settings, "version">>):
   app.set({ settings: next });
 }
 
-/** The page takes typing: Editing or Suggesting, with a markup view the text can be changed in. */
-export const pageEditable = (s: AppState) => s.mode !== "viewing" && (s.markup === "all" || s.markup === "simple");
+/** The page takes typing: Editing or Suggesting, with a markup view the text can be changed in, and not locked. */
+export const pageEditable = (s: AppState) => !s.locked && s.mode !== "viewing" && (s.markup === "all" || s.markup === "simple");
 
 export const openDialog = (dialog: Dialog) => app.set({ dialog, palette: false });
 export const closeDialog = () => app.set({ dialog: null });

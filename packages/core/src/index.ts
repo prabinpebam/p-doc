@@ -1,5 +1,6 @@
 export * from "./format.ts";
 export * from "./schema.ts";
+export * from "./image.ts";
 export * from "./outline.ts";
 export * from "./toc.ts";
 export * from "./find.ts";

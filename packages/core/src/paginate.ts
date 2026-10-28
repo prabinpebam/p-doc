@@ -2,6 +2,10 @@
  * Block-level pagination (O2): blocks that don't fit move to the next page; a block taller than a
  * page starts a page and overflows into the following ones. The same result lays out the screen and
  * the printed PDF, so both have the same pages (A1).
+ *
+ * A floated block (an image with text wrapped round it, A9) takes no height in the flow: the text
+ * after it runs beside it. It needs its own height of room on the page, and the page ends below it
+ * (the sheet break clears floats), so the space left on the page counts from its bottom too.
  */
 
 export interface BlockBox {
@@ -9,6 +13,8 @@ export interface BlockBox {
   height: number;
   /** A manual page break: the next block starts a page. */
   pageBreak?: boolean;
+  /** Height of a floated block (with its margins); its `height` in the flow is usually 0. */
+  float?: number;
 }
 
 export interface Pagination {
@@ -30,16 +36,21 @@ export function paginate(blocks: BlockBox[], pageContentHeight: number): Paginat
   const push = new Map<number, number>();
   let page = 1;
   let used = 0;
+  /** Bottom of the lowest float on the page, from the top of the page's text. */
+  let floats = 0;
   let breakNext = false;
   blocks.forEach((b, i) => {
-    if (i > 0 && (breakNext || (used > 0 && used + b.height > h + EPS))) {
-      push.set(i, Math.max(0, h - used));
+    const need = Math.max(b.height, b.float ?? 0);
+    if (i > 0 && (breakNext || (Math.max(used, floats) > 0 && used + need > h + EPS))) {
+      push.set(i, Math.max(0, h - Math.max(used, floats)));
       page++;
       starts.push(i);
       used = 0;
+      floats = 0;
     }
     breakNext = Boolean(b.pageBreak);
     pageOf.push(page);
+    if (b.float) floats = Math.min(h, Math.max(floats, used + b.float));
     used += b.height;
     if (used > h + EPS) {
       const extra = Math.ceil((used - EPS) / h) - 1;

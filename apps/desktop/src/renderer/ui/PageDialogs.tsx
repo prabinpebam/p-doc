@@ -6,7 +6,7 @@ import { app, closeDialog, toast, updateSettings } from "../state.ts";
 import { Dialog } from "./Dialog.tsx";
 
 /** Margins show in centimetres outside the US, as in Word and Google Docs. */
-const usesInches = () => /^en-(US|LR)|^my/i.test(navigator.language || "en-US");
+export const usesInches = () => /^en-(US|LR)|^my/i.test(navigator.language || "en-US");
 
 const MARGINS = [
   ["top", "Top"],

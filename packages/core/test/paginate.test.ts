@@ -41,6 +41,19 @@ describe("paginate", () => {
     expect(sheetsOf(paginate([], 500))).toEqual([{ start: 0, end: 0, page: 1, span: 1 }]);
   });
 
+  it("lets text run beside a floated image, and ends the page below it (A9)", () => {
+    // A 200px float, then two 80px paragraphs beside it: the page's text is 160px, but the float is lower.
+    const r = paginate([{ height: 100 }, { height: 0, float: 200 }, { height: 80 }, { height: 80 }, { height: 300 }], 500);
+    expect(r.pageOf).toEqual([1, 1, 1, 1, 2]);
+    expect(r.push.get(4)).toBe(500 - 300);
+  });
+
+  it("moves a floated image that doesn't fit to the next page", () => {
+    const r = paginate([{ height: 400 }, { height: 0, float: 200 }, { height: 50 }], 500);
+    expect(r.pageOf).toEqual([1, 2, 2]);
+    expect(r.push.get(1)).toBe(100);
+  });
+
   it("counts many pages", () => {
     const r = paginate(Array.from({ length: 100 }, () => ({ height: 48 })), 864);
     expect(r.pages).toBe(Math.ceil(100 / 18));

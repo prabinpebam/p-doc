@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Page } from "@playwright/test";
 import { expect, launch, quit, test } from "./helpers.ts";
-import { load, longDocument, settled } from "./fixtures.ts";
+import { imageDocument, load, longDocument, settled } from "./fixtures.ts";
 
 interface ScreenSheet {
   first: string;
@@ -134,3 +134,92 @@ test("2.1 2.4 Pages lays out sheets of the page size, moves blocks that don't fi
   await page.keyboard.press("Control+0");
   await quit(l);
 });
+
+/** Each sheet as drawn, with floats: what starts it and how low its lowest block (wrapped images too) reaches. */
+function floatSheets(page: Page) {
+  return page.evaluate(() => {
+    const art = document.querySelector<HTMLElement>("[data-testid=page]")!;
+    const cs = getComputedStyle(art);
+    const v = (name: string) => parseFloat(cs.getPropertyValue(name));
+    const scale = art.getBoundingClientRect().width / v("--page-width");
+    const content = v("--page-height") - v("--page-pad-top") - v("--page-pad-bottom");
+    const root = art.querySelector<HTMLElement>(".pd-content")!;
+    const key = (el: Element) => (el.matches(".pd-img") ? `image ${el.getAttribute("data-natural-width")}x${el.getAttribute("data-natural-height")}` : (el.textContent ?? "").slice(0, 40));
+    const sheets: { first: string; reach: number; room: number; floats: number }[] = [];
+    let start = root.getBoundingClientRect().top;
+    let blocks: Element[] = [];
+    const close = (end: number) => {
+      const reach = Math.max(...blocks.map((b) => b.getBoundingClientRect().bottom + parseFloat(getComputedStyle(b).marginBottom) * scale));
+      sheets.push({ first: key(blocks[0]!), reach: (Math.max(reach, end) - start) / scale, room: content, floats: blocks.filter((b) => getComputedStyle(b).float !== "none").length });
+    };
+    for (const k of root.children) {
+      if (k.classList.contains("pd-sheet-break")) {
+        close(k.querySelector(".pd-sheet-fill")!.getBoundingClientRect().top);
+        start = k.getBoundingClientRect().bottom;
+        blocks = [];
+      } else blocks.push(k);
+    }
+    close(0);
+    return { pages: Number(art.dataset.pages), sheets };
+  });
+}
+
+test("7.5 wrapped images keep the pages: text runs beside them, none crosses a page, and the PDF matches", async () => {
+  const saveDir = mkdtempSync(join(tmpdir(), "pdoc-pdf-"));
+  const l = await launch({ env: { PDOC_SAVE_DIR: saveDir } });
+  const { page, app } = l;
+  await load(page, imageDocument());
+  const art = page.getByTestId("page");
+  await expect(page.locator(".pd-img img")).toHaveCount(14);
+  await page.waitForFunction(() => [...document.querySelectorAll<HTMLImageElement>(".pd-img img")].every((i) => i.complete && i.naturalWidth > 0));
+  await expect.poll(async () => Number(await art.getAttribute("data-pages"))).toBeGreaterThanOrEqual(5);
+  await settled(page);
+
+  const s = await floatSheets(page);
+  expect(s.sheets.length).toBe(s.pages);
+  expect(s.sheets.reduce((n, x) => n + x.floats, 0)).toBe(12);
+  // Every sheet's blocks, floats included, end within its page.
+  for (const [i, x] of s.sheets.entries()) expect(x.reach, `sheet ${i + 1} fits`).toBeLessThanOrEqual(x.room + 1);
+  // Text runs beside a wrapped image: the paragraph after it starts level with it, not below it.
+  const beside = await page.evaluate(() => {
+    const img = document.querySelector<HTMLElement>('.pd-content .pd-img[data-wrap="left"]')!;
+    const next = img.nextElementSibling!;
+    return { img: img.getBoundingClientRect(), next: next.getBoundingClientRect() };
+  });
+  expect(beside.next.top).toBeLessThan(beside.img.bottom);
+  expect(beside.next.top).toBeGreaterThanOrEqual(beside.img.top - 1);
+  await page.locator('.pd-img[data-wrap="right"]').first().scrollIntoViewIfNeeded();
+  await page.screenshot({ path: test.info().outputPath("wrapped.png") });
+
+  // The layout settles: it doesn't change when nothing does.
+  const again = await floatSheets(page);
+  expect(again.sheets.map((x) => x.first)).toEqual(s.sheets.map((x) => x.first));
+
+  // Print has the same sheets, and no image runs past its page.
+  const req = await page.evaluate(() => (window as unknown as { __pdoc: { printRequest(): { html: string } } }).__pdoc.printRequest());
+  const htmlFile = join(saveDir, "print.html");
+  writeFileSync(htmlFile, req.html);
+  const printed = await app.evaluate(async ({ BrowserWindow }, file) => {
+    const w = new BrowserWindow({ show: false, width: 1200, height: 900 });
+    await w.loadFile(file);
+    await w.webContents.executeJavaScript(`Promise.all([...document.images].map((i) => i.decode().catch(() => {})))`);
+    const r = (await w.webContents.executeJavaScript(`[...document.querySelectorAll(".print-sheet")].map((sh) => {
+      const c = sh.querySelector(".pd-content");
+      const kids = [...c.children];
+      const first = kids[0];
+      const key = (el) => el.matches(".pd-img") ? "image " + el.getAttribute("data-natural-width") + "x" + el.getAttribute("data-natural-height") : (el.textContent ?? "").slice(0, 40);
+      const top = c.getBoundingClientRect().top;
+      const reach = Math.max(0, ...kids.map((k) => k.getBoundingClientRect().bottom + parseFloat(getComputedStyle(k).marginBottom) - top));
+      return { first: first ? key(first) : "", reach, room: c.clientHeight, missing: c.querySelectorAll(".pd-img-handle, .pd-img-missing, .pd-crop").length };
+    })`)) as { first: string; reach: number; room: number; missing: number }[];
+    w.destroy();
+    return r;
+  }, htmlFile);
+  expect(printed.map((x) => x.first)).toEqual(s.sheets.map((x) => x.first));
+  for (const [i, x] of printed.entries()) {
+    expect(x.reach, `printed sheet ${i + 1} fits`).toBeLessThanOrEqual(x.room + 1);
+    expect(x.missing, "no editing handles in print").toBe(0);
+  }
+  await quit(l);
+});
+

@@ -1,8 +1,10 @@
 /** The page area (V4): the grey canvas and the page with the live editor, laid out as sheets in Pages mode. */
 import { useEffect, type CSSProperties } from "react";
+import { getSchema } from "@tiptap/core";
 import { EditorContent, useEditor } from "@tiptap/react";
-import { headerFooterText, styleCss, TEXT_WIDTH, CSS_PX_PER_INCH, type PDocFile } from "@p-doc/core";
-import { editorExtensions, insertImageFiles } from "../editor/setup.ts";
+import { FORMAT_VERSION, headerFooterText, knownContent, styleCss, TEXT_WIDTH, CSS_PX_PER_INCH, type PDocFile } from "@p-doc/core";
+import { editorExtensions } from "../editor/setup.ts";
+import { insertImageFiles, replaceImageFile, selectedImage, type ImageHost } from "../editor/image.ts";
 import { jumpToBlock } from "../editor/blocks.ts";
 import { geometry, pageLayout, setPageSetup, type Layout } from "../editor/pages.ts";
 import { attachEditor, changed, detachEditor, getEditor } from "../session.ts";
@@ -11,6 +13,7 @@ import { history } from "../versions.ts";
 import { applyMode, review, reviewCss } from "../review.ts";
 import { FindBar } from "./FindBar.tsx";
 import { VersionView } from "./HistoryPanel.tsx";
+import { ImageBar } from "./ImageBar.tsx";
 
 /** The first page's header and the last page's footer; the ones between are drawn by sheet breaks. */
 function HfOverlay({ cls, which, page, pages }: { cls: string; which: "header" | "footer"; page: number; pages: number }) {
@@ -34,15 +37,30 @@ export function bumpTick(): void {
   });
 }
 
-const tooLarge = () => toast("This image is larger than 2 MB. Make it smaller and try again.", { tone: "error" });
+/** Pictures go to the open document's repository (spec §4.9). */
+const imageHost = (): ImageHost => ({
+  put: (bytes) => {
+    const cur = app.get().current;
+    if (!cur) return Promise.reject(new Error("Open a document first."));
+    return window.pdoc.assets.put(cur.space, bytes);
+  },
+  onError: (message) => toast(message, { tone: "error" }),
+});
+
+/** A newer P-Doc's document is locked; this build shows what it knows of it rather than nothing. */
+function shownOfNewer(doc: PDocFile, extensions: ReturnType<typeof editorExtensions>) {
+  const schema = getSchema(extensions);
+  return knownContent(doc.content, new Set(Object.keys(schema.nodes)), new Set(Object.keys(schema.marks)));
+}
 
 function DocEditor({ doc }: { doc: PDocFile }) {
   const author = app.use((s) => s.settings?.identity.name || "Me");
   const spelling = app.use((s) => s.settings?.spelling ?? true);
+  const extensions = editorExtensions({ author, images: imageHost });
   const editor = useEditor(
     {
-      extensions: editorExtensions({ author, onImageTooLarge: tooLarge }),
-      content: doc.content,
+      extensions,
+      content: doc.version > FORMAT_VERSION ? shownOfNewer(doc, extensions) : doc.content,
       immediatelyRender: true,
       shouldRerenderOnTransaction: false,
       editorProps: {
@@ -79,7 +97,7 @@ function DocEditor({ doc }: { doc: PDocFile }) {
         bumpTick();
       },
       onUpdate: ({ transaction }) => {
-        if (transaction.getMeta("pdoc-toc")) return;
+        if (transaction.getMeta("pdoc-toc") || transaction.getMeta("pdoc-quiet")) return;
         changed();
       },
       onTransaction: () => bumpTick(),
@@ -136,6 +154,7 @@ export function PageArea() {
   const viewing = history.use((s) => s.viewing);
   const markup = app.use((s) => s.markup);
   const active = review.use((s) => s.active);
+  const locked = app.use((s) => s.locked);
   const page = doc?.page ?? null;
   useEffect(() => setPageSetup(page), [page]);
   if (!doc) return <main className="canvas" aria-busy="true" />;
@@ -146,7 +165,13 @@ export function PageArea() {
     <main className={`canvas${viewing ? " viewing" : ""}`} data-region aria-label="Page">
       {/* While a version is shown, the live page stays laid out underneath, hidden and read-only. */}
       {viewing ? <VersionView viewing={viewing} zoom={zoom} style={pageStyle({ ...doc, page: { ...p, mode: "pageless" } }, null)} /> : null}
+      {locked ? (
+        <div className="lock-banner" role="status" data-testid="lock-banner">
+          {locked}
+        </div>
+      ) : null}
       <FindBar />
+      <ImageBar />
       <div
         className="page-scroll"
         onMouseDown={(e) => {
@@ -186,7 +211,20 @@ export function PageArea() {
         onChange={(e) => {
           const f = e.target.files?.[0];
           const ed = getEditor();
-          if (f && ed) void insertImageFiles(ed.view, [f], null, tooLarge).then(() => ed.commands.focus());
+          if (f && ed) void insertImageFiles(ed.view, imageHost(), [f], null).then(() => ed.commands.focus());
+          e.target.value = "";
+        }}
+      />
+      <input
+        id="image-replace"
+        type="file"
+        accept="image/png,image/jpeg,image/gif,image/webp,image/bmp,image/svg+xml"
+        hidden
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          const ed = getEditor();
+          const sel = ed && selectedImage(ed.state);
+          if (f && ed && sel) void replaceImageFile(ed.view, imageHost(), sel.pos, f).then(() => ed.view.focus());
           e.target.value = "";
         }}
       />

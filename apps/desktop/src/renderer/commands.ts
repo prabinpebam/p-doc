@@ -3,9 +3,11 @@
  * keyboard handler all read it, so a command is reachable from each the same way (PD3, U11).
  */
 import type { Editor } from "@tiptap/core";
-import { defaultStyles, STYLE_LABELS, TEXT_WIDTH, type PageSetup, type StyleKey, type TextWidth } from "@p-doc/core";
+import { NodeSelection } from "@tiptap/pm/state";
+import { cleanCrop, defaultStyles, STYLE_LABELS, TEXT_WIDTH, type PageSetup, type StyleKey, type TextWidth } from "@p-doc/core";
 import type { Theme } from "../shared/api.ts";
 import { applyStyle, clearBlockDirectFormatting, currentStyle, indent, insertAtomBlock, setBlockAttrs, currentBlock, styleFromSelection } from "./editor/blocks.ts";
+import { endCrop, imageUi, selectedImage, startCrop } from "./editor/image.ts";
 import { copyDoc, deleteDoc } from "./ops.ts";
 import { downloadAs, downloadPdf, openFromFile, printDoc } from "./output.ts";
 import { flush, getEditor, newDoc, syncSelection, updateDoc } from "./session.ts";
@@ -54,6 +56,38 @@ const withEditor = (fn: (e: Editor) => void) => () => {
   if (e) fn(e);
 };
 const chain = (fn: (c: ReturnType<Editor["chain"]>) => ReturnType<Editor["chain"]>) => withEditor((e) => void fn(e.chain().focus()).run());
+
+/** The selected image, when one is. */
+const image = () => {
+  const e = ed();
+  return e ? selectedImage(e.state) : null;
+};
+const canImage = () => canEdit() && !!image();
+/** Changes the selected image's attributes, keeping it selected (one undo step). */
+export function setImage(patch: Record<string, unknown>): void {
+  const e = ed();
+  const s = e && selectedImage(e.state);
+  if (!e || !s) return;
+  const tr = e.state.tr.setNodeMarkup(s.pos, undefined, { ...s.node.attrs, ...patch });
+  e.view.dispatch(tr.setSelection(NodeSelection.create(tr.doc, s.pos)));
+  e.view.focus();
+}
+/** The whole picture again, at the scale it was shown (up to the text width). */
+function resetCrop(): void {
+  const e = ed();
+  const s = e && selectedImage(e.state);
+  const crop = cleanCrop(s?.node.attrs.crop);
+  if (!e || !s || !crop) return;
+  const a = s.node.attrs;
+  const max = (e.view.dom as HTMLElement).clientWidth || Infinity;
+  let width = a.width != null ? a.width / crop.w : null;
+  let height = a.height != null ? a.height / crop.h : null;
+  if (width != null && width > max) {
+    if (height != null) height *= max / width;
+    width = max;
+  }
+  setImage({ crop: null, width: width == null ? null : Math.round(width), height: height == null ? null : Math.round(height) });
+}
 
 const FONT_STEPS = [6, 7, 8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 28, 32, 36, 48, 60, 72, 96];
 
@@ -358,6 +392,38 @@ const commands: Command[] = [
     ] as [string, string, (c: ReturnType<Editor["chain"]>) => ReturnType<Editor["chain"]>][]
   ).map(([id, label, fn]): Command => ({ id, label, keywords: "table", run: chain(fn), enabled: () => canEdit() && !!ed()?.isActive("table") })),
 
+  // Format > Image (U40)
+  ...(
+    [
+      ["image.inline", "In line with text", { wrap: "inline" }, "break text"],
+      ["image.wrapLeft", "Wrap left", { wrap: "left" }, "wrap text float"],
+      ["image.wrapRight", "Wrap right", { wrap: "right" }, "wrap text float"],
+      ["image.alignLeft", "Align left", { align: "left" }, "align"],
+      ["image.alignCenter", "Align centre", { align: "center" }, "align center"],
+      ["image.alignRight", "Align right", { align: "right" }, "align"],
+    ] as [string, string, Record<string, string>, string][]
+  ).map(
+    ([id, label, patch, words]): Command => ({
+      id,
+      label,
+      keywords: `image picture ${words}`,
+      run: () => setImage(patch),
+      checked: () => {
+        const s = image();
+        return !!s && Object.entries(patch).every(([k, v]) => s.node.attrs[k] === v);
+      },
+      enabled: () => canImage() && (!("align" in patch) || image()?.node.attrs.wrap === "inline"),
+    }),
+  ),
+  { id: "image.crop", label: "Crop", keywords: "image picture trim", run: withEditor((e) => startCrop(e.view)), enabled: () => canImage() && !imageUi.get().cropping },
+  { id: "image.cropDone", label: "Keep crop", keywords: "image picture", run: () => endCrop(true), enabled: () => imageUi.get().cropping },
+  { id: "image.cropCancel", label: "Cancel crop", keywords: "image picture", run: () => endCrop(false), enabled: () => imageUi.get().cropping },
+  { id: "image.replace", label: "Replace image…", keywords: "image picture swap", run: () => document.querySelector<HTMLInputElement>("#image-replace")?.click(), enabled: canImage },
+  { id: "image.alt", label: "Alt text…", keywords: "image picture accessibility describe", run: () => openDialog({ kind: "imageAlt" }), enabled: canImage },
+  { id: "image.options", label: "Image options…", keywords: "image picture size width height crop", run: () => openDialog({ kind: "imageOptions" }), enabled: canImage },
+  { id: "image.resetSize", label: "Reset size", keywords: "image picture", run: () => setImage({ width: null, height: null }), enabled: () => canImage() && image()?.node.attrs.width != null },
+  { id: "image.resetCrop", label: "Reset crop", keywords: "image picture uncrop", run: resetCrop, enabled: () => canImage() && !!cleanCrop(image()?.node.attrs.crop) },
+
   {
     id: "format.clear",
     label: "Clear formatting",
@@ -518,6 +584,10 @@ export const MENUS: Menu[] = [
       { label: "Line spacing", items: [...LINE_SPACINGS.map(([, v]) => `spacing.${v}`), "-", "spacing.before", "spacing.after"] },
       { label: "Lists", items: ["list.bullets", "list.numbers", "list.checklist"] },
       { label: "Table", items: ["table.rowAbove", "table.rowBelow", "table.colLeft", "table.colRight", "-", "table.deleteRow", "table.deleteCol", "table.delete"] },
+      {
+        label: "Image",
+        items: ["image.inline", "image.wrapLeft", "image.wrapRight", "-", "image.alignLeft", "image.alignCenter", "image.alignRight", "-", "image.crop", "image.resetCrop", "image.resetSize", "-", "image.replace", "image.alt", "image.options"],
+      },
       "-",
       "format.clear",
     ],

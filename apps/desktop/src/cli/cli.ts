@@ -204,7 +204,7 @@ export async function run(argv: string[], io: Io): Promise<number> {
           doc = await lib.versionAt(found, v.sha);
           version = v.sha;
         }
-        const bytes = await exportBytes(doc, kind);
+        const bytes = await exportBytes(doc, kind, { library: lib, space: found.space });
         if (typeof out !== "string") {
           const text = new TextDecoder().decode(bytes);
           print(text, { document: brief(found), version, format: kind, content: text });

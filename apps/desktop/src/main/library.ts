@@ -2,13 +2,34 @@
  * The library (U33): `<root>/private` and `<root>/public`, each a Git repository on `main` with
  * documents at `docs/<slug>-<id8>.pdoc.json`, deleted ones in `.bin/`, and a README. Electron-free, so
  * the CLI and unit tests use it as the app does. File names stay as created: a rename changes the
- * title inside the file, so history follows the file without rename detection.
+ * title inside the file, so history follows the file without rename detection. Images live beside the
+ * documents as `assets/<sha256>.<ext>` (spec §4.9): written before the document that uses them,
+ * committed with it, copied into the other repository when a document goes there, and never deleted.
  */
-import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { closeSync, copyFileSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, readSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { createDocument, documentPath, parseDocument, serializeDocument, newId, type PDocFile } from "@p-doc/core";
+import {
+  assetsOf,
+  createDocument,
+  dataImageParts,
+  dataImageUrl,
+  declaredVersion,
+  documentPath,
+  FORMAT_VERSION,
+  hasDataImages,
+  IMAGE_MIME,
+  imageInfo,
+  isAssetSrc,
+  mapImages,
+  MAX_IMAGE_BYTES,
+  newId,
+  parseDocument,
+  serializeDocument,
+  type PDocFile,
+} from "@p-doc/core";
 import { git, gitSupported, gitVersion } from "./git.ts";
-import { DOC_PATH, isDocRef, type CreateRequest, type DocRef, type DocSummary, type Identity, type Opened, type Space, type VersionEntry } from "../shared/api.ts";
+import { DOC_PATH, isDocRef, type StoredAsset, type CreateRequest, type DocRef, type DocSummary, type Identity, type Opened, type Space, type VersionEntry } from "../shared/api.ts";
 
 /** "2026-10-28 14:05" in local time, for version messages. */
 export function localTime(iso: string): string {
@@ -32,10 +53,11 @@ const pause = (ms: number) => Atomics.wait(new Int32Array(new SharedArrayBuffer(
  * rename over a file that another process (Git, the indexer, antivirus) has open fails for a moment,
  * so it is retried for up to about two seconds before the error is reported.
  */
-export function writeAtomic(file: string, text: string): void {
+export function writeAtomic(file: string, data: string | Uint8Array): void {
   mkdirSync(dirname(file), { recursive: true });
   const tmp = `${file}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2, 8)}.tmp`;
-  writeFileSync(tmp, text, "utf8");
+  if (typeof data === "string") writeFileSync(tmp, data, "utf8");
+  else writeFileSync(tmp, data);
   for (let attempt = 0; ; attempt++) {
     try {
       renameSync(tmp, file);
@@ -52,6 +74,24 @@ export function writeAtomic(file: string, text: string): void {
 }
 
 export class LibraryError extends Error {}
+
+export const NEWER_MESSAGE = "Made with a newer P-Doc. Update to edit it.";
+export const TOO_BIG_MESSAGE = "This image is larger than 20 MB. Make it smaller and try again.";
+export const NOT_IMAGE_MESSAGE = "This file isn't an image P-Doc can show. Use PNG, JPEG, GIF, WebP, SVG or BMP.";
+
+
+/** The format version at the head of a file on disk, or null. */
+function versionOnDisk(file: string): number | null {
+  if (!existsSync(file)) return null;
+  const fd = openSync(file, "r");
+  try {
+    const buf = Buffer.alloc(4096);
+    const n = readSync(fd, buf, 0, buf.length, 0);
+    return declaredVersion(buf.subarray(0, n).toString("utf8"));
+  } finally {
+    closeSync(fd);
+  }
+}
 
 export interface LibraryOptions {
   identity: () => Identity;
@@ -139,19 +179,130 @@ export class Library {
 
   summary(ref: DocRef, doc?: PDocFile): DocSummary {
     const file = this.file(ref);
-    const d = doc ?? parseDocument(readFileSync(file, "utf8"));
-    return { space: ref.space, path: ref.path, id: d.id, title: d.title, modified: statSync(file).mtime.toISOString(), bin: ref.path.startsWith(".bin/") };
+    const d = doc ?? parseDocument(readFileSync(file, "utf8"), { allowNewer: true });
+    const s: DocSummary = { space: ref.space, path: ref.path, id: d.id, title: d.title, modified: statSync(file).mtime.toISOString(), bin: ref.path.startsWith(".bin/") };
+    if (d.version > FORMAT_VERSION) s.newer = true;
+    return s;
   }
 
+  /** A document as saved. One from a newer P-Doc comes marked `newer`: shown read-only, never rewritten (A18). */
   read(ref: DocRef): Opened {
-    const doc = parseDocument(readFileSync(this.file(ref), "utf8"));
+    const doc = parseDocument(readFileSync(this.file(ref), "utf8"), { allowNewer: true });
     return { doc, summary: this.summary(ref, doc) };
   }
 
-  /** Saves a document's current state (no version: versions are made by the cadence or on close). */
+  /** A document this build may change; a newer one refuses with the update message. */
+  private editable(ref: DocRef): PDocFile {
+    const { doc } = this.read(ref);
+    if (doc.version > FORMAT_VERSION) throw new LibraryError(NEWER_MESSAGE);
+    return doc;
+  }
+
+  /**
+   * Saves a document's current state (no version: versions are made by the cadence or on close).
+   * Never over a newer P-Doc's file. Images still inside it are stored beside it first, and images it
+   * uses from the other repository are copied in, so the file on disk never points at a missing one.
+   */
   write(ref: DocRef, doc: PDocFile): DocSummary {
-    writeAtomic(this.file(ref), serializeDocument(doc));
-    return this.summary(ref, doc);
+    const file = this.file(ref);
+    if ((versionOnDisk(file) ?? 0) > FORMAT_VERSION || doc.version > FORMAT_VERSION) throw new LibraryError(NEWER_MESSAGE);
+    const stored = this.storeImages(ref.space, doc);
+    writeAtomic(file, serializeDocument(stored));
+    return this.summary(ref, stored);
+  }
+
+  // ------------------------------------------------------------------------------ images (§4.9)
+
+  assetFile(space: Space, src: string): string {
+    if (!isAssetSrc(src)) throw new LibraryError(`Not an image in the library: ${src}`);
+    return join(this.dir(space), ...src.split("/"));
+  }
+
+  /** Where an image's file is: the given repository first, then the other; null when missing. */
+  findAsset(src: string, prefer: Space = "private"): string | null {
+    if (!isAssetSrc(src)) return null;
+    for (const space of [prefer, ...SPACES.filter((x) => x !== prefer)]) {
+      const f = this.assetFile(space, src);
+      if (existsSync(f)) return f;
+    }
+    return null;
+  }
+
+  /** Stores an image's bytes once in a repository (content-addressed; a second copy is the same file). */
+  putAsset(space: Space, bytes: Uint8Array): StoredAsset {
+    if (bytes.byteLength > MAX_IMAGE_BYTES) throw new LibraryError(TOO_BIG_MESSAGE);
+    const info = imageInfo(bytes);
+    if (!info) throw new LibraryError(NOT_IMAGE_MESSAGE);
+    const src = `assets/${createHash("sha256").update(bytes).digest("hex")}.${info.type}`;
+    const file = this.assetFile(space, src);
+    if (!existsSync(file)) writeAtomic(file, bytes);
+    return { src, width: info.width, height: info.height };
+  }
+
+  /** An image's bytes and type, from either repository; null when missing. */
+  readAsset(src: string, prefer: Space = "private"): { mime: string; bytes: Uint8Array } | null {
+    const f = this.findAsset(src, prefer);
+    if (!f) return null;
+    return { mime: IMAGE_MIME[src.slice(src.lastIndexOf(".") + 1)] ?? "application/octet-stream", bytes: readFileSync(f) };
+  }
+
+  /**
+   * The document with every image inside it stored beside it (a v1 file, a paste, an import) and every
+   * image it uses present in this repository. Images it can't store (an unknown type) stay inside.
+   */
+  storeImages(space: Space, doc: PDocFile): PDocFile {
+    let content = doc.content;
+    if (hasDataImages(content)) {
+      content = mapImages(content, (a) => {
+        const parts = typeof a.src === "string" ? dataImageParts(a.src) : null;
+        if (!parts || parts.bytes.byteLength > MAX_IMAGE_BYTES) return null;
+        try {
+          const put = this.putAsset(space, parts.bytes);
+          return { ...a, src: put.src, naturalWidth: a.naturalWidth ?? put.width, naturalHeight: a.naturalHeight ?? put.height };
+        } catch {
+          return null;
+        }
+      });
+    }
+    for (const src of assetsOf(content)) {
+      const here = this.assetFile(space, src);
+      if (existsSync(here)) continue;
+      const there = this.findAsset(src, space);
+      if (there) {
+        mkdirSync(dirname(here), { recursive: true });
+        copyFileSync(there, `${here}.tmp`);
+        renameSync(`${here}.tmp`, here);
+      }
+    }
+    return content === doc.content ? doc : { ...doc, content };
+  }
+
+  /** The document with its images inside it as data, for exports; images whose file is missing are left out. */
+  inlineImages(doc: PDocFile, prefer: Space = "private"): PDocFile {
+    const missing = new Set<string>();
+    let content = mapImages(doc.content, (a) => {
+      if (!isAssetSrc(a.src)) return null;
+      const got = this.readAsset(a.src, prefer);
+      if (!got) {
+        missing.add(a.src);
+        return null;
+      }
+      return { ...a, src: dataImageUrl(got.mime, got.bytes) };
+    });
+    if (missing.size) content = dropImages(content, missing);
+    return { ...doc, content };
+  }
+
+  /**
+   * Moves a document that still has its images inside it to the new form (spec §4.9 step 6): images
+   * first, then the document, then a version "Store images beside *title*". Null when nothing to do.
+   */
+  async storeImagesOf(ref: DocRef): Promise<Opened | null> {
+    const { doc } = this.read(ref);
+    if (doc.version > FORMAT_VERSION || !hasDataImages(doc.content) || !ref.path.startsWith("docs/")) return null;
+    this.write(ref, doc);
+    await this.commit(ref.space, [ref.path], `Store images beside ${doc.title}`);
+    return this.read(ref);
   }
 
   /** A file name in `docs/` for a document that no other document (or Bin entry) has. */
@@ -165,22 +316,23 @@ export class Library {
     const space = req.space ?? "private";
     const doc = createDocument({ title: req.title, content: req.content, page: req.page });
     const ref = { space, path: this.freePath(space, doc) };
-    const summary = this.write(ref, doc);
+    this.write(ref, doc);
     await this.commit(space, [ref.path], `Create ${doc.title}`);
-    return { doc, summary };
+    // As written: its pictures stored beside it.
+    return this.read(ref);
   }
 
   /** A new document from a whole P-Doc file (File > Open from file): a fresh id, so it never collides with the original. */
   async adopt(source: PDocFile, space: Space = "private"): Promise<Opened> {
     const doc: PDocFile = { ...structuredClone(source), id: newId(), created: new Date().toISOString() };
     const ref = { space, path: this.freePath(space, doc) };
-    const summary = this.write(ref, doc);
+    this.write(ref, doc);
     await this.commit(space, [ref.path], `Import ${doc.title}`);
-    return { doc, summary };
+    return this.read(ref);
   }
 
   async rename(ref: DocRef, title: string): Promise<DocSummary> {
-    const { doc } = this.read(ref);
+    const doc = this.editable(ref);
     const old = doc.title;
     doc.title = title.trim() || "Untitled document";
     const s = this.write(ref, doc);
@@ -189,7 +341,7 @@ export class Library {
   }
 
   async copy(ref: DocRef, title?: string): Promise<DocSummary> {
-    const { doc } = this.read(ref);
+    const doc = this.editable(ref);
     const copy: PDocFile = { ...structuredClone(doc), id: newId(), title: title ?? `Copy of ${doc.title}`, created: new Date().toISOString() };
     const to = { space: ref.space, path: this.freePath(ref.space, copy) };
     const s = this.write(to, copy);
@@ -228,9 +380,10 @@ export class Library {
   /** Moves a document between Private and Public; the caller asks the person first (P6). */
   async move(ref: DocRef, space: Space): Promise<DocSummary> {
     if (ref.space === space) return this.summary(ref);
-    const { doc } = this.read(ref);
+    const doc = this.editable(ref);
     const to = { space, path: existsSync(join(this.dir(space), ...ref.path.split("/"))) ? this.freePath(space, doc) : ref.path };
-    writeAtomic(this.file(to), serializeDocument(doc));
+    // Its images are copied over first (write); the ones in the old repository stay, since its versions use them.
+    this.write(to, doc);
     rmSync(this.file(ref));
     const label = space === "public" ? "Public" : "Private";
     await this.commit(space, [to.path], `Move ${doc.title} to ${label}`);
@@ -249,7 +402,7 @@ export class Library {
       if (!existsSync(join(dir, ".git"))) return null;
       // One at a time: a path that is neither on disk nor tracked (a file put there by hand, then
       // moved) is no error. Only P-Doc stages, so the index holds just these paths.
-      for (const p of paths) await git(dir, ["add", "-A", "--", p], { ok: [0, 128] });
+      for (const p of [...paths, ...this.assetsFor(space, paths)]) await git(dir, ["add", "-A", "--", p], { ok: [0, 128] });
       const staged = await git(dir, ["diff", "--cached", "--quiet"], { ok: [0, 1] });
       if (staged.code === 0) return null;
       await git(dir, ["commit", "-q", "-m", message], { identity: this.identity() });
@@ -257,6 +410,22 @@ export class Library {
       this.changed(space);
       return sha;
     });
+  }
+
+  /** The image files the given documents use that are in this repository (only those are ever committed). */
+  private assetsFor(space: Space, paths: string[]): string[] {
+    const out = new Set<string>();
+    for (const p of paths) {
+      if (!DOC_PATH.test(p)) continue;
+      const file = join(this.dir(space), ...p.split("/"));
+      if (!existsSync(file)) continue;
+      try {
+        for (const src of assetsOf(parseDocument(readFileSync(file, "utf8"), { allowNewer: true }).content)) if (existsSync(this.assetFile(space, src))) out.add(src);
+      } catch {
+        // Not readable: committed as it is, without images.
+      }
+    }
+    return [...out];
   }
 
   /** Runs Git work on a repository after the work already queued there (sync uses it too). */
@@ -334,7 +503,7 @@ export class Library {
   async versionAt(ref: DocRef, sha: string): Promise<PDocFile> {
     const v = await this.version(ref, sha);
     const r = await git(this.dir(ref.space), ["show", `${v.sha}:${v.path}`]);
-    return parseDocument(r.stdout);
+    return parseDocument(r.stdout, { allowNewer: true });
   }
 
   /** Names a version (an annotated Git tag); an empty name removes it (U31). */
@@ -358,7 +527,7 @@ export class Library {
     const v = await this.version(ref, sha);
     const old = await this.versionAt(ref, v.sha);
     await this.commitDoc(ref);
-    const cur = this.read(ref).doc;
+    const cur = this.editable(ref);
     this.write(ref, { ...old, id: cur.id, created: cur.created });
     await this.commit(ref.space, [ref.path], `Restore ${localTime(v.time)}`);
     return this.read(ref);
@@ -367,6 +536,7 @@ export class Library {
   /** A new document from an old version (U32). */
   async copyVersion(ref: DocRef, sha: string): Promise<DocSummary> {
     const old = await this.versionAt(ref, sha);
+    if (old.version > FORMAT_VERSION) throw new LibraryError(NEWER_MESSAGE);
     const copy: PDocFile = { ...old, id: newId(), title: `Copy of ${old.title}`, created: new Date().toISOString() };
     const to = { space: ref.space, path: this.freePath(ref.space, copy) };
     const s = this.write(to, copy);
@@ -378,4 +548,10 @@ export class Library {
   async settle(): Promise<void> {
     await Promise.all([...this.queues.values()]);
   }
+}
+
+/** Content without the images whose files are missing (exports skip them, spec §4.9). */
+function dropImages(content: PDocFile["content"], missing: Set<string>): PDocFile["content"] {
+  const walk = (n: PDocFile["content"]): PDocFile["content"] => (n.content ? { ...n, content: n.content.filter((c) => !(c.type === "image" && missing.has(String(c.attrs?.src)))).map(walk) } : n);
+  return walk(content);
 }

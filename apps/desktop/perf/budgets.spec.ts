@@ -10,7 +10,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Page } from "@playwright/test";
 import { expect, launch, quit, tempDirs, test } from "../e2e/helpers.ts";
-import { bigDocument, load, settled } from "../e2e/fixtures.ts";
+import { bigDocument, imageNode, load, png, settled } from "../e2e/fixtures.ts";
 import { fakeHelperConfig, startFakeGitHub } from "../test/fakes/fake-github.ts";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
@@ -179,6 +179,7 @@ test("opening a 100-page document from the library", async () => {
     const big = w.__pdoc.app.get().current;
     await w.__pdoc.perf.flush();
     await w.__pdoc.perf.newDoc();
+    await new Promise((r) => setTimeout(r, 200));
     const small = w.__pdoc.app.get().current;
     const out: number[] = [];
     for (let i = 0; i < 5; i++) {
@@ -192,6 +193,80 @@ test("opening a 100-page document from the library", async () => {
     return out;
   });
   record("open100", "Open a 100-page document from the library", 500, samples, `Read, parse, draw and lay out all ${pages} pages`);
+  await quit(l);
+});
+
+test("opening a 100-page document with 20 images", async () => {
+  const l = await launch();
+  const { page } = l;
+  // The A6 fixture: 20 pictures of about 2 MB each, spread through 100 pages of prose.
+  const doc = bigDocument(100) as { content: unknown[] };
+  const step = Math.floor(doc.content.length / 20);
+  for (let i = 19; i >= 0; i--) {
+    const src = `data:image/png;base64,${png(820, 820, [70, 120, 200], true).toString("base64")}`;
+    doc.content.splice(i * step + 1, 0, imageNode(src, { width: 320, naturalWidth: 820, naturalHeight: 820 }));
+  }
+  await load(page, doc);
+  const pages = await settled(page);
+  expect(pages).toBeGreaterThanOrEqual(90);
+  const samples = await page.evaluate(async () => {
+    const w = window as unknown as { __pdoc: { app: { get(): { current: { space: string; path: string } } }; layout(): { pages: number } | null; perf: Perf; getEditor(): { getJSON(): unknown } | null } };
+    const big = w.__pdoc.app.get().current;
+    // Saving writes the pictures beside the document; the opens below read them from there.
+    await w.__pdoc.perf.flush();
+    await w.__pdoc.perf.newDoc();
+    await new Promise((r) => setTimeout(r, 200));
+    const small = w.__pdoc.app.get().current;
+    const out: number[] = [];
+    for (let i = 0; i < 5; i++) {
+      const t = performance.now();
+      await w.__pdoc.perf.openDoc(big);
+      while (w.__pdoc.app.get().current.path !== big.path || !w.__pdoc.getEditor() || (w.__pdoc.layout()?.pages ?? 0) < 90) await new Promise((r) => requestAnimationFrame(r));
+      out.push(performance.now() - t);
+      if (!JSON.stringify(w.__pdoc.getEditor()!.getJSON()).includes("assets/")) throw new Error("The images were not stored beside the document");
+      await w.__pdoc.perf.openDoc(small);
+      await new Promise((r) => setTimeout(r, 200));
+    }
+    return out;
+  });
+  record("open100Images", "Open a 100-page document with 20 images", 500, samples, `Read, parse, draw and lay out all ${pages} pages with 20 images of about 2 MB stored beside the document; images fade in`);
+  await quit(l);
+});
+
+test("inserting a 20 MB image", async () => {
+  const l = await launch();
+  const { page } = l;
+  await load(page, bigDocument(3));
+  await settled(page);
+  const samples: number[] = [];
+  for (let i = 0; i < 5; i++) {
+    // Noise barely compresses, so each picture is just under the 20 MB limit and new to the asset store.
+    const bytes = png(2580, 2700, [200, 120, 70], true);
+    expect(bytes.length).toBeGreaterThan(19.5 * 1024 * 1024);
+    samples.push(
+      await page.evaluate(async (b64) => {
+        const data = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+        const dt = new DataTransfer();
+        dt.items.add(new File([data], "big.png", { type: "image/png" }));
+        // A text caret, so the paste adds a picture instead of replacing the one just added.
+        (window as unknown as { __pdoc: { getEditor(): { commands: { setTextSelection(n: number): void } } } }).__pdoc.getEditor().commands.setTextSelection(3);
+        const target = document.querySelector(".pd-content")!;
+        const before = target.querySelectorAll("img").length;
+        const t = performance.now();
+        target.dispatchEvent(new ClipboardEvent("paste", { clipboardData: dt, bubbles: true, cancelable: true }));
+        // Shown: the new picture is in the page and decoded.
+        for (;;) {
+          const imgs = target.querySelectorAll("img");
+          const img = imgs.length > before ? (imgs[imgs.length - 1] as HTMLImageElement) : null;
+          if (img?.complete && img.naturalWidth > 0) break;
+          if (performance.now() - t > 10_000) throw new Error(`The image never showed: ${imgs.length} images, ${img ? `${img.closest(".pd-img")?.className} ${img.src} ${img.complete}` : "none new"}`);
+          await new Promise((r) => requestAnimationFrame(r));
+        }
+        return performance.now() - t;
+      }, bytes.toString("base64")),
+    );
+  }
+  record("insertImage20", "Insert a 20 MB image", 300, samples, "From paste to the picture decoded on the page: reading the file, hashing and writing it beside the document, and drawing it");
   await quit(l);
 });
 

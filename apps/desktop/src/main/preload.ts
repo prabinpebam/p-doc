@@ -41,7 +41,9 @@ const api: PDocApi = {
     move: call("library:move"),
     showInFolder: call("library:showInFolder"),
     showRoot: call("library:showRoot"),
+    storeImages: call("library:storeImages"),
   } as PDocApi["library"],
+  assets: { put: call("assets:put") } as PDocApi["assets"],
   recovery: { put: send("recovery:put"), clear: send("recovery:clear"), take: call("recovery:take") } as PDocApi["recovery"],
   versions: {
     list: call("versions:list"),

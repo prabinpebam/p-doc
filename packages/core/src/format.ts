@@ -2,7 +2,8 @@
 import type { JSONContent } from "@tiptap/core";
 
 export const FORMAT = "p-doc";
-export const FORMAT_VERSION = 1;
+/** 2: images live beside the document as `assets/<sha256>.<ext>` (stage 7); 1 kept them inline. */
+export const FORMAT_VERSION = 2;
 
 export type PaperSize = "letter" | "legal" | "a4" | "a5" | "tabloid";
 export type Orientation = "portrait" | "landscape";
@@ -92,7 +93,7 @@ export interface CommentThread extends CommentReply {
 
 export interface PDocFile {
   format: typeof FORMAT;
-  version: typeof FORMAT_VERSION;
+  version: number;
   id: string;
   title: string;
   created: string;
@@ -173,6 +174,22 @@ export function createDocument(o: CreateOptions = {}): PDocFile {
 
 export class FormatError extends Error {}
 
+/** A file written by a later P-Doc: this build lists it but never opens it for editing or rewrites it (A18). */
+export class NewerFormatError extends FormatError {
+  constructor(
+    readonly version: number,
+    readonly title: string,
+  ) {
+    super("Made with a newer P-Doc. Update to edit it.");
+  }
+}
+
+/** The format version a file's text declares, read without parsing it all (null if none). */
+export function declaredVersion(text: string): number | null {
+  const m = /"version"\s*:\s*(\d+)/.exec(text.slice(0, 4096));
+  return m ? Number(m[1]) : null;
+}
+
 /** Reads a document, filling settings a writer of an earlier P-Doc left out. Throws FormatError. */
 /** A page setup from a file or another process: known values kept, anything else the default. */
 export function cleanPage(raw: unknown): PageSetup {
@@ -200,7 +217,11 @@ export function cleanPage(raw: unknown): PageSetup {
   };
 }
 
-export function parseDocument(text: string): PDocFile {
+/**
+ * Reads a document. A file from a newer P-Doc throws NewerFormatError, unless `allowNewer`: then it is
+ * read as far as this build understands it, keeping its own `version`, for showing read-only.
+ */
+export function parseDocument(text: string, o: { allowNewer?: boolean } = {}): PDocFile {
   let raw: unknown;
   try {
     raw = JSON.parse(text);
@@ -209,14 +230,15 @@ export function parseDocument(text: string): PDocFile {
   }
   const d = raw as Partial<PDocFile>;
   if (!d || typeof d !== "object" || d.format !== FORMAT) throw new FormatError("Not a P-Doc document");
-  if (typeof d.version !== "number" || d.version > FORMAT_VERSION) throw new FormatError(`Made by a newer P-Doc (format ${String(d.version)})`);
+  if (typeof d.version !== "number") throw new FormatError("No format version");
+  if (d.version > FORMAT_VERSION && !o.allowNewer) throw new NewerFormatError(d.version, typeof d.title === "string" && d.title.trim() ? d.title : "Untitled document");
   if (typeof d.id !== "string" || !d.id) throw new FormatError("No document id");
   if (!d.content || (d.content as JSONContent).type !== "doc") throw new FormatError("No content");
   const styles = defaultStyles();
   for (const k of STYLE_KEYS) if (d.styles?.[k]) styles[k] = { ...styles[k], ...d.styles[k] };
   return {
     format: FORMAT,
-    version: FORMAT_VERSION,
+    version: Math.max(FORMAT_VERSION, d.version),
     id: d.id,
     title: typeof d.title === "string" && d.title.trim() ? d.title : "Untitled document",
     created: typeof d.created === "string" ? d.created : new Date(0).toISOString(),
@@ -229,6 +251,23 @@ export function parseDocument(text: string): PDocFile {
 
 export function serializeDocument(doc: PDocFile): string {
   return `${JSON.stringify(doc, null, 2)}\n`;
+}
+
+/**
+ * A newer P-Doc's content as this build can show it: node and mark types it doesn't know are left
+ * out, and an unknown node with content gives way to its children. For showing only: such a file is
+ * never written (A18).
+ */
+export function knownContent(content: JSONContent, nodes: ReadonlySet<string>, marks: ReadonlySet<string>): JSONContent {
+  const walk = (n: JSONContent): JSONContent[] => {
+    const kids = n.content?.flatMap(walk);
+    if (!n.type || !nodes.has(n.type)) return kids ?? [];
+    const out: JSONContent = { ...n };
+    if (kids) out.content = kids;
+    if (n.marks) out.marks = n.marks.filter((m) => marks.has(m.type));
+    return [out];
+  };
+  return walk(content)[0] ?? emptyContent();
 }
 
 export function slug(title: string): string {

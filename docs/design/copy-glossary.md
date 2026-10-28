@@ -31,3 +31,8 @@ Words P-Doc uses, and the words it doesn't. Sentence case everywhere; no exclama
 | Connect GitHub | Start sign-in and repository setup | Log in, Link account |
 | sign in / sign out | GitHub account in Git's helper | log in, log out |
 | command search | Alt+/ popover to run any command | Tell me, palette |
+| image | A picture placed in a document (PNG, JPEG, GIF, WebP, SVG, BMP) | picture, photo, graphic |
+| alt text | The description of an image for people who can't see it | alternative text, caption |
+| crop | Hide the edges of an image without changing the file | trim, clip |
+| In line with text / Wrap left / Wrap right | Where an image sits: in the line, or with text flowing round it | float, square, tight |
+| Image missing | An image whose file isn't in the repository | broken image |

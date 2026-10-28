@@ -59,6 +59,7 @@ let frame = 0;
 export function setPageSetup(p: PageSetup | null): void {
   if (JSON.stringify(p) === JSON.stringify(setup)) return;
   setup = p;
+  edited = true;
   schedule();
 }
 
@@ -85,23 +86,50 @@ function measure(view: EditorView): void {
   const g = geometry(s);
   const sheet = view.dom.closest<HTMLElement>(".page");
   const scale = sheet ? sheet.getBoundingClientRect().width / g.width || 1 : 1;
-  const boxes: { height: number; pageBreak: boolean }[] = [];
+  const boxes: { height: number; pageBreak: boolean; float?: number }[] = [];
   const headingAt: [string, number][] = [];
+  // Each block's height is where its bottom is less where the block before it ended (or its sheet began):
+  // that counts margins, and any gap where a block that can't sit beside a float moved below it.
+  const rootCs = getComputedStyle(view.dom);
+  let flowEnd = view.dom.getBoundingClientRect().top + (parseFloat(rootCs.borderTopWidth) + parseFloat(rootCs.paddingTop) || 0) * scale;
   view.state.doc.forEach((node, offset, i) => {
     const el = view.nodeDOM(offset);
     let height = 0;
-    if (el instanceof HTMLElement) {
+    let float: number | undefined;
+    if (el instanceof HTMLElement && el.getClientRects().length) {
+      const before = el.previousElementSibling;
+      if (before?.classList.contains("pd-sheet-break")) flowEnd = before.getBoundingClientRect().bottom;
       const cs = getComputedStyle(el);
-      height = el.getBoundingClientRect().height / scale + (parseFloat(cs.marginTop) || 0) + (parseFloat(cs.marginBottom) || 0);
+      const r = el.getBoundingClientRect();
+      const top = Math.min(flowEnd, r.top - (parseFloat(cs.marginTop) || 0) * scale);
+      const bottom = r.bottom + (parseFloat(cs.marginBottom) || 0) * scale;
+      height = Math.max(0, bottom - top) / scale;
+      if (cs.float !== "none") [float, height] = [height, 0];
+      else flowEnd = bottom;
     }
-    boxes.push({ height, pageBreak: node.type.name === "pageBreak" });
+    boxes.push({ height, pageBreak: node.type.name === "pageBreak", float });
     if (node.type.name === "heading" && node.attrs.id) headingAt.push([String(node.attrs.id), i]);
   });
   const p = paginate(boxes, g.content);
   const sheets = sheetsOf(p);
   const headings: Record<string, number> = {};
   for (const [id, i] of headingAt) headings[id] = p.pageOf[i] ?? 1;
-  apply(view, { pages: p.pages, sheets, pageOf: p.pageOf, fills: sheets.map((sh) => (sh.start === 0 ? 0 : (p.push.get(sh.start) ?? 0))), headings });
+  apply(view, settle(layoutOf(view.state), { pages: p.pages, sheets, pageOf: p.pageOf, fills: sheets.map((sh) => (sh.start === 0 ? 0 : (p.push.get(sh.start) ?? 0))), headings }));
+}
+
+/** The layout drawn before the one on screen, and whether the document or setup changed since. */
+let before: Layout | null = null;
+let edited = true;
+
+/**
+ * Text beside a float rewraps when it moves to the next page, which can move it back (A9). Measuring
+ * that only returns to the layout before keeps the one drawn now; an edit allows any layout again.
+ */
+function settle(current: Layout | null, next: Layout): Layout | null {
+  if (!edited && before && current && !sameLayout(next, current) && sameLayout(next, before)) return current;
+  edited = false;
+  if (!sameLayout(next, current)) before = current;
+  return next;
 }
 
 /** Within half a pixel is the same layout: measuring again after drawing must settle, not loop. */
@@ -268,7 +296,10 @@ export const Pages = Extension.create({
           schedule();
           return {
             update(v, prev) {
-              if (v.state.doc !== prev.doc) schedule();
+              if (v.state.doc !== prev.doc) {
+                edited = true;
+                schedule();
+              }
             },
             destroy() {
               ro.disconnect();

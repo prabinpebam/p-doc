@@ -1,5 +1,7 @@
 /** Documents for journeys, built the same way every run. */
 import type { Page } from "@playwright/test";
+import { randomBytes } from "node:crypto";
+import { deflateSync } from "node:zlib";
 
 /** Replaces the open document's content, as typing would (it saves and lays out again). */
 export async function load(page: Page, doc: unknown): Promise<void> {
@@ -82,3 +84,79 @@ export function bigDocument(pages: number): unknown {
   }
   return { type: "doc", content };
 }
+
+/** A plain SVG image of the given size and colour, as a data URL (documents from before stage 7 had these). */
+export function svgImage(w: number, h: number, fill = "#4a7bd0"): string {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><rect width="${w}" height="${h}" fill="${fill}"/><circle cx="${w / 2}" cy="${h / 2}" r="${Math.min(w, h) / 4}" fill="#f2c14e"/></svg>`;
+  return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
+}
+
+export const imageNode = (src: string, attrs: Record<string, unknown> = {}) => ({ type: "image", attrs: { src, alt: "A test image", ...attrs } });
+
+/**
+ * About eight Letter pages with images wrapped left and right among the paragraphs, in-line images,
+ * and tall wrapped images placed where they don't fit the page they would start on (A9).
+ */
+export function imageDocument(): unknown {
+  const content: unknown[] = [{ type: "paragraph", attrs: { textStyle: "title" }, content: [text("Images fixture")] }];
+  for (let s = 1; s <= 8; s++) {
+    content.push(h(2, `Section ${s}`, `img-sec-${s}`));
+    for (let i = 0; i < 5; i++) {
+      if (i === 1) content.push(imageNode(svgImage(320, 240), { width: 240, naturalWidth: 320, naturalHeight: 240, wrap: s % 2 ? "left" : "right" }));
+      if (i === 3 && s % 3 === 0) content.push(imageNode(svgImage(600, 300, "#3c9a6b"), { naturalWidth: 600, naturalHeight: 300 }));
+      if (i === 4 && s % 2 === 0) content.push(imageNode(svgImage(300, 600, "#b5534a"), { width: 200, naturalWidth: 300, naturalHeight: 600, wrap: "right" }));
+      content.push(p(prose(40 + ((s + i) % 4) * 15, s * 10 + i)));
+    }
+  }
+  content.push(p("The end."));
+  return { type: "doc", content };
+}
+
+const CRC_TABLE = (() => {
+  const t = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    t[n] = c >>> 0;
+  }
+  return t;
+})();
+
+function crc32(b: Buffer): number {
+  let c = 0xffffffff;
+  for (const x of b) c = CRC_TABLE[(c ^ x) & 0xff]! ^ (c >>> 8);
+  return (c ^ 0xffffffff) >>> 0;
+}
+
+function chunk(type: string, data: Buffer): Buffer {
+  const len = Buffer.alloc(4);
+  len.writeUInt32BE(data.length);
+  const body = Buffer.concat([Buffer.from(type, "ascii"), data]);
+  const crc = Buffer.alloc(4);
+  crc.writeUInt32BE(crc32(body));
+  return Buffer.concat([len, body, crc]);
+}
+
+/** A real PNG file: a colour fading across, or noise (which barely compresses, for large files). */
+export function png(w: number, h: number, rgb: [number, number, number], noise = false): Buffer {
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(w, 0);
+  ihdr.writeUInt32BE(h, 4);
+  ihdr[8] = 8;
+  ihdr[9] = 2;
+  const row = w * 3 + 1;
+  const raw = noise ? randomBytes(row * h) : Buffer.alloc(row * h);
+  for (let y = 0; y < h; y++) {
+    raw[y * row] = 0;
+    if (noise) continue;
+    for (let x = 0; x < w; x++) {
+      const o = y * row + 1 + x * 3;
+      const f = 0.5 + (0.5 * x) / w;
+      raw[o] = Math.round(rgb[0] * f);
+      raw[o + 1] = Math.round(rgb[1] * f);
+      raw[o + 2] = Math.round(rgb[2] * f);
+    }
+  }
+  return Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), chunk("IHDR", ihdr), chunk("IDAT", deflateSync(raw, { level: noise ? 0 : 6 })), chunk("IEND", Buffer.alloc(0))]);
+}
+

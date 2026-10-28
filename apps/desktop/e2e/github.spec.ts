@@ -232,6 +232,6 @@ test("5.6 privacy: a document reaches the public repository only after Move to P
   await syncNow();
   await expect.poll(publicDocs, SYNCED).toEqual([`docs/${name}`]);
   expect(fake.file("ada", "p-doc-public", `docs/${name}`)).toContain("Private plans");
-  expect(fake.files("ada", "p-doc-private")).not.toContain(`docs/${name}`);
+  await expect.poll(() => fake.files("ada", "p-doc-private"), SYNCED).not.toContain(`docs/${name}`);
   await quit(l);
 });

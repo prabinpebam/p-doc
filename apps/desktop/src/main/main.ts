@@ -2,10 +2,11 @@
  * P-Doc's main process: one editor window, the library on disk, and a typed IPC surface. The
  * renderer has no Node; every argument from it is checked here (spec §6, Security).
  */
-import { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, shell, type MenuItemConstructorOptions, type OpenDialogOptions } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, net, protocol, shell, type MenuItemConstructorOptions, type OpenDialogOptions } from "electron";
 import { appendFileSync, existsSync, mkdirSync, readFileSync, statSync } from "node:fs";
+import { pathToFileURL } from "node:url";
 import { basename, join } from "node:path";
-import { cleanPage, importKind, parseDocument, type PDocFile } from "@p-doc/core";
+import { ASSET_SCHEME, assetOfUrl, cleanPage, importKind, parseDocument, type PDocFile } from "@p-doc/core";
 import { Library } from "./library.ts";
 import { exported, exportDocument, printDocument, savePdf } from "./output.ts";
 import { ImportError, importInto, isExportKind, MAX_IMPORT } from "./files.ts";
@@ -246,6 +247,14 @@ function handlers(): void {
     void versions.commitExcept(r);
     return library.read(r);
   });
+  // Images (spec §4.9): stored beside the document before it refers to them.
+  h("assets:put", (space: unknown, data: unknown) => {
+    if (!isSpace(space)) throw new Error("Unknown space");
+    const bytes = data instanceof Uint8Array ? data : data instanceof ArrayBuffer ? new Uint8Array(data) : null;
+    if (!bytes) throw new Error("Not an image");
+    return library.putAsset(space, bytes);
+  });
+  h("library:storeImages", (ref: DocRef) => library.storeImagesOf(asRef(ref)));
   h("library:save", (ref: DocRef, doc: unknown) => {
     const r = asRef(ref);
     const s = library.write(r, asDoc(doc));
@@ -351,11 +360,11 @@ function handlers(): void {
     return shell.openPath(logDir).then(() => undefined);
   });
   h("app:version", () => app.getVersion());
-  h("output:pdf", (req: PrintRequest) => savePdf(win, req));
-  h("output:print", (req: PrintRequest) => printDocument(req));
+  h("output:pdf", (req: PrintRequest) => savePdf(win, req, library));
+  h("output:print", (req: PrintRequest) => printDocument(req, library));
   h("output:export", (doc: unknown, kind: unknown) => {
     if (!isExportKind(kind)) throw new Error("Unknown format");
-    return exportDocument(win, asDoc(doc), kind);
+    return exportDocument(win, asDoc(doc), kind, library);
   });
   const importBytes = async (name: string, data: Uint8Array): Promise<Imported> => {
     void versions.commitAll();
@@ -427,6 +436,9 @@ function handlers(): void {
   });
 }
 
+// Images in the window load from the library through their own scheme: only `assets/` files, read-only.
+protocol.registerSchemesAsPrivileged([{ scheme: ASSET_SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true } }]);
+
 Menu.setApplicationMenu(null);
 app.on("second-instance", () => {
   if (win) {
@@ -445,6 +457,11 @@ void app.whenReady().then(async () => {
   log("start", { version: app.getVersion(), library: library.root, git: library.gitVersion });
   if (library.ready) recovered = applyRecovery();
   handlers();
+  protocol.handle(ASSET_SCHEME, (req) => {
+    const src = assetOfUrl(req.url);
+    const file = src ? library.findAsset(src) : null;
+    return file ? net.fetch(pathToFileURL(file).toString()) : new Response("Image missing", { status: 404 });
+  });
   win = createWindow();
   // Text saved but never made a version (a crash, a forced quit) gets one on the usual cadence.
   if (library.ready) void library.unversioned().then((refs) => refs.forEach((r) => versions.changed(r)), (e) => log("unversioned failed", String(e)));

@@ -971,6 +971,37 @@ kbd {
   gap: var(--space-2);
 }
 
+/* The open document can't take typing (made by a newer P-Doc, or changed from under it). */
+.lock-banner {
+  padding: var(--space-2) var(--space-4);
+  border-bottom: var(--border-hairline) solid var(--color-rule);
+  background: var(--color-bg-raised);
+}
+
+/* Image bar (V11) */
+
+.image-bar {
+  position: fixed;
+  z-index: var(--layer-raised);
+  display: flex;
+  align-items: center;
+  padding: var(--space-1);
+  border: var(--border-hairline) solid var(--color-rule);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-raised);
+  box-shadow: var(--shadow-popup);
+  translate: -50% calc(-100% - var(--space-2));
+}
+
+.image-bar.below {
+  translate: -50% var(--space-2);
+}
+
+.image-bar .tb-btn.wide {
+  gap: var(--space-1);
+  padding: 0 var(--space-2);
+}
+
 /* Find bar (U10) */
 
 .findbar {

@@ -17,6 +17,8 @@ export interface DocSummary extends DocRef {
   modified: string;
   /** In the Bin. */
   bin: boolean;
+  /** Made with a newer P-Doc: shown read-only, never rewritten (spec §4.9 step 7). */
+  newer?: boolean;
 }
 
 export interface Identity {
@@ -146,6 +148,13 @@ export interface Opened {
   doc: PDocFile;
 }
 
+/** An image stored beside the documents: its path in the repository and its natural size. */
+export interface StoredAsset {
+  src: string;
+  width: number;
+  height: number;
+}
+
 export interface Recovered {
   ref: DocRef;
   doc: PDocFile;
@@ -238,6 +247,13 @@ export interface PDocApi {
     showInFolder(ref: DocRef): Promise<void>;
     /** Opens the library folder in the system file manager. */
     showRoot(): Promise<void>;
+    /** Moves a document's images out of the file to beside it, with a version; null when there were none (spec §4.9). */
+    storeImages(ref: DocRef): Promise<Opened | null>;
+  };
+  /** Images beside the documents (spec §4.9). */
+  assets: {
+    /** Stores an image in a repository once; rejects with a sentence to show (too big, not a picture). */
+    put(space: Space, data: Uint8Array): Promise<StoredAsset>;
   };
   recovery: {
     /** Keeps a copy of unsaved text (fire and forget). */

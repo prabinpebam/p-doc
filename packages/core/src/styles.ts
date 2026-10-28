@@ -18,7 +18,9 @@ function decl(s: StyleDef, isNormal: boolean): string {
     `font-weight: ${s.bold ? 700 : 400}`,
     `font-style: ${s.italic ? "italic" : "normal"}`,
     `line-height: ${s.lineHeight}`,
-    `margin: ${s.spaceBefore}pt 0 ${s.spaceAfter}pt 0`,
+    // Space before is padding so it adds to the space after the block above instead of collapsing into it (as in Word).
+    `padding-top: ${s.spaceBefore}pt`,
+    `margin: 0 0 ${s.spaceAfter}pt 0`,
   ];
   if (s.color) out.push(`color: ${s.color}`);
   else if (!isNormal) out.push("color: inherit");
@@ -30,8 +32,8 @@ export function styleCss(styles: Styles, scope: string): string {
   const n = styles.normal;
   const rules = [`${scope} { font-family: ${n.fontFamily}; font-size: ${n.fontSize}pt; line-height: ${n.lineHeight}; ${n.color ? `color: ${n.color};` : ""} }`];
   for (const k of Object.keys(SELECTORS) as StyleKey[]) rules.push(`${scope} ${SELECTORS[k]} { ${decl(styles[k], k === "normal")} }`);
-  rules.push(`${scope} li > p { margin: 0 }`);
-  rules.push(`${scope} td > p, ${scope} th > p { margin: 0 }`);
+  rules.push(`${scope} li > p { margin: 0; padding-top: 0 }`);
+  rules.push(`${scope} td > p, ${scope} th > p { margin: 0; padding-top: 0 }`);
   return rules.join("\n");
 }
 

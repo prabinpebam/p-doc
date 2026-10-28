@@ -1,66 +1,12 @@
-/** The live editor's extensions: the shared schema plus placeholder, TOC sync, suggestions, find and image files. */
+/** The live editor's extensions: the shared schema plus placeholder, TOC sync, suggestions, find, images and pages. */
 import { commands, Extension, type AnyExtension } from "@tiptap/core";
-import { Plugin, Selection, TextSelection } from "@tiptap/pm/state";
-import type { EditorView } from "@tiptap/pm/view";
+import { Selection, TextSelection } from "@tiptap/pm/state";
 import { Placeholder, TrailingNode } from "@tiptap/extensions";
 import { extensions, Suggest, TocSync } from "@p-doc/core";
 import { FindHighlight } from "./find.ts";
+import { ImageFiles, LiveImage, type ImageHost } from "./image.ts";
 import { Pages } from "./pages.ts";
 import { CommentDraft } from "./review.ts";
-
-export const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
-
-export function readImage(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => resolve(String(r.result));
-    r.onerror = () => reject(r.error);
-    r.readAsDataURL(file);
-  });
-}
-
-/** Inserts image files at a position (or the selection); files over 2 MB are refused through `onTooLarge`. */
-export async function insertImageFiles(view: EditorView, files: File[], at: number | null, onTooLarge: () => void): Promise<void> {
-  for (const f of files) {
-    if (f.size > MAX_IMAGE_BYTES) {
-      onTooLarge();
-      continue;
-    }
-    const src = await readImage(f);
-    const node = view.state.schema.nodes.image!.create({ src, alt: f.name.replace(/\.[^.]+$/, "") });
-    const tr = at == null ? view.state.tr.replaceSelectionWith(node) : view.state.tr.insert(at, node);
-    view.dispatch(tr.scrollIntoView());
-  }
-}
-
-const imagesOf = (list: FileList | null | undefined) => [...(list ?? [])].filter((f) => f.type.startsWith("image/"));
-
-function ImageFiles(onTooLarge: () => void) {
-  return Extension.create({
-    name: "imageFiles",
-    addProseMirrorPlugins() {
-      return [
-        new Plugin({
-          props: {
-            handlePaste(view, event) {
-              const files = imagesOf(event.clipboardData?.files);
-              if (!files.length) return false;
-              void insertImageFiles(view, files, null, onTooLarge);
-              return true;
-            },
-            handleDrop(view, event) {
-              const files = imagesOf(event.dataTransfer?.files);
-              if (!files.length) return false;
-              const at = view.posAtCoords({ left: event.clientX, top: event.clientY })?.pos ?? null;
-              void insertImageFiles(view, files, at, onTooLarge);
-              return true;
-            },
-          },
-        }),
-      ];
-    },
-  });
-}
 
 /**
  * TipTap's `focus` waits a frame before focusing, so keys pressed straight after a toolbar or menu
@@ -100,8 +46,9 @@ const DocEnds = Extension.create({
   },
 });
 
-export function editorExtensions(o: { author: string; onImageTooLarge: () => void }): AnyExtension[] {
+export function editorExtensions(o: { author: string; images: () => ImageHost }): AnyExtension[] {
   return extensions({
+    image: LiveImage,
     extra: [
       SyncFocus,
       DocEnds,
@@ -112,7 +59,7 @@ export function editorExtensions(o: { author: string; onImageTooLarge: () => voi
       Suggest.configure({ author: o.author }),
       CommentDraft,
       FindHighlight,
-      ImageFiles(o.onImageTooLarge),
+      ImageFiles(o.images),
       Pages,
     ],
   });

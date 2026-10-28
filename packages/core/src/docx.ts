@@ -6,6 +6,8 @@ import {
   DeletedTextRun,
   Document,
   ExternalHyperlink,
+  HorizontalPositionAlign,
+  HorizontalPositionRelativeFrom,
   Footer,
   Header,
   HeadingLevel,
@@ -22,6 +24,9 @@ import {
   TableCell,
   TableRow,
   TextRun,
+  TextWrappingSide,
+  TextWrappingType,
+  VerticalPositionRelativeFrom,
   WidthType,
   type IParagraphOptions,
   type ParagraphChild,
@@ -30,6 +35,7 @@ import mammoth from "mammoth";
 import { PAPER, type PDocFile, type StyleDef } from "./format.ts";
 import { fromHTML } from "./convert.ts";
 import { nodeText } from "./outline.ts";
+import { cleanCrop, dataImageParts, imageInfo } from "./image.ts";
 
 type Mark = NonNullable<JSONContent["marks"]>[number];
 
@@ -44,28 +50,10 @@ function points(v: unknown): number | undefined {
   return m[2] === "px" ? n * 0.75 : n;
 }
 
-/** Width and height of a PNG, JPEG or GIF. */
+/** Width and height of a PNG, JPEG, GIF or BMP (Word takes these four). */
 export function imageSize(buf: Uint8Array): { width: number; height: number; type: "png" | "jpg" | "gif" | "bmp" } | null {
-  const dv = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
-  if (buf.length > 24 && buf[0] === 0x89 && buf[1] === 0x50) return { width: dv.getUint32(16), height: dv.getUint32(20), type: "png" };
-  if (buf.length > 10 && buf[0] === 0x47 && buf[1] === 0x49) return { width: dv.getUint16(6, true), height: dv.getUint16(8, true), type: "gif" };
-  if (buf.length > 26 && buf[0] === 0x42 && buf[1] === 0x4d) return { width: dv.getInt32(18, true), height: Math.abs(dv.getInt32(22, true)), type: "bmp" };
-  if (buf.length > 4 && buf[0] === 0xff && buf[1] === 0xd8) {
-    let i = 2;
-    while (i + 9 < buf.length) {
-      if (buf[i] !== 0xff) return null;
-      const marker = buf[i + 1]!;
-      const len = dv.getUint16(i + 2);
-      if (marker >= 0xc0 && marker <= 0xcf && ![0xc4, 0xc8, 0xcc].includes(marker)) return { width: dv.getUint16(i + 7), height: dv.getUint16(i + 5), type: "jpg" };
-      i += 2 + len;
-    }
-  }
-  return null;
-}
-
-function dataUrlBytes(src: string): Uint8Array | null {
-  const m = /^data:[^;,]+;base64,(.*)$/.exec(src);
-  return m ? Uint8Array.from(Buffer.from(m[1]!, "base64")) : null;
+  const i = imageInfo(buf);
+  return i && i.type !== "webp" && i.type !== "svg" ? { width: i.width, height: i.height, type: i.type } : null;
 }
 
 interface Ctx {
@@ -119,13 +107,43 @@ function runs(nodes: JSONContent[] | undefined, ctx: Ctx, extra: { font?: string
   return out;
 }
 
+/**
+ * An image as Word lays it out (U40): its width, crop (Word trims the same share of each edge) and,
+ * when text wraps around it, a floating picture on that side with square wrapping.
+ */
 function imageRun(n: JSONContent, ctx: Ctx): ImageRun | null {
-  const bytes = dataUrlBytes(String(n.attrs?.src ?? ""));
+  const a = n.attrs ?? {};
+  const bytes = dataImageParts(String(a.src ?? ""))?.bytes;
   if (!bytes) return null;
   const size = imageSize(bytes);
   if (!size) return null;
-  const scale = Math.min(1, ctx.maxImageWidth / Math.max(1, size.width));
-  return new ImageRun({ type: size.type, data: bytes, transformation: { width: Math.round(size.width * scale), height: Math.round(size.height * scale) }, altText: { name: "image", title: String(n.attrs?.alt ?? ""), description: String(n.attrs?.alt ?? "") } });
+  const crop = cleanCrop(a.crop);
+  const shownW = size.width * (crop?.w ?? 1);
+  const shownH = size.height * (crop?.h ?? 1);
+  const wanted = typeof a.width === "number" && a.width > 0 ? a.width : shownW;
+  const width = Math.max(1, Math.round(Math.min(wanted, ctx.maxImageWidth)));
+  const freed = typeof a.width === "number" && a.width > 0 && typeof a.height === "number" && a.height > 0 ? a.height : null;
+  const height = Math.max(1, Math.round(freed ? (freed * width) / wanted : (width * shownH) / Math.max(1, shownW)));
+  const alt = String(a.alt ?? "");
+  const pct = (v: number) => Math.max(0, Math.min(100, +(v * 100).toFixed(3)));
+  const wrap = a.wrap === "left" || a.wrap === "right" ? a.wrap : null;
+  return new ImageRun({
+    type: size.type,
+    data: bytes,
+    transformation: { width, height },
+    altText: { name: "image", title: alt, description: alt },
+    ...(crop ? { crop: { left: pct(crop.x), top: pct(crop.y), right: pct(1 - crop.x - crop.w), bottom: pct(1 - crop.y - crop.h) } } : {}),
+    ...(wrap
+      ? {
+          floating: {
+            horizontalPosition: { relative: HorizontalPositionRelativeFrom.COLUMN, align: wrap === "left" ? HorizontalPositionAlign.LEFT : HorizontalPositionAlign.RIGHT },
+            verticalPosition: { relative: VerticalPositionRelativeFrom.PARAGRAPH, offset: 0 },
+            wrap: { type: TextWrappingType.SQUARE, side: wrap === "left" ? TextWrappingSide.RIGHT : TextWrappingSide.LEFT },
+            margins: wrap === "left" ? { right: 152400, bottom: 76200 } : { left: 152400, bottom: 76200 },
+          },
+        }
+      : {}),
+  });
 }
 
 const ALIGN: Record<string, (typeof AlignmentType)[keyof typeof AlignmentType]> = { left: AlignmentType.LEFT, center: AlignmentType.CENTER, right: AlignmentType.RIGHT, justify: AlignmentType.JUSTIFIED };
@@ -180,7 +198,9 @@ function blocks(nodes: JSONContent[] | undefined, ctx: Ctx, list?: { ref: string
         break;
       case "image": {
         const img = imageRun(n, ctx);
-        if (img) out.push(new Paragraph({ children: [img] }));
+        const wraps = n.attrs?.wrap === "left" || n.attrs?.wrap === "right";
+        if (img) out.push(new Paragraph({ alignment: wraps ? undefined : ALIGN[String(n.attrs?.align ?? "center")], children: [img] }));
+        else if (n.attrs?.alt) out.push(new Paragraph({ children: [new TextRun({ text: `[${String(n.attrs.alt)}]`, italics: true })] }));
         break;
       }
       case "tableOfContents": {

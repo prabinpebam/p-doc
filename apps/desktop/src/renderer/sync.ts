@@ -1,7 +1,7 @@
 /** GitHub sync in the window (spec §4.7): the status bar's words, Sync now, and what a sync changed. */
 import type { SyncEvent, SyncState, SyncStatus } from "../shared/api.ts";
 import { sameRef } from "../shared/api.ts";
-import { dirty, flush, ipcMessage, refreshList, reloadDoc } from "./session.ts";
+import { dirty, flush, ipcMessage, lockDoc, refreshList, reloadDoc } from "./session.ts";
 import { app, openDialog, toast } from "./state.ts";
 
 /** The status bar's words for a sync state (spec §4.7 step 4). */
@@ -43,8 +43,11 @@ export async function applySync(e: SyncEvent): Promise<void> {
     else {
       try {
         reloadDoc(await window.pdoc.library.open(cur));
-      } catch {
-        // The document moved or went to the bin on the other computer; the list shows where it is now.
+      } catch (err) {
+        // Moved or binned on the other computer, or unreadable here: the page stops taking typing
+        // rather than save old text over the new. The list shows where the document is now.
+        lockDoc(`${cur.title} changed on another computer and can't be shown here. Open it again from the library.`);
+        console.error(err);
       }
     }
   }

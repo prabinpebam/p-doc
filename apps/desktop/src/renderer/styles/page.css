@@ -43,6 +43,7 @@
 }
 
 .pd-sheet-break {
+  clear: both;
   margin: 0 calc(-1 * var(--page-pad-right)) 0 calc(-1 * var(--page-pad-left));
   cursor: default;
   user-select: none;
@@ -114,12 +115,12 @@
 }
 
 /*
- * Blocks stack without margin collapsing, as in Word and Google Docs: the space between two
- * paragraphs is one's space after plus the next one's space before, and pages add up exactly.
+ * Blocks stack without margins collapsing, as in Word and Google Docs: a block's space before is
+ * padding, so the space between two paragraphs is one's space after plus the next one's space before,
+ * and pages add up exactly. Block layout (not flex) lets text wrap round floated images (A9).
  */
 .pd-content {
-  display: flex;
-  flex-direction: column;
+  display: flow-root;
   outline: none;
   min-height: 100%;
   caret-color: var(--color-page-text);
@@ -153,6 +154,7 @@
 
 .pd-content li > p {
   margin: 0;
+  padding-top: 0;
 }
 
 .pd-content ul[data-type="taskList"] {
@@ -218,8 +220,147 @@
   height: auto;
 }
 
-.pd-content img.ProseMirror-selectednode {
+/* Images (U40): the frame and picture take their size, crop and wrap from inline styles (image.ts). */
+.pd-content .pd-img {
+  line-height: 0;
+}
+
+.pd-img-missing {
+  display: none;
+}
+
+.pd-img.is-missing .pd-img-frame {
+  min-width: var(--size-card);
+  border: var(--border-hairline) dashed var(--color-page-muted);
+  background: var(--color-page-code);
+}
+
+.pd-img.is-missing .pd-img-missing {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: var(--space-6) var(--space-4);
+  color: var(--color-page-muted);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  line-height: var(--leading-ui);
+}
+
+.pd-img.ProseMirror-selectednode .pd-img-frame {
   outline: var(--border-focus) solid var(--color-focus);
+}
+
+.pd-img-handle {
+  display: none;
+  position: absolute;
+  width: var(--space-2);
+  height: var(--space-2);
+  border: var(--border-hairline) solid var(--color-focus);
+  background: var(--color-page);
+  touch-action: none;
+}
+
+.ProseMirror[contenteditable="true"] .pd-img.ProseMirror-selectednode:not(.is-cropping) .pd-img-handle {
+  display: block;
+}
+
+.pd-img-handle[data-corner="nw"] {
+  top: 0;
+  left: 0;
+  cursor: nwse-resize;
+}
+
+.pd-img-handle[data-corner="ne"] {
+  top: 0;
+  right: 0;
+  cursor: nesw-resize;
+}
+
+.pd-img-handle[data-corner="sw"] {
+  bottom: 0;
+  left: 0;
+  cursor: nesw-resize;
+}
+
+.pd-img-handle[data-corner="se"] {
+  right: 0;
+  bottom: 0;
+  cursor: nwse-resize;
+}
+
+/* Crop: the whole picture dimmed, the part kept shown bright inside the frame. */
+.pd-img.is-cropping img {
+  opacity: var(--opacity-disabled);
+}
+
+.pd-crop {
+  position: absolute;
+  inset: 0;
+  touch-action: none;
+}
+
+.pd-crop-box {
+  position: absolute;
+  outline: var(--border-focus) solid var(--color-focus);
+  background-repeat: no-repeat;
+  cursor: move;
+}
+
+.pd-crop-handle {
+  position: absolute;
+  width: var(--space-2);
+  height: var(--space-2);
+  border: var(--border-hairline) solid var(--color-focus);
+  background: var(--color-page);
+}
+
+.pd-crop-handle[data-edge="n"],
+.pd-crop-handle[data-edge="s"] {
+  left: 50%;
+  translate: -50% 0;
+  cursor: ns-resize;
+}
+
+.pd-crop-handle[data-edge="e"],
+.pd-crop-handle[data-edge="w"] {
+  top: 50%;
+  translate: 0 -50%;
+  cursor: ew-resize;
+}
+
+.pd-crop-handle[data-edge="n"],
+.pd-crop-handle[data-edge="nw"],
+.pd-crop-handle[data-edge="ne"] {
+  top: 0;
+}
+
+.pd-crop-handle[data-edge="s"],
+.pd-crop-handle[data-edge="sw"],
+.pd-crop-handle[data-edge="se"] {
+  bottom: 0;
+}
+
+.pd-crop-handle[data-edge="w"],
+.pd-crop-handle[data-edge="nw"],
+.pd-crop-handle[data-edge="sw"] {
+  left: 0;
+}
+
+.pd-crop-handle[data-edge="e"],
+.pd-crop-handle[data-edge="ne"],
+.pd-crop-handle[data-edge="se"] {
+  right: 0;
+}
+
+.pd-crop-handle[data-edge="nw"],
+.pd-crop-handle[data-edge="se"] {
+  cursor: nwse-resize;
+}
+
+.pd-crop-handle[data-edge="ne"],
+.pd-crop-handle[data-edge="sw"] {
+  cursor: nesw-resize;
 }
 
 .pd-content table {
@@ -241,6 +382,7 @@
 .pd-content td > p,
 .pd-content th > p {
   margin: 0;
+  padding-top: 0;
 }
 
 .pd-content .selectedCell::after {

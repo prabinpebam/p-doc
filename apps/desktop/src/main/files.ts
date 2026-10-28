@@ -5,7 +5,7 @@
 import type { JSONContent } from "@tiptap/core";
 import { cleanPage, fromHTML, fromMarkdown, fromText, importKind, parseDocument, titleFromFile, toHTML, toMarkdown, toText, type PageSetup, type PDocFile } from "@p-doc/core";
 import { fromDocx, toDocx } from "@p-doc/core/docx";
-import type { ExportKind, Imported } from "../shared/api.ts";
+import type { ExportKind, Imported, Space } from "../shared/api.ts";
 import type { Library } from "./library.ts";
 
 /** The largest file Open from file accepts. */
@@ -22,8 +22,13 @@ export const isExportKind = (k: unknown): k is ExportKind => typeof k === "strin
 
 export class ImportError extends Error {}
 
-/** The file's bytes for a format. Exports carry the text as it reads with suggestions accepted; Word keeps them as tracked changes. */
-export async function exportBytes(doc: PDocFile, kind: ExportKind): Promise<Uint8Array> {
+/**
+ * The file's bytes for a format. Exports carry the text as it reads with suggestions accepted; Word
+ * keeps them as tracked changes. With a library, the document's images go inside the file (missing
+ * ones are left out).
+ */
+export async function exportBytes(source: PDocFile, kind: ExportKind, from?: { library: Library; space: Space }): Promise<Uint8Array> {
+  const doc = from ? from.library.inlineImages(source, from.space) : source;
   const utf8 = (s: string) => new TextEncoder().encode(s);
   switch (kind) {
     case "docx":
