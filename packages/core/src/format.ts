@@ -129,7 +129,7 @@ export interface StyleDef {
   spaceAfter: number;
 }
 
-export const STYLE_KEYS = ["normal", "title", "subtitle", "heading1", "heading2", "heading3", "heading4"] as const;
+export const STYLE_KEYS = ["normal", "title", "subtitle", "heading1", "heading2", "heading3", "heading4", "heading5", "heading6"] as const;
 export type StyleKey = (typeof STYLE_KEYS)[number];
 export type Styles = Record<StyleKey, StyleDef>;
 
@@ -141,6 +141,8 @@ export const STYLE_LABELS: Record<StyleKey, string> = {
   heading2: "Heading 2",
   heading3: "Heading 3",
   heading4: "Heading 4",
+  heading5: "Heading 5",
+  heading6: "Heading 6",
 };
 
 export interface CommentReply {
@@ -184,6 +186,8 @@ export function defaultStyles(): Styles {
     heading2: base({ fontSize: 16, spaceBefore: 18, spaceAfter: 6 }),
     heading3: base({ fontSize: 14, color: "#434343", spaceBefore: 16, spaceAfter: 4 }),
     heading4: base({ fontSize: 12, color: "#666666", spaceBefore: 14, spaceAfter: 4 }),
+    heading5: base({ fontSize: 11, bold: true, color: "#666666", spaceBefore: 12, spaceAfter: 4 }),
+    heading6: base({ fontSize: 11, italic: true, color: "#666666", spaceBefore: 12, spaceAfter: 4 }),
   };
 }
 

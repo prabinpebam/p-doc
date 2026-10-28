@@ -388,7 +388,7 @@ export function Toolbar() {
           data-tb
           tabIndex={-1}
           aria-label="Paragraph style"
-          title="Paragraph style (Ctrl+Alt+0 to 4)"
+          title="Paragraph style (Ctrl+Alt+0 to 6)"
           value={style ?? ""}
           disabled={!editable}
           onChange={(e) => {

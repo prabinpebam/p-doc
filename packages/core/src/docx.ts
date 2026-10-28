@@ -273,7 +273,7 @@ function imageRun(n: JSONContent, ctx: Ctx): ImageRun | null {
 }
 
 const ALIGN: Record<string, (typeof AlignmentType)[keyof typeof AlignmentType]> = { left: AlignmentType.LEFT, center: AlignmentType.CENTER, right: AlignmentType.RIGHT, justify: AlignmentType.JUSTIFIED };
-const HEADING = [HeadingLevel.HEADING_1, HeadingLevel.HEADING_2, HeadingLevel.HEADING_3, HeadingLevel.HEADING_4];
+const HEADING = [HeadingLevel.HEADING_1, HeadingLevel.HEADING_2, HeadingLevel.HEADING_3, HeadingLevel.HEADING_4, HeadingLevel.HEADING_5, HeadingLevel.HEADING_6];
 
 const LEADER = { none: undefined, dots: LeaderType.DOT, dashes: LeaderType.HYPHEN, line: LeaderType.UNDERSCORE } as const;
 const TAB_TYPE = { left: TabStopType.LEFT, center: TabStopType.CENTER, right: TabStopType.RIGHT, decimal: TabStopType.DECIMAL } as const;
@@ -520,7 +520,7 @@ export async function toDocx(doc: PDocFile): Promise<Uint8Array> {
     styles: {
       default: { document: { run: styleRun(s.normal), paragraph: styleParagraph(s.normal) } },
       paragraphStyles: [
-        ...(["heading1", "heading2", "heading3", "heading4"] as const).map((k, i) => ({ id: `Heading${i + 1}`, name: `Heading ${i + 1}`, basedOn: "Normal", next: "Normal", quickFormat: true, run: styleRun(s[k]), paragraph: styleParagraph(s[k]) })),
+        ...(["heading1", "heading2", "heading3", "heading4", "heading5", "heading6"] as const).map((k, i) => ({ id: `Heading${i + 1}`, name: `Heading ${i + 1}`, basedOn: "Normal", next: "Normal", quickFormat: true, run: styleRun(s[k]), paragraph: styleParagraph(s[k]) })),
         { id: "Title", name: "Title", basedOn: "Normal", next: "Normal", quickFormat: true, run: styleRun(s.title), paragraph: styleParagraph(s.title) },
         { id: "Subtitle", name: "Subtitle", basedOn: "Normal", next: "Normal", quickFormat: true, run: styleRun(s.subtitle), paragraph: styleParagraph(s.subtitle) },
         { id: "Code", name: "Code", basedOn: "Normal", run: { font: "Consolas", size: 20 }, paragraph: { spacing: { after: 0 } } },

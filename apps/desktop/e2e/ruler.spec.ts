@@ -82,9 +82,9 @@ test("9.2 ruler: margins shaded, indents and tabs dragged, clicked, keyed and re
   await page.keyboard.press("Shift+ArrowLeft");
   await expect.poll(async () => px(await para.evaluate((p) => getComputedStyle(p).marginRight))).toBeCloseTo(8 * step * 96, 0);
   // Set up the caret explicitly; this journey tests the ruler, not native Ctrl+End in a background window.
-  await page.evaluate(() => (window as Window & { __pdoc: { getEditor(): Editor } }).__pdoc.getEditor().commands.focus("end"));
+  await page.evaluate(() => (window as unknown as { __pdoc: { getEditor(): Editor } }).__pdoc.getEditor().commands.focus("end"));
   await expect.poll(() => page.evaluate(() => {
-    const ed = (window as Window & { __pdoc: { getEditor(): Editor } }).__pdoc.getEditor();
+    const ed = (window as unknown as { __pdoc: { getEditor(): Editor } }).__pdoc.getEditor();
     return ed.state.selection.from === ed.state.doc.content.size - 1;
   })).toBe(true);
 

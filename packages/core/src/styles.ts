@@ -8,7 +8,9 @@ const SELECTORS: Record<StyleKey, string> = {
   heading1: "h1",
   heading2: "h2",
   heading3: "h3",
-  heading4: ":is(h4, h5, h6)",
+  heading4: "h4",
+  heading5: "h5",
+  heading6: "h6",
 };
 
 function decl(s: StyleDef, isNormal: boolean): string {
@@ -43,7 +45,10 @@ export function styleCss(styles: Styles, scope: string): string {
 
 /** The style a text block has, by its node type and attributes. */
 export function styleKeyOf(type: string, attrs: Record<string, unknown>): StyleKey | null {
-  if (type === "heading") return `heading${Math.min(4, Number(attrs.level ?? 1))}` as StyleKey;
+  if (type === "heading") {
+    const level = Number(attrs.level ?? 1);
+    return Number.isInteger(level) && level >= 1 && level <= 6 ? `heading${level}` as StyleKey : null;
+  }
   if (type === "paragraph") return attrs.textStyle === "title" ? "title" : attrs.textStyle === "subtitle" ? "subtitle" : "normal";
   return null;
 }

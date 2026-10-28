@@ -171,7 +171,7 @@ A person can make the document look their way once and reuse it: their own style
 
 | # | Done when | Evidence | Result |
 |---|---|---|---|
-| 8.1 | Heading 5 and 6, editing any style, own styles (new, rename, delete) and default styles work, and the outline, contents and .docx and HTML exports follow (U41) | unit `styles`; e2e `styles` | |
+| 8.1 | Heading 5 and 6, editing any style, own styles (new, rename, delete) and default styles work, and the outline, contents and .docx and HTML exports follow (U41) | unit `styles`; e2e `styles` | In progress: Heading 5/6 distinct in editor, menus, shortcuts, outline, contents, HTML, Markdown and Word; focused core 37/37, styles/contents e2e 4/4. Editable/custom/default styles remain |
 | 8.2 | Each style set restyles the document and Undo returns (U42) | e2e `styles` | |
 | 8.3 | List formats, bullets, start at, restart and continue, and nine levels show on the page, print and survive .docx and Markdown export (U43) | unit `lists`; e2e `lists` | |
 | 8.4 | Small caps, all caps, letter spacing, change case and paint format (once and kept) work and export to .docx (U44) | unit `format`; e2e `formatting` | |

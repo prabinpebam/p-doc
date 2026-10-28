@@ -87,7 +87,7 @@ export function applyStyle(editor: Editor, key: StyleKey | "quote" | "code"): vo
   if (key === "code") return void chain.toggleCodeBlock().run();
   if (editor.isActive("codeBlock")) chain.toggleCodeBlock();
   if (key.startsWith("heading")) {
-    chain.setHeading({ level: Number(key.slice(7)) as 1 | 2 | 3 | 4 }).run();
+    chain.setHeading({ level: Number(key.slice(7)) as 1 | 2 | 3 | 4 | 5 | 6 }).run();
     return setBlockAttrs(editor, { textStyle: null });
   }
   chain.setParagraph().run();

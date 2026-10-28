@@ -145,7 +145,7 @@ const spaceAt = (e: Editor, which: "spaceBefore" | "spaceAfter"): number => {
   return b?.attrs[which] != null ? Number(b.attrs[which]) : key && doc ? doc.styles[key][which] : 0;
 };
 
-const STYLE_KEYS_MENU: (StyleKey | "quote" | "code")[] = ["normal", "title", "subtitle", "heading1", "heading2", "heading3", "heading4", "quote", "code"];
+const STYLE_KEYS_MENU: (StyleKey | "quote" | "code")[] = ["normal", "title", "subtitle", "heading1", "heading2", "heading3", "heading4", "heading5", "heading6", "quote", "code"];
 export const STYLE_NAMES: Record<StyleKey | "quote" | "code", string> = { ...STYLE_LABELS, quote: "Quote", code: "Code" };
 
 function updateStyleToMatch(): void {
