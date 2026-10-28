@@ -147,7 +147,14 @@ function createWindow(): BrowserWindow {
   // Tests never take the computer's focus.
   if (process.env.PDOC_E2E) w.showInactive();
   w.once("ready-to-show", () => {
+    log("window shown");
     if (!process.env.PDOC_E2E) w.show();
+  });
+  w.webContents.on("did-finish-load", () => log("window loaded"));
+  w.webContents.on("did-fail-load", (_e, code, desc) => log("window failed to load", code, desc));
+  w.webContents.on("render-process-gone", (_e, d) => log("renderer gone", d.reason));
+  w.webContents.on("console-message", (e) => {
+    if (e.level === "error") log("renderer error", String(e.message).slice(0, 300));
   });
   w.webContents.on("will-navigate", (e) => e.preventDefault());
   w.webContents.setWindowOpenHandler(({ url }) => {

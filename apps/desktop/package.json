@@ -15,6 +15,8 @@
     "e2e": "playwright test",
     "perf": "playwright test --config playwright.perf.config.ts",
     "package": "pnpm run build && electron-builder --publish never",
+    "package:dir": "pnpm run build && electron-builder --dir --publish never",
+    "package:smoke": "node scripts/package-smoke.mjs",
     "pdoc": "node out/main/cli.mjs"
   },
   "devDependencies": {

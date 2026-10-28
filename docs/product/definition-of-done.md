@@ -3,8 +3,8 @@
 What success means for the [spec](spec.md): the project's Definition of Done, made from its promises, and one for each stage a person can try, made from the user-can statements it delivers. Each row names the evidence that would prove it; the result is recorded beside it once known.
 
 > **TL;DR.**
-> - **Success is:** a writer installs P-Doc, writes a structured document that never loses a keystroke, prints it as seen, reviews it, goes back to any version, and keeps it private or public on their own GitHub, online or offline.
-> - **Stages:** 1 Write offline; 2 Pages and print; 3 Versions; 4 Review; 5 GitHub and first run; 6 Import and export; 7 Install.
+> - **Success is:** a writer installs P-Doc, writes a structured document with the tools of Docs and Word they reach for (power ones included) that never loses a keystroke, prints it as seen, reviews it, goes back to any version, and keeps it private or public on their own GitHub, online or offline.
+> - **Stages:** 1 Write offline; 2 Pages and print; 3 Versions; 4 Review; 5 GitHub and first run; 6 Import and export; then the [parity](parity.md) stages 7 Images beside the document; 8 Styles and lists; 9 Paragraph layout; 10 References; 11 Sections and page layout; 12 Tables, code and equations; 13 Review power; 14 Citations, index and fields; 15 Navigation and windows; 16 Library, files and proofing; and last 17 Install.
 > - **Against the promise:** see §4.
 
 ## 1. Project Definition of Done
@@ -12,12 +12,12 @@ What success means for the [spec](spec.md): the project's Definition of Done, ma
 | # | Promise | Done when | Evidence | Result |
 |---|---|---|---|---|
 | PD1 | P1 | Typing is on disk within 1 s of a pause, survives a forced quit (recovery), and every committed state is listed and restorable | e2e `autosave`, `recovery`, `versions`; unit `library` | Pass 2026-10-28: `autosave`, `recovery`, `versions` and unit `library` pass. Every committed state is listed in the history and restorable; text saved before a forced quit becomes a version on the next start |
-| PD2 | P2 | Every feature works with the network off and no account; documents are readable JSON in plain Git repositories | e2e suites run offline with no GitHub; unit `format` | Partial 2026-10-28: stages 1–5 run with no account (`offline`, Use offline in `first-run`); GitHub only ever through the fake, and Settings, versions and every editing feature work when not connected; readable JSON (unit `format`). Stage 6: import and export run in the main process and the `pdoc` CLI with no network (e2e `import-export`, unit `cli`). Stays Partial until the parity stages and Install are done |
+| PD2 | P2 | Every feature works with the network off and no account; documents are readable JSON in plain Git repositories | e2e suites run offline with no GitHub; unit `format` | Partial 2026-10-28: stages 1–5 run with no account (`offline`, Use offline in `first-run`); GitHub only ever through the fake, and Settings, versions and every editing feature work when not connected; readable JSON (unit `format`). Stage 6: import and export run in the main process and the `pdoc` CLI with no network (e2e `import-export`, unit `cli`). Stays Partial until stages 7–17 are done |
 | PD3 | P3 | Outline and table of contents follow heading changes with no manual step; every command is reachable by command search | e2e `outline`, `toc`, `command-search` | Pass 2026-10-28: `outline`, `command-search` and `toc` pass |
-| PD4 | P4 | A multi-page fixture has the same page count on screen and in the exported PDF (A1) | e2e `pagination` | Pass 2026-10-28: the 16-page fixture has the same page count on screen, in the print layout and in the PDF (A1 confirmed) |
+| PD4 | P4 | A multi-page fixture has the same page count on screen and in the exported PDF (A1); from the parity stages, the same page sizes (11.1), notes on each page (10.1), columns (11.2) and split points (9.3, 12.2) | e2e `pagination` | Pass 2026-10-28: the 16-page fixture has the same page count on screen, in the print layout and in the PDF (A1 confirmed) |
 | PD5 | P5 | Accepting all gives the suggested text; rejecting all gives the original, exactly | unit `suggestions`; e2e `review` | Pass 2026-10-28: unit `suggestions` "accept-all gives the suggested text and reject-all the original, exactly"; e2e `review` checks the page text after Accept all and after Reject all |
 | PD6 | P6 | Nothing reaches the public repository without the Move to Public confirmation; new documents are private | e2e `privacy`; unit `library` | Pass 2026-10-28: e2e `github` "5.6" (Cancel keeps the public repository empty after a sync; only the confirmed move reaches it); e2e `first-run`, `autosave` and `github` find new documents in `private/docs`; unit `library` moves both ways |
-| PD7 | The outcome is valuable | A fresh install reaches a first saved document in under a minute, offline or signed in | e2e `first-run` timing; owner try-it | Partial 2026-10-28: e2e `github` reaches a first saved document, signed in with both repositories set up, in under 60 s from launch (checked in the test); offline it is one click (`first-run`). Owner try-it on the installed app with real GitHub waits for stage 7 |
+| PD7 | The outcome is valuable | A fresh install reaches a first saved document in under a minute, offline or signed in | e2e `first-run` timing; owner try-it | Partial 2026-10-28: e2e `github` reaches a first saved document, signed in with both repositories set up, in under 60 s from launch (checked in the test); offline it is one click (`first-run`). Owner try-it on the installed app with real GitHub waits for Install (stage 17) |
 | PD8 | Nothing live breaks | No real GitHub, documents or settings of the owner are touched by tests; budgets in spec §7 hold | test isolation (W7); `pnpm perf` against `perf-baseline.json` | Partial 2026-10-28: every e2e run has its own data, library and empty Git config; unit `library` uses an empty Git config. `pnpm perf` within budget (keystroke p95 1.3 ms, repagination 2.7 ms, save 10 ms, open 100 pages 90 ms, cold start 0.55 s, 50-page PDF 0.3 s; [baseline](perf-baseline.json)); stage 3: version commit of 50 pages p95 0.44 s (budget 1 s), history of 500 versions p95 0.2 s (budget 0.3 s); stage 4: review list on 50 pages p95 0.2 ms (budget 16 ms); stage 5: typing in a 50-page document during 4 syncs p95 0.8 ms (budget 16 ms: sync never blocks typing); stage 6: 50-page .docx export p95 34 ms (budget 3 s) |
 | PD9 | Docs | The spec's "As built" records what was built | Review | |
 
@@ -141,7 +141,175 @@ A person can bring Word, Markdown, HTML and text in, and take .docx, PDF, Markdo
 
 **Depends on:** nothing outside the product.
 
-### Stage 7: Install
+### Stage 7: Images beside the document
+
+A person can use big pictures freely: each is stored once beside its document, laid out the way they want, and never lost through a version, a move or a sync.
+
+- **Delivers:** U39, U40
+- **Settles:** A6 (its fallback), A9
+- **Try it:** paste a large photo and a screenshot into a document → resize one by its corner, wrap text around it, crop it, give it alt text → make a few versions, restore the first, move the document to Public and back → the pictures are there each time; the document file is a few KB, and the pictures are files in `assets/`.
+
+| # | Done when | Evidence | Result |
+|---|---|---|---|
+| 7.1 | An inserted, pasted or dropped image is written once to `assets/<sha256>.<ext>`, and the document refers to it by path; the same image in two documents is one file; images up to 20 MB are accepted, larger refused with the words in §8 (U39) | unit `assets`; e2e `images` | |
+| 7.2 | Integrity: a version 1 document with embedded images moves to version 2 on open with every image intact; then 5 versions, an image deleted, the oldest version restored, a sync to the fake GitHub and a fresh clone, a .docx export and re-import, a copy, a Move to Public and back, and `pdoc export` and `import` all keep every image; a crash between writing an image and writing the document loses nothing; P-Doc never deletes an asset any version refers to; a build that knows only version 1 opens a version 2 file read-only and leaves it byte-for-byte unchanged after closing and syncing (U39, P1, A18) | unit `assets-integrity` (temp repositories, fake GitHub) | |
+| 7.3 | Size: the A6 fixture (100 pages, 20 images at 2 MB) is a document file under 1 MB, and 10 more text-only versions add under 1 MB to the repository (U39, A6) | `PDOC_MEASURE=1` unit `a6-measure` | |
+| 7.4 | Resize (proportions kept, Shift frees them), align, wrap left or right, crop and reset, replace and alt text work by mouse and keyboard and survive save, reopen and .docx and HTML export (U40) | e2e `images`; unit `export-docx` | |
+| 7.5 | Wrapped images paginate the same on screen and in the PDF (A9) | e2e `pagination` with wrapped images | |
+| 7.6 | A missing image file shows "Image missing" and nothing else breaks; Move to Public says how many images become public (P6) | e2e `images`; e2e `privacy` | |
+| 7.7 | Opening a 100-page document with 20 images is editable in ≤ 500 ms; inserting a 20 MB image ≤ 300 ms (§7) | `pnpm perf` | |
+
+**Depends on:** nothing outside the product.
+
+### Stage 8: Styles and lists
+
+A person can make the document look their way once and reuse it: their own styles, style sets, list formats, finer character formatting, and Markdown typing.
+
+- **Delivers:** U41–U45
+- **Settles:** A16 (first check)
+- **Try it:** Format > Paragraph styles > Edit styles → make Heading 1 dark blue 20 pt → New style "Note" from Normal, italic → Save as my default styles → a new document has them → a numbered list in a, b, c, restart at 1 → small caps on a word, Shift+F3 to uppercase → paint format onto another word → type `## Plan` and `**done**` → they format → Edit > Copy as Markdown and paste into Notepad.
+
+| # | Done when | Evidence | Result |
+|---|---|---|---|
+| 8.1 | Heading 5 and 6, editing any style, own styles (new, rename, delete) and default styles work, and the outline, contents and .docx and HTML exports follow (U41) | unit `styles`; e2e `styles` | |
+| 8.2 | Each style set restyles the document and Undo returns (U42) | e2e `styles` | |
+| 8.3 | List formats, bullets, start at, restart and continue, and nine levels show on the page, print and survive .docx and Markdown export (U43) | unit `lists`; e2e `lists` | |
+| 8.4 | Small caps, all caps, letter spacing, change case and paint format (once and kept) work and export to .docx (U44) | unit `format`; e2e `formatting` | |
+| 8.5 | Markdown while typing, with Undo turning it back; Copy as Markdown and Paste from Markdown; substitutions list edited in Settings; each switch off stops its behaviour (U45) | e2e `markdown`; unit `markdown` | |
+| 8.6 | The toolbar keeps its groups at 1280 px and every new command is found by command search (A16) | e2e `command-search` sweep | |
+
+### Stage 9: Paragraph layout
+
+A person can lay paragraphs out like in Word: indents, tabs, a ruler, spacing, page-break control, borders, right-to-left text, sorting, and the marks that show it all.
+
+- **Delivers:** U46–U50
+- **Settles:** A10
+- **Try it:** View > Show ruler → drag the first-line indent → add a right tab with dot leaders and type a name, Tab, a page number → Format > Paragraph → Keep with next on a heading at a page foot → it moves with its paragraph → long paragraphs break across pages with no big gaps → Ctrl+Shift+P shows ¶ and → → select five lines, Format > Sort.
+
+| # | Done when | Evidence | Result |
+|---|---|---|---|
+| 9.1 | Custom line spacing, left, right, first-line and hanging indents, and tab stops with leaders show on screen, in the PDF and in .docx (U46) | unit `paragraph`; e2e `paragraph` | |
+| 9.2 | The ruler shows margins, indents and tabs and dragging changes them; clicking adds a tab (U46) | e2e `ruler` | |
+| 9.3 | Paragraphs split across pages at lines, the same on screen and in the PDF, with widow and orphan control; keep with next, keep lines together and page break before hold (U47, A10, A20). If the A10 spike fails: paragraphs move whole and Keep lines together is always on, and this row says so | e2e `pagination` split fixture; unit `paginate` | |
+| 9.4 | Borders, shading and right-to-left paragraphs show, print and export to .docx (U48) | e2e `paragraph`; unit `export-docx` | |
+| 9.5 | Non-printing characters show and never print (U49) | e2e `paragraph` (PDF text has no ¶) | |
+| 9.6 | Sort orders paragraphs, list items and table rows, numbers in number order; Undo returns (U50) | unit `sort`; e2e `paragraph` | |
+| 9.7 | Repagination stays ≤ 16 ms on 50 pages with split paragraphs (§7) | `pnpm perf` | |
+
+### Stage 10: References
+
+A person can write with notes, bookmarks, numbered captions and cross-references that keep themselves right, and contents with page numbers.
+
+- **Delivers:** U51–U54
+- **Settles:** A8, O19
+- **Try it:** Ctrl+Alt+F twice on page 3 → two numbered notes at the foot of page 3 → delete the first → the second becomes 1 → caption two images → Insert > Cross-reference to Figure 2 as "page" → move Figure 2 before Figure 1 → numbers and the reference follow → contents with page numbers → Download PDF: notes and numbers match the screen.
+
+| # | Done when | Evidence | Result |
+|---|---|---|---|
+| 10.1 | Footnotes number themselves, sit at the foot of their page (continuing on the next page when long; without A10, a long note moves whole), the same on screen and in the PDF; endnotes at the end; convert both ways; .docx exports and imports them (U51, A8) | unit `notes`; e2e `notes`; e2e `pagination` notes fixture | |
+| 10.2 | Bookmarks, and links to headings and bookmarks, work in the page, the PDF, HTML and .docx (U52) | e2e `notes`; unit `export-docx` | |
+| 10.3 | Captions number by kind in document order; cross-references show text, number or page and follow moves; a deleted target reads "Reference missing"; a table of figures lists captions with pages (U53) | unit `references`; e2e `references` | |
+| 10.4 | Contents with page numbers and dotted leaders or links, levels 1–6, matching the PDF's pages (U54) | e2e `toc` | |
+| 10.5 | Repagination with 40 notes stays ≤ 16 ms on 50 pages (§7) | `pnpm perf` | |
+| 10.6 | Page numbers settle: a 50-page fixture with contents, index fields and page references reaches a stable layout within 2 passes (A19) | unit `paginate` | |
+
+### Stage 11: Sections and page layout
+
+A person can make demanding layouts: sections with their own page setup, columns, headers per section, odd and even pages, numbering formats, a watermark, line numbers, hyphenation and drop caps.
+
+- **Delivers:** U55–U59
+- **Settles:** A12, A13, A14, O3
+- **Try it:** a report → a next-page section break before the appendix → Page setup > This section > Landscape → the appendix pages are landscape → a continuous section with two columns → front matter numbered i, ii, the body from 1 → different odd and even footers → a "Draft" watermark → Download PDF: the same pages, sizes, columns and numbers.
+
+| # | Done when | Evidence | Result |
+|---|---|---|---|
+| 11.1 | Section breaks of every kind start where they say; orientation, paper and margins per section show on screen and in the PDF (U55, A12) | e2e `sections`; unit `paginate` | |
+| 11.2 | Columns (1–3, spacing, line between, column break) fill and balance the same on screen and in the PDF (U56, A13; balancing needs A10) | e2e `sections` columns fixture | |
+| 11.3 | Odd and even headers, per-section headers with Link to previous, number formats and start at, on screen, in the PDF and in .docx (U57) | e2e `sections`; unit `export-docx` | |
+| 11.4 | Text and picture watermarks show behind every page and print (U58) | e2e `sections` | |
+| 11.5 | Line numbers, offline hyphenation and drop caps show and print (U59, A14) | e2e `sections` with the network off | |
+| 11.6 | Pageless keeps every section setting and shows one flow (U13) | e2e `sections` | |
+| 11.7 | Repagination with sections and columns stays ≤ 16 ms on 50 pages (§7) | `pnpm perf` | |
+
+### Stage 12: Tables, code and equations
+
+A person can build real tables, write highlighted code and typeset maths.
+
+- **Delivers:** U60–U62
+- **Settles:** A11, A17, O13, O16
+- **Try it:** a 4×6 table → merge the top row → widen a column by dragging → shade the header and repeat it → add rows until it runs over a page → it breaks between rows with the header repeated → a JavaScript code block highlights → Alt+= and `\frac{a}{b}` → Download Word: the table and the equation are there.
+
+| # | Done when | Evidence | Result |
+|---|---|---|---|
+| 12.1 | Merge, split, widths (drag and dialog), alignment, borders, shading, padding, vertical alignment, text to table and back, distribute, sort; all in .docx and HTML (U60) | unit `tables`; e2e `tables` | |
+| 12.2 | Long tables break between rows with header rows repeated, the same on screen and in the PDF; a row taller than a page breaks inside it when A10 holds, and overflows otherwise (U60, A11) | e2e `pagination` table fixture | |
+| 12.3 | Code blocks highlight by language, and keep the language in Markdown export (U61) | e2e `code`; unit `export` | |
+| 12.4 | Inline and display equations from LaTeX draw as typed, show a readable error for bad input, and export as OMML (.docx), MathML (HTML) and `$…$` (Markdown) (U62, A17) | unit `equations`; e2e `equations` | |
+| 12.5 | A .docx with equations opens in Word with editable equations (A17) | owner try-it | Needs owner |
+
+### Stage 13: Review power
+
+A person can review like in Word: formatting suggestions, Commenting mode, a document that always suggests, changes by reviewer, comparing documents, and Word's comments and tracked changes both ways.
+
+- **Delivers:** U63–U67
+- **Settles:** A4, A15, O6
+- **Try it:** Suggesting → bold a word → a "Formatted: Bold" suggestion → reject → plain again → Always suggest in this document → reopen → it's in Suggesting → Tools > Compare documents against an older copy → a new document of suggestions → open a .docx from Word with comments and tracked changes → they're comments and suggestions.
+
+| # | Done when | Evidence | Result |
+|---|---|---|---|
+| 13.1 | Formatting changes in Suggesting are suggestions; accept all gives the suggested formatting and reject all the original, exactly (U63, A15) | unit `suggestions`; e2e `review` | |
+| 13.2 | Commenting mode blocks typing but not comments; Always suggest holds after reopening (U64) | e2e `review` | |
+| 13.3 | Reviewer filter shows only the ticked reviewers, and accept and reject all act on what's shown (U65) | unit `review`; e2e `review` | |
+| 13.4 | Compare makes a new private document whose accept all gives the revised text and reject all the original, exactly (U66) | unit `compare`; e2e `compare` | |
+| 13.5 | Word comments (with replies and resolved state) and tracked changes (author and time) come in from .docx; a fixture's moves and table and property changes come in as comments with "*n* changes kept as comments"; comments, suggestions and formatting suggestions go out as Word comments and tracked changes and come back (U67) | unit `import-docx`, `export-docx` | |
+| 13.6 | Comparing two 50-page documents ≤ 1 s (§7) | `pnpm perf` | |
+
+### Stage 14: Citations, index and fields
+
+A person can cite sources in a recognised style, index a long document, and insert live fields and dates from a menu at the cursor.
+
+- **Delivers:** U68–U70
+- **Settles:** O14
+- **Try it:** Insert > Citation → add a book and an article → cite both → Insert > Bibliography → switch APA to MLA → both change → mark three index entries → Insert > Index with page numbers → type @ → Date → today's date chip → @Page count in the footer.
+
+| # | Done when | Evidence | Result |
+|---|---|---|---|
+| 14.1 | Citations and the bibliography format correctly in APA 7, MLA 9 and Chicago author-date for each source type, and change together with the style (U68) | unit `citations` against reference examples; e2e `citations` | |
+| 14.2 | Index entries and subentries give an alphabetical index with the PDF's page numbers (U69) | unit `index`; e2e `references` | |
+| 14.3 | The @ menu filters as you type and inserts each item; date chips, fields and variables stay current and export as text (U70) | e2e `insert-menu`; unit `fields` | |
+
+### Stage 15: Navigation and windows
+
+A person can move around a long document fast, see pages their way, use two windows, and listen to the text.
+
+- **Delivers:** U71–U74
+- **Try it:** Ctrl+G → Page 12 → there → collapse a long section by its chevron → promote a Heading 3 in the outline → View > Zoom > Two pages → File > New window → open another document there → Tools > Read aloud → it reads from the cursor.
+
+| # | Done when | Evidence | Result |
+|---|---|---|---|
+| 15.1 | Go to reaches pages, headings, bookmarks, comments, notes and sections (U71) | e2e `navigate` | |
+| 15.2 | Collapsing hides a section on screen only; print and export keep it; promote and demote move subheadings too (U71) | e2e `navigate`; e2e `outline` | |
+| 15.3 | Page width fits the page to the window's width; Whole page shows one whole page; Two pages shows pages *n* and *n+1* side by side at the same scale (U72) | e2e `navigate` | |
+| 15.4 | A second window opens; the same document is never open in two windows; both save safely (U73, P1) | e2e `windows` | |
+| 15.5 | Read aloud starts, pauses and stops, highlighting the sentence; with no voice it says so (U74) | e2e `read-aloud` (speech stubbed in tests); owner check with the network off | |
+
+### Stage 16: Library, files and proofing
+
+A person can find and organise documents, start from templates, describe documents, spell in their language, check accessibility, and export to every format Docs offers.
+
+- **Delivers:** U75–U80
+- **Try it:** star a document → it's under Starred → New folder "Clients", drag two documents in → File > New from template > Report → File > Details: add keywords → Download EPUB and .odt → open them in a reader and LibreOffice → Tools > Accessibility check → add the missing alt text it finds.
+
+| # | Done when | Evidence | Result |
+|---|---|---|---|
+| 16.1 | Open recent, star, sort and folders work; folders sync; a document moved into a folder keeps its history, named versions and images; moving a folder to Public asks first with the document and image counts, and Cancel leaves the public repository unchanged (U75, P6) | unit `library`; e2e `library`; e2e `privacy` | |
+| 16.2 | Details are saved in the document and appear in .docx, PDF, EPUB and HTML metadata (U76) | unit `export`; e2e `files` | |
+| 16.3 | Templates: the built-ins and own templates (saved in the private repository) start new documents (U77) | e2e `templates`; unit `library` | |
+| 16.4 | A chosen spelling language marks words in that language; an added word stays unmarked after a restart; Ignore applies only in this document (U78) | e2e `spelling` | |
+| 16.5 | The accessibility check finds each listed problem in a fixture and Go to reaches it; the fixes work: Alt text opens the field, a skipped level becomes the next level down, a table's first row becomes its header row, and Add a title focuses the title (U79) | unit `a11y`; e2e `a11y` | |
+| 16.6 | EPUB, .odt and .rtf exports open in their readers with headings, lists, tables and images; PDFs have the heading outline and links (U80) | unit `export` (EPUB and ODT validated, RTF parsed); e2e `import-export` | |
+
+### Stage 17: Install
 
 A person can install P-Doc on Windows, or run it portable, and it starts and works.
 
@@ -150,16 +318,27 @@ A person can install P-Doc on Windows, or run it portable, and it starts and wor
 
 | # | Done when | Evidence | Result |
 |---|---|---|---|
-| 7.1 | `pnpm package` builds an NSIS installer and a portable exe with the app icon and fuses set | build output; `release/` listing | |
-| 7.2 | The packaged app starts, shows the first run, makes a document offline and saves it | e2e `packaged` against the unpacked build | |
-| 7.3 | Code signing | owner (certificate) | Needs owner |
+| 17.1 | `pnpm package` builds an NSIS installer and a portable exe with the app icon and fuses set | build output; `release/` listing | |
+| 17.2 | The packaged app starts, shows the first run, makes a document offline and saves it | e2e `packaged` against the unpacked build | |
+| 17.3 | The installed `pdoc` command works from a terminal (U38) | e2e `packaged` runs `pdoc list --json` | |
+| 17.4 | Code signing | owner (certificate) | Needs owner |
 
-**Depends on:** a code-signing certificate for 7.3 (owner).
+**Depends on:** a code-signing certificate for 17.4 (owner).
 
 ## 3. Order by value and risk
 
-Stage 1 proves the core promise (P1–P3) soonest and everything else builds on it. Stage 2 settles the riskiest assumption (A1) next. Stage 3 completes P1 (versions) and is the base for sync. Stage 4 (review) is independent of 3 and 5. Stage 5 depends on 3 (commits to push). Stage 6 depends on 1 and 2 (page setup for .docx and PDF). Stage 7 packages the result.
+Stage 1 proves the core promise (P1–P3) soonest and everything else builds on it. Stage 2 settles the riskiest assumption (A1) next. Stage 3 completes P1 (versions) and is the base for sync. Stage 4 (review) is independent of 3 and 5. Stage 5 depends on 3 (commits to push). Stage 6 depends on 1 and 2 (page setup for .docx and PDF).
+
+The parity stages (7–16, from the [parity audit](parity.md)) come after stage 6 and before Install, because packaging is cheap to redo and every parity stage changes what gets packaged:
+
+- **7, Images** comes first: A6 failed, so the document format changes, and every later image feature (wrap, captions, templates) builds on it. Its integrity row (7.2) is written before the code.
+- **8, Styles and lists** and **9, Paragraph layout** are the tools a writer uses daily (J15); 9 settles A10 (split paragraphs), which 10–12 also need.
+- **10, References**, **11, Sections and page layout** and **12, Tables, code and equations** carry the pagination risks (A8, A12, A13, A11); each starts with a spike that proves its risk, or takes the fallback in the register.
+- **13, Review power** finishes P5 and the exchange with Word users (J16).
+- **14–16** are the long tail: scholarly tools, navigation, the library and files.
+- Every stage from 8 to 16 re-runs the 8.6 sweep (toolbar at 1280 px, every new command in command search; A16) and a round-trip test proving unknown attributes survive (A18).
+- **17, Install** packages all of it. A packaging check runs early (after stage 6) so surprises show before then.
 
 ## 4. Against the promise
 
-To be written after the stages run: the gaps, in the order they block a real writer, and who each waits on. Known before building: a real GitHub sign-in (5.7) and code signing (7.3) wait on the owner.
+To be written after the stages run: the gaps, in the order they block a real writer, and who each waits on. Known before building: a real GitHub sign-in (5.7), code signing (17.4) and opening exported equations in Word (12.5) wait on the owner.

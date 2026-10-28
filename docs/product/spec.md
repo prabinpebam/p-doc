@@ -5,11 +5,11 @@ P-Doc is a desktop word processor (Electron, Windows first) for people who write
 > **TL;DR.**
 > - **The promise:** Write and review real documents with Docs' ease and Word's structure, in files you own, with every version kept, online or not.
 > - **Who:** a single writer (sometimes reviewing others' text) on Windows; agents and scripts through the `pdoc` CLI.
-> - **What a person can do:** write with styles and see it save (U1–U12); lay out true pages or go pageless and print or export (U13–U20); suggest, comment and review changes (U21–U27); see, compare, name and restore any version, and keep documents private or public on GitHub (U28–U38).
+> - **What a person can do:** write with styles and see it save (U1–U12); lay out true pages or go pageless and print or export (U13–U20); suggest, comment and review changes (U21–U27); see, compare, name and restore any version, and keep documents private or public on GitHub (U28–U38). Then the power tools of Docs and Word, from the [parity audit](parity.md) (U39–U80): images beside the document, own styles and list formats, tabs and ruler, footnotes, captions and cross-references, sections and columns, advanced tables, equations, formatting suggestions, compare, citations, index, templates and more.
 > - **How:** Electron shell + React/TipTap editor; documents are `*.pdoc.json` files in two local Git repositories (`private/`, `public/`) that sync to `<login>/p-doc-private` and `<login>/p-doc-public`.
 > - **Riskiest assumption:** A1, that block-level pagination in a live editor is accurate enough that print/PDF output matches what the writer saw. Confirmed when a 20-page fixture prints with the same page count and page-start blocks as the screen.
-> - **Success:** PD1 nothing is ever lost (autosave + versions + offline); PD2 a document round-trips through .docx; PD3 a fresh install reaches a first saved document in under a minute, signed in or not.
-> - **Open:** O3 per-section orientation (working default: whole-document only); O9 real-time co-editing (non-goal).
+> - **Success:** PD1 nothing is ever lost (autosave, versions, recovery); PD2 everything works offline with no account; PD4 the screen's pages are the PDF's pages; PD5 accept and reject are exact; PD6 nothing becomes public without a confirmation; PD7 a fresh install reaches a first saved document in under a minute, signed in or not.
+> - **Open:** O3 sections (built in stage 11), O6 formatting suggestions (built in stage 13); O9 real-time co-editing (non-goal). Riskiest open assumptions: the pagination ones for footnotes, split paragraphs and tables, sections and columns (A8–A13).
 
 Research behind this spec: [Google Docs KB](../research/index.md) (observed with Stagehand: EV-001 to EV-003; 42 features, 10 rules) and [Microsoft Word KB](../research/index.md) (documentation: 30 features, 10 rules). References use `GD F-###` / `W F-###` for features and `GD R-###` / `W R-###` for rules.
 
@@ -21,12 +21,12 @@ Write and review real documents with the ease of Google Docs and the structure o
 |---|---|---|
 | P1 | **Nothing is lost.** Every change is saved within seconds without a Save step, and every earlier state can be found again. | A crash or close loses typing; a version can't be found; a sync overwrites newer work. |
 | P2 | **Yours, offline first.** Documents are plain files in your Git repositories on your computer and on your own GitHub; P-Doc works fully without a network or an account. | A feature needs the network or a P-Doc server; files can't be read without P-Doc. |
-| P3 | **Structure without clutter.** Styles, outline, page layout, headers, page numbers and a live table of contents, behind one calm toolbar and menus you can search. | A common task needs a hunt through panels; the outline or contents are stale. |
+| P3 | **Structure without clutter.** Styles, outline, page layout, headers, page numbers and a live table of contents, behind one calm toolbar and menus you can search. | A common task needs a hunt through panels; the outline or contents are stale; a reader using assistive technology can't follow the structure. |
 | P4 | **What you see is what prints.** Pages mode shows the same pages that print and export. | Printed or PDF page breaks differ from the screen. |
 | P5 | **Review without losing the original.** Suggest edits, comment, and accept or reject changes one by one or all at once. | A suggestion can't be told from the original; accepting changes the wrong text. |
 | P6 | **Private by default, public on purpose.** A document is public only when the writer moves it there, and P-Doc says so before it happens. | A private document ends up in the public repository or public on GitHub. |
 
-**Not promised (non-goals):** real-time co-editing, sharing permissions and presence (GD BR-001, W BR-001); Google- or Microsoft-only services (smart chips to Drive people, Explore, translate, voice typing; GD BR-002); mail merge; macros and add-ins; mobile and web versions; Mac and Linux packages in this release (the code stays portable).
+**Not promised (non-goals):** real-time co-editing, sharing permissions and presence (GD BR-001, W BR-001); Google- or Microsoft-only services (smart chips to Drive people, Explore, translate, voice typing; GD BR-002); mail merge; macros and add-ins; mobile and web versions; Mac and Linux packages in this release (the code stays portable). The [parity audit](parity.md) lists every Docs and Word capability left out (Skip) or deferred (Later), with the reason.
 
 ## 2. Scenarios and jobs to be done
 
@@ -44,6 +44,12 @@ Write and review real documents with the ease of Google Docs and the structure o
 | J10 | receive or must send Word files | import and export .docx (and Markdown, HTML, text, PDF) | work with others' tools | P2, P4 |
 | J11 | use more than one computer | get the same documents on each, signed in to GitHub | carry on where I left off | P1, P2 |
 | J12 | automate (scripts, agents) | list, export, import and read history from the command line | build on my documents | P2 |
+| J13 | write a formal document (a paper, thesis, report or manual) | notes, citations, numbered figures, cross-references and an index that keep themselves right | meet the format I'm held to without checking numbers by hand | P3, P4 |
+| J14 | lay out a demanding deliverable (a landscape appendix, a two-column paper, a book-style header) | sections with their own page setup, columns and headers | make it in P-Doc instead of finishing it in Word | P3, P4 |
+| J15 | write every day and fast | my own styles, list formats, Markdown typing, templates and keyboard paths | format without reaching for the mouse or repeating myself | P3 |
+| J16 | exchange reviewed documents with Word users | their comments and tracked changes to come in and mine to go out | review across tools without losing a change | P5, P2 |
+| J17 | hand a document to readers who use assistive technology | find and fix what makes it hard to read | be sure everyone can read it | P3 |
+| J18 | proof-read a draft | hear it read back while I follow on the page | catch what my eyes skip | P3, P5 |
 
 ## 3. What a person can do
 
@@ -104,6 +110,53 @@ Write and review real documents with the ease of Google Docs and the structure o
 | U36 | have documents sync to GitHub on their own, and sync now on demand | J11 | Focus Notes sync |
 | U37 | move a document between Private and Public, with a clear warning before it becomes public | J9 | P6 |
 | U38 | list, import, export and read history from the `pdoc` command line with JSON output | J12 | craft agent path |
+
+**Power and parity** (from the [parity audit](parity.md); stages 7–16)
+
+| # | A person can… | Jobs | From |
+|---|---|---|---|
+| U39 | add big pictures without slowing or bloating documents or their history | J1, J10 | A6; W F-030 |
+| U40 | resize, align, wrap text around, crop and replace an image, and give it alt text | J3 | GD F-011 |
+| U41 | use Heading 5 and 6, change any style (font, size, colour, emphasis, spacing, indent, the style that follows), create their own styles, and keep styles as defaults for new documents | J2, J15 | GD F-002, W F-002 |
+| U42 | restyle the whole document at once by choosing a style set | J3, J15 | W Design |
+| U43 | choose list number formats and bullets, start at a number, restart or continue numbering, and nest lists to nine levels | J2, J15 | GD F-003, W F-003 |
+| U44 | use small caps, all caps and letter spacing, change case, and copy formatting from one place to another | J1, J15 | GD F-001, GD F-006 |
+| U45 | type Markdown and have it formatted, copy as Markdown and paste Markdown, and keep their own automatic substitutions, and turn each behaviour off | J15 | GD F-005, GD F-009, GD F-038 |
+| U46 | set custom line spacing, left, right, first-line and hanging indents and tab stops with leaders, and see and drag them on a ruler | J3 | GD F-004, GD F-021, W F-003 |
+| U47 | control how paragraphs break across pages: keep with next, keep lines together, page break before, widow and orphan control | J3 | GD F-004 |
+| U48 | give paragraphs borders and shading, and write right to left | J3 | W Paragraph |
+| U49 | show and hide non-printing characters | J3 | GD F-021 |
+| U50 | sort paragraphs, list items or table rows | J15 | W Sort |
+| U51 | add footnotes and endnotes that number themselves and sit at the foot of their page or the end of the document, and convert between them | J13 | GD F-015, W F-012 |
+| U52 | add bookmarks and link to any heading or bookmark | J2, J13 | GD F-010 |
+| U53 | caption figures, tables and equations with numbers that keep themselves in order, refer to them (and to headings, bookmarks and notes) by text, number or page with references that stay current, and add a table of figures | J13 | W References |
+| U54 | choose whether the table of contents shows page numbers or links and which heading levels it lists | J2, J3 | GD F-024, W F-011 |
+| U55 | divide a document into sections that start on a new page, on the same page, or on the next odd or even page, each with its own orientation, paper size and margins | J14 | W F-006, W F-008, GD F-017 |
+| U56 | lay text out in columns, per section, with a column break | J14 | GD F-020, W F-008 |
+| U57 | give headers and footers different odd and even pages and different text per section (or linked to the previous), with page numbers in a chosen format starting at a chosen number | J14 | GD F-018, W F-007 |
+| U58 | add a text or picture watermark behind every page | J3 | GD, W Design |
+| U59 | show line numbers, hyphenate automatically, and start a paragraph with a drop cap | J13, J14 | GD F-039, W Layout |
+| U60 | merge and split table cells, set widths and alignment, borders, shading, padding and vertical alignment, repeat header rows on each page, have long tables break between rows, and turn text into a table and back | J3 | GD F-012, W F-030 |
+| U61 | write code blocks highlighted for their language | J15 | GD F-014 |
+| U62 | write equations in LaTeX, inline or on their own line, that print as maths and open in Word as equations | J13 | GD F-013, W Insert |
+| U63 | in Suggesting, have formatting changes recorded as suggestions | J5, J16 | GD F-028, W F-013 (O6) |
+| U64 | only comment, without changing the text, and keep a document always suggesting | J5 | GD F-029, W F-013 |
+| U65 | see, filter and accept or reject changes by reviewer | J5, J16 | W F-015 |
+| U66 | compare two documents, or a document with a file, into a new document of suggestions | J5, J16 | GD F-030, W F-018 |
+| U67 | bring in Word's comments and tracked changes from a .docx as comments and suggestions, and take comments out to Word | J16 | W F-013, W F-017 |
+| U68 | keep a list of sources, cite them, and insert a bibliography in APA, MLA or Chicago style | J13 | GD F-039, W References |
+| U69 | mark index entries and insert an index with page numbers | J13 | W References |
+| U70 | insert anything at the cursor by typing its name, including dates and fields (page, page count, title, author, date, their own variables) that stay current | J15 | GD F-014, GD F-039 |
+| U71 | go to a page, heading, bookmark, comment or note; collapse sections in the page; promote and demote headings from the outline | J2 | W F-005, GD F-023, W F-010 |
+| U72 | zoom to the page width, the whole page or two pages side by side | J3 | W F-009 |
+| U73 | open documents in more than one window | J2 | W View |
+| U74 | hear the document or a selection read aloud | J18, J17 | W F-028 |
+| U75 | reopen recent documents, star documents, sort the library and organise documents in folders | J1 | GD F-032 |
+| U76 | see and edit a document's details (author, subject, keywords), which travel into its exports | J10 | GD F-032, W F-023 |
+| U77 | start a document from a template, and save a document as a template | J1, J15 | GD, W New |
+| U78 | choose the spelling language, add words to a personal dictionary and ignore a word | J1 | GD F-037 |
+| U79 | check a document for accessibility problems and go to each one to fix it | J17 | GD F-042, W Review |
+| U80 | export to EPUB, OpenDocument (.odt) and Rich Text (.rtf), and get PDFs with the heading outline and working links | J10 | GD F-033 |
 
 ## 4. Task flows
 
@@ -174,7 +227,7 @@ Waits name their class from the perceived-performance skill: *instant* (< 100 ms
 2. **File > Version history** (Ctrl+Alt+Shift+H), **View > Version history**, or a click on the save state in the title bar opens the history panel at the right (an overlay at narrow widths). Opening it commits the current text first, so the top row is always "**Current version** · *time*". Versions are grouped by Today, Yesterday, then dates; each row shows time, author and name if named. Toggle **Only named versions**. Focus starts on **Close version history**. *(responsive; skeleton rows)*
 3. Selecting a version shows it read-only over the page with differences **since that version**: text added since is highlighted green, text removed since is struck through red (decision: compare the old version to the current text, as Google Docs does). A banner: "Viewing the version from *time* (*name*)." with "Since then: *n* words added, *m* removed.", a legend, and **Restore this version**, **Make a copy** and **Back to current**. Selecting the top row, or Esc, goes back to the current text; Esc again closes the panel. *(in-flow)*
 4. **Restore this version** (banner or row menu) → confirm "Restore the version from *time*? The current version stays in history." → edits not yet in a version are committed first; the old text becomes current as a new version "Restore *YYYY-MM-DD HH:MM*", keeping the document's id and created date (GD R-006).
-5. **Name this version** (row menu, or File > Version history > Name current version) → an inline field (Enter saves, Esc cancels); saved as an annotated Git tag `pdoc/<file>/<sha>`; named versions show the name first. **Rename this version** and **Remove name** in the row menu.
+5. **Name this version** (row menu, or File > Version history > Name current version) → an inline field (Enter saves, Esc cancels); saved as an annotated Git tag `pdoc/<file stem>/<sha12>` (the stem carries the document's id, and folders never rename a file, so names survive moves); named versions show the name first. **Rename this version** and **Remove name** in the row menu.
 6. **Make a copy** (banner or row menu) → a new Private document "Copy of *title*" with that version's text, committed as "Copy *title* from *time*"; a toast offers **Open**.
 
 **Branches:** no versions yet → "No earlier versions yet. Versions are made as you write."; Only named with none named → "No named versions yet. Name one from its menu."; Git missing → "Install Git to keep versions."; the history can't be read → the error with the panel still usable.
@@ -193,6 +246,112 @@ Waits name their class from the perceived-performance skill: *instant* (< 100 ms
 
 1. **File > Open from file** (Ctrl+Shift+O) accepts .docx, .md, .html, .txt and .pdoc.json, or drop a file on the window → a new Private document with the content and the file name as its title. *(in-flow; "Importing…")* Unsupported .docx parts give "Imported. Some parts (text boxes, embedded objects) were left out."
 
+### 4.9 Images beside the document (U39, U40)
+
+1. An image inserted from a file, pasted or dropped is copied once into the document's repository as `assets/<sha256>.<ext>` and the document refers to it by that path, relative to the repository root (not to the document, so folders never break it). The same picture in ten documents, or in a hundred versions, is stored once. *(responsive; the image shows at once from memory while its file is written)*
+2. Images up to 20 MB are accepted (PNG, JPEG, GIF, WebP, SVG drawn as an image). Larger: "This image is larger than 20 MB. Make it smaller and try again."
+3. Selecting an image shows handles at its corners and a small bar: **In line with text** (break text) **· Wrap left · Wrap right**, **Align** left, centre, right, **Crop**, **Replace**, **Alt text**, **Reset size**. Dragging a corner keeps the proportions (Shift frees them). *(instant)*
+4. **Crop** shows the whole picture with a crop frame; Enter or a press outside keeps it, Esc cancels. Cropping never changes the stored file; **Reset size** and **Reset crop** undo either.
+5. **Alt text** opens a field: "Describe this image for people who can't see it." Images without alt text are listed by the accessibility check (U79).
+6. Old documents with embedded images are moved to the new form the first time they're opened for editing: the images are written beside the document first, then the document, so an interruption never loses one. A version is made ("Store images beside *title*"). *(in-flow; the page shows at once from the old file, ≤ 1 s for 20 images)* The move never runs in Viewing, in version history or on a restored old version until it is edited; restoring an old version writes its images beside it in the same way.
+7. A document made by a newer P-Doc (a higher format `version`) opens read-only with "Made with a newer P-Doc. Update to edit it." and is never rewritten, so an older build on a second computer can't strip what it doesn't know.
+
+**Branches:** an image used by a private document is pasted into a public one → its file is copied into the public repository with that document (the person put it there); moving a document to Public copies its images, and says so in the confirmation ("Its *n* images become public too."); an image file is missing (deleted by hand) → the page shows "Image missing" in its place and exports skip it, nothing else breaks.
+
+**Defaults:** a new image is in line with text, centred, at its natural size up to the text width.
+
+**Agent path:** `pdoc export` embeds the images in .docx, HTML and EPUB; `pdoc import` stores a document's images beside it.
+
+### 4.10 Styles, lists and formatting (U41–U45)
+
+1. **Format > Paragraph styles > Edit styles…** opens the styles dialog: the list of styles (Normal, Title, Subtitle, Heading 1–6, Quote, Code, then the person's own) with a preview; for the selected style, font, size, colour, bold, italic, space before and after, line spacing, indent, and **Style for the following paragraph**. **New style** asks for a name and the style to start from; own styles can be renamed and deleted (text in a deleted style becomes Normal). Changes apply to the document at once. *(instant)*
+2. **Save as my default styles** and **Use my default styles** (in the dialog and the Paragraph styles menu) keep the styles in settings for new documents. Ctrl+Alt+5 and 6 apply Heading 5 and 6.
+3. **Format > Style set ▸** Default, Classic (serif body, small caps headings), Modern (sans, colour headings), Compact (tighter spacing). Choosing one restyles the document; Undo returns.
+4. **Format > Lists > List options…**: per level, the number format (1, a, i, A, I, 01) or bullet (•, ◦, ▪, –, ✓) and the start number. A list item's menu has **Restart numbering** and **Continue numbering**. Tab and Shift+Tab nest down to nine levels.
+5. **Format > Text ▸** adds Small caps, All caps, **Letter spacing ▸** (Condensed, Normal, Expanded) and **Capitalisation ▸** (lowercase, UPPERCASE, Title Case, Sentence case). Shift+F3 cycles the case of the selection.
+6. **Paint format** (toolbar paintbrush; Ctrl+Alt+C copies formatting, Ctrl+Alt+V pastes it): one click applies once, a double click keeps it on until Esc.
+7. **Edit > Copy as Markdown** and **Paste from Markdown**. Typing `# `, `- `, `1. `, `> `, `**bold**`, `_italic_`, `` `code` `` and ``` formats as you type, and Ctrl+Z right after turns it back into the characters. **Settings > Editing**: Markdown while typing, Smart quotes, Capitalise sentences, Detect links, Detect lists, and **Substitutions** (a list of "replace … with …", starting with (c) ©, (r) ®, (tm) ™, -> →, <- ←, --  –, ... …, 1/2 ½), each with a switch.
+
+### 4.11 Paragraph layout (U46–U50)
+
+1. **Format > Paragraph…** (and a paragraph's context menu) has three tabs. **Indents and spacing**: left, right, special (None, First line, Hanging) by an amount, space before and after, line spacing (Single, 1.15, 1.5, Double, Multiple, At least, Exactly). **Line and page breaks**: Keep with next, Keep lines together, Page break before, Widow and orphan control (on by default for new documents). **Borders, shading and direction**: a border on any side (width, colour), a background colour, and Left to right or Right to left.
+2. **Tabs** (in the same dialog): positions with alignment (left, centre, right, decimal) and leader (none, dots, dashes, line), and **Clear all**. Tab in a paragraph moves to the next stop (in lists Tab still nests).
+3. **View > Show ruler**: the ruler above the page shows the margins, the indents of the paragraph at the cursor and its tab stops. Dragging an indent marker or a tab moves it; a click on the ruler adds a left tab; dragging a tab off removes it. *(instant)*
+4. **View > Show non-printing characters** (Ctrl+Shift+P): ¶ at each paragraph end, · for spaces, → for tabs, ↵ for line breaks, and labelled page, column and section breaks. They never print.
+5. **Format > Sort…** sorts the selected paragraphs, list items, or a table's rows by a column, A to Z or Z to A, with numbers in number order. Undo returns.
+
+**Branches:** a paragraph that can't be kept together because it is taller than a page breaks anyway (Word's rule); keep-with-next chains longer than a page are broken at the page.
+
+### 4.12 References (U51–U54)
+
+1. **Insert > Footnote** (Ctrl+Alt+F) puts a superscript number at the cursor and the caret in the note at the foot of the page, under a short rule. Notes number themselves in document order. Esc or Shift+Tab returns to the number. Deleting the number deletes the note. In Pageless, notes are listed at the end of the document. *(instant)*
+2. **Insert > Endnote** (Ctrl+Alt+D) puts the note at the end of the document, numbered i, ii, iii. A note's menu has **Convert to endnote** / **Convert to footnote**; **Format > Notes…** sets the number formats.
+3. **Insert > Bookmark** marks the cursor's place, named from the nearby text (renamable); a flag shows in the margin when non-printing characters are shown. The link dialog (Ctrl+K) lists **Headings and bookmarks** beside the address field. Bookmarks and headings are listed by Go to (U71).
+4. Selecting an image, table or equation and choosing **Insert > Caption…** adds "Figure *n*: ", "Table *n*: " or "Equation *n*: " (label editable, or a new label) above tables and below the rest. Numbers follow the order of the document as things move.
+5. **Insert > Cross-reference…**: kind (Heading, Bookmark, Figure, Table, Equation, Footnote, Endnote), the item, and **Insert as** text, number ("Figure 2"), page number or "above/below". The reference updates itself; a click jumps to its target; if the target is deleted it reads "Reference missing" in the error colour, and the accessibility check lists it.
+6. **Insert > Table of figures** lists one caption label with page numbers. The table of contents gets **Contents options** (its menu): **Page numbers** (dotted leaders, the default in Pages) or **Links** (Pageless always), and **Levels** 1 to 1–6.
+
+**Branches:** in Pageless page numbers have nothing to count, so references and tables show links and "page" references read "see *heading*".
+
+### 4.13 Sections and page layout (U55–U59)
+
+1. **Insert > Break ▸** Page break (Ctrl+Enter), Column break (Ctrl+Shift+Enter), Section break (next page), Section break (continuous), Section break (odd page), Section break (even page). A section break shows as a labelled line across the page.
+2. **File > Page setup** gains **Apply to**: Whole document or This section. Orientation, paper size and margins can differ per section; a continuous break can't change paper, so the dialog offers "Starts on a new page". *(pages reflow in-flow)*
+3. **Format > Columns…**: one, two or three columns, spacing, and a line between, for the section at the cursor (with a selection, P-Doc puts continuous section breaks around it first). Text flows down one column then the next; the last page's columns are balanced.
+4. **Header and footer** options: Different first page, **Different odd and even pages**, and per section **Link to previous** (on by default; off lets that section have its own). **Page numbers…**: format 1, i, I, a, A and **Start at** or continue from the previous section.
+5. **Insert > Watermark…**: Text (the words, colour, diagonal or flat) or Picture (an image, faded), behind every page; **Remove watermark**.
+6. **File > Page setup > Line numbers**: None, Continuous, Restart each page, Restart each section, and Count by. **Format > Hyphenation**: automatic on or off for the document. **Format > Drop cap**: None or Dropped (three lines).
+
+**Branches:** Pageless shows one flow: no section pages, a single column, no watermark or line numbers (all kept, as headers are today).
+
+### 4.14 Tables, code and equations (U60–U62)
+
+1. A table's context menu and **Format > Table ▸**: Insert rows and columns, Delete, **Merge cells**, **Split cell…**, **Distribute columns**, **Repeat as header row** (the first rows), **Sort…**, **Convert to text**, and **Table properties…**: width and alignment, column widths, borders (width, colour), cell background, cell padding and vertical alignment. Dragging a column border resizes it. *(instant)*
+2. A table taller than the space left breaks between rows and continues on the next page, its header rows repeated. A row taller than a page breaks inside it (needs A10; until then it overflows its page, as today).
+3. **Format > Table > Convert text to table** turns the selected paragraphs, split at tabs or commas, into a table.
+4. A code block shows its language at the top right (Plain text by default); choosing one highlights it. Typing ```` ```js ```` starts a JavaScript block.
+5. **Insert > Equation** (Alt+=) opens a small field at the cursor for LaTeX with the drawn maths beside it as you type; Enter keeps it, Esc cancels. On a line of its own it is a display equation. Typing `$x^2$` (Markdown on) makes an inline equation. A click on an equation edits it again. A mistake shows "Can't read this: *reason*" under the field and the source stays.
+
+### 4.15 Review power (U63–U67)
+
+1. In Suggesting, changing emphasis, font, size, colour, highlight, alignment, list or paragraph style records a suggestion "Formatted: Bold" (or the change) on the text, with author and time. Accept keeps it; Reject puts the old formatting back.
+2. The mode switcher adds **Commenting**: typing does nothing, comments work, and the title bar says "Commenting". **Tools > Review > Always suggest in this document** saves the setting in the document: it opens in Suggesting, and Editing asks to turn the setting off first.
+3. The review panel header gets **Everyone ▾**: tick reviewers to show only their changes; **Accept all** and **Reject all** then act on what's shown ("Accept 4 shown").
+4. **Tools > Compare documents…**: the original (this document, a library document, or a file) and the revised one. The result is a new private document "Comparison of *A* and *B*" holding *B* with every difference from *A* as a suggestion, opened in All markup. *(in-flow; "Comparing…")*
+5. Opening a .docx with Word comments and tracked changes brings them in as comment threads (replies and resolved state kept) and suggestions (author and time kept). Download > Microsoft Word takes comments out as Word comments, with replies and resolved state, suggestions as Word tracked insertions and deletions, and formatting suggestions as Word tracked formatting changes.
+
+**Branches:** a Word revision P-Doc can't hold (a move, a table or property change) is kept as a comment on its text describing it, and the open says "*n* changes kept as comments"; nothing is dropped silently.
+
+### 4.16 Citations, index and fields (U68–U70)
+
+1. **Insert > Citation** opens the **Citations** panel at the right: the document's sources, a style (APA 7, MLA 9, Chicago author-date) and **Add source** (book, journal article, website, report, other: authors, title, year, publisher or journal, volume, pages, URL, accessed). **Cite** inserts the in-text citation at the cursor; **Insert > Bibliography** adds a list that keeps itself sorted and current. Changing the style restyles both.
+2. **Insert > Index entry** (Alt+Shift+X) marks the selection (main entry, optional subentry). **Insert > Index** adds an alphabetical index with page numbers that stays current.
+3. Typing **@** (after a space or at the start of a line) opens a menu that filters as you type: Date, Page number, Page count, Title, Author, a variable, and things to insert (table, image, footnote, equation, heading, checklist, code block, page break, contents). Esc leaves the @ as typed.
+4. A date chip shows the date in the chosen format and opens a calendar on click. Fields show their current value and follow changes. **Insert > Variables** lists the document's own variables (name and value); changing a value changes every place it's used.
+
+**Branches:** a source that is cited is deleted → its citations read "Source missing" in the error colour and the accessibility check lists them; in Pageless the index lists headings to jump to instead of page numbers (as references do).
+
+### 4.17 Navigation and windows (U71–U74)
+
+1. **Edit > Go to…** (Ctrl+G): Page, Heading, Bookmark, Comment, Footnote or Section, with a number or a list to pick from; Enter goes there. *(instant)*
+2. Hovering a heading shows a chevron in the margin; clicking it hides the section under it on screen (print and export keep everything). **Expand all** and **Collapse all** are in View.
+3. In the outline, a heading's menu has **Promote** and **Demote** (Alt+Shift+Left and Right in the page on a heading), moving its subheadings with it.
+4. **View > Zoom ▸** adds **Page width**, **Whole page** and **Two pages** (pages side by side).
+5. **File > New window** (Ctrl+Shift+N) opens another window with the library. Opening a document already open in another window brings that window forward instead of opening it twice.
+6. **Tools > Read aloud** (Ctrl+Alt+Space) reads from the cursor or the selection with a system voice, highlighting the sentence being read; a small bar has Pause, Stop, speed and voice. *(responsive)*
+
+**Branches:** no system voice installed → "No voice is installed. Add one in Windows Settings > Time and language > Speech." and nothing else changes.
+
+### 4.18 Library, files and proofing (U75–U80)
+
+1. **File > Open recent ▸** lists the last ten documents. A document's menu has **Star**; starred documents are listed first under **Starred**. The library header sorts by Last edited, Title or Created.
+2. **New folder** in Private or Public; drag documents onto a folder or use **Move to folder…**; folders can be renamed and deleted (their documents go to the Bin). Folders are real folders under `docs/` in the repository; a document keeps its file name, history, named versions and images when it moves between folders. Moving a folder to Public asks first: "Make *n* documents and *m* images public?" (P6), and Cancel leaves everything private.
+3. **File > Details…**: title, author (the Git name to start with), subject, keywords and description, with created, edited, words and location. They are written into exports (.docx properties, PDF and EPUB metadata, HTML meta).
+4. **File > New from template ▸** opens a gallery: Blank, Report, Proposal, Letter, Meeting notes, Paper, Resume, then **Yours**. **File > Save as template** keeps the document as a template in the private repository (`templates/`), so it syncs.
+5. **Settings > Editing > Spelling language** lists the languages Windows has. A misspelled word's menu has the suggestions, **Add to dictionary** and **Ignore** (this document).
+6. **Tools > Accessibility check** lists, with **Go to** and a fix where one exists: images without alt text, skipped heading levels, empty headings, tables without a header row, text with low contrast, links that read "click here", references whose target is gone, a document with no title. "No problems found." when clean.
+7. **File > Download ▸** adds EPUB, OpenDocument text (.odt) and Rich Text (.rtf). *(in-flow; "Making EPUB…"; a failure shows "Couldn't export: *reason*.")* PDFs now carry the heading outline as PDF bookmarks, working internal links and the document's details.
+
 ## 5. Views
 
 | View | Layout | Serves | Regions and data |
@@ -207,6 +366,16 @@ Waits name their class from the perceived-performance skill: *instant* (< 100 ms
 | V8 Command search | Popover under the menu bar (Alt+/) | U11 | Field and list: command, menu path, shortcut. |
 | V9 First run | Centred card 560 px | U35 | Welcome, Git, Sign in, Identity, Repositories, Done; step dots. |
 | V10 Settings | Dialog with sections | U14, U20, U35 | Appearance; Editing (spelling, smart quotes); Storage (library folder, Show in folder); GitHub (account, repositories, sync on/off, Sync now, Sign out); About (version, licences). |
+| V11 Image bar | Floating bar over a selected image, with corner handles | U40 | Wrap, align, crop, replace, alt text, reset (§4.9). |
+| V12 Styles dialog | Dialog: style list with preview at left, properties at right | U41, U42 | Styles, properties, New style, defaults (§4.10). |
+| V13 Paragraph dialog and ruler | Dialog with three tabs; ruler 24 px above the page | U46–U48 | Indents and spacing, breaks, borders, tabs; ruler markers (§4.11). |
+| V14 Citations panel | Right panel 340 px | U68 | Sources, style, Add source, Cite (§4.16). |
+| V15 Go to | Small dialog | U71 | Kind, number or list (§4.17). |
+| V16 Read-aloud bar | Small bar at the foot of the page area | U74 | Pause, Stop, speed, voice (§4.17). |
+| V17 Template gallery | Dialog with a grid of first pages | U77 | Built-in templates, then Yours (§4.18). |
+| V18 Accessibility results | Right panel 340 px | U79 | Problems with Go to and Fix (§4.18). |
+
+The right-hand panels (review, version history, Citations, accessibility results) replace each other: one is open at a time.
 
 **Complete by definition:** light and dark; rest, hover, active, focus-visible, disabled, error, empty and loading states; full keyboard use (menus with arrow keys, toolbar with roving focus, F6 cycles regions, Esc closes panels); screen-reader names and a live region for the save state and toasts; windows down to 800×600 (toolbar groups move into More, from the end, as the window narrows; under 1000 px the left panel collapses, and View > Show outline or Show library opens it over the page until Esc or a press on the page).
 
@@ -222,6 +391,17 @@ Waits name their class from the perceived-performance skill: *instant* (< 100 ms
 | Tools | Word count (Ctrl+Shift+C) · Spelling (on/off) · Review changes ▸ (Next, Previous, Accept, Reject, Accept all, Reject all) · Command search (Alt+/) |
 | Help | Keyboard shortcuts (Ctrl+/) · About P-Doc · Open logs folder |
 
+**Additions by stage** (the flows in §4.9–§4.18 name each item; the table above changes as each stage is built):
+
+| Menu | Adds |
+|---|---|
+| File | New window (15) · New from template ▸, Save as template, Open recent ▸, Details… (16) · Download ▸ EPUB, OpenDocument, Rich Text (16) · Page setup: Apply to, Line numbers (11) |
+| Edit | Copy as Markdown, Paste from Markdown (8) · Go to… Ctrl+G (15) |
+| View | Show ruler, Show non-printing characters Ctrl+Shift+P (9) · Mode ▸ Commenting (13) · Zoom ▸ Page width, Whole page, Two pages; Expand all, Collapse all (15) |
+| Insert | Break ▸ (page, column, sections) (11) · Footnote Ctrl+Alt+F, Endnote Ctrl+Alt+D, Bookmark, Caption…, Cross-reference…, Table of figures (10) · Watermark… (11) · Equation Alt+= (12) · Citation, Bibliography, Index entry Alt+Shift+X, Index, Variables (14) |
+| Format | Paragraph styles ▸ Edit styles…, Heading 5–6, Save as my default styles; Style set ▸; Text ▸ Small caps, All caps, Letter spacing ▸, Capitalisation ▸; Lists ▸ List options… (8) · Paragraph…, Sort… (9) · Notes… (10) · Columns…, Hyphenation, Drop cap (11) · Table ▸ Merge, Split, Distribute, Header row, Properties…, Convert (12) |
+| Tools | Review ▸ Always suggest in this document; Compare documents… (13) · Read aloud Ctrl+Alt+Space (15) · Accessibility check (16) |
+
 Shortcuts follow Google Docs where Docs and Word differ, plus Word's Ctrl+E/L/R/J alignment and Ctrl+[ / Ctrl+] font size (W SRC-001). Ctrl+S is accepted and shows "Saved" (GD R-001). Where two chords would collide, the formatting one wins: Ctrl+Shift+J is Justify, so Focus view is Ctrl+Alt+Shift+F; Ctrl+, is Subscript, so Settings has no chord (it is in File and command search). Cut, Copy and Paste show their chords as hints; the keys themselves are the system's.
 
 ## 6. Architecture
@@ -236,10 +416,10 @@ packages/tokens       DTCG design tokens → CSS variables (light and dark)
 apps/desktop/src/cli  `pdoc` command line over core and the library (shares main's Electron-free modules)
 ```
 
-- **Document format** (`*.pdoc.json`, UTF-8, pretty-printed so Git diffs read well): `{ format: "p-doc", version: 1, id, title, created, page: { mode, size, orientation, margins, color, textWidth, header, footer, differentFirstPage }, styles: { normal, title, subtitle, heading1..4 }, content: <ProseMirror JSON>, comments: [ { id, author, created, body, resolved, replies[] } ] }`. Suggestions are marks in `content` (`insertion`, `deletion`, with id, author, time); comment anchors are `comment` marks with the thread id. Images are embedded data URLs up to 2 MB each (O4).
+- **Document format** (`*.pdoc.json`, UTF-8, pretty-printed so Git diffs read well): `{ format: "p-doc", version: 1, id, title, created, page: { mode, size, orientation, margins, color, textWidth, header, footer, differentFirstPage }, styles: { normal, title, subtitle, heading1..4 }, content: <ProseMirror JSON>, comments: [ { id, author, created, body, resolved, replies[] } ] }`. Suggestions are marks in `content` (`insertion`, `deletion`, with id, author, time); comment anchors are `comment` marks with the thread id. Images are embedded data URLs up to 2 MB each (O4). **From stage 7, version 2:** images are files in the repository's `assets/` folder named by the SHA-256 of their bytes, and an image's `src` is that path relative to the repository root (`assets/<sha256>.png`), so a file and its history store each picture once (A6). Asset files are never changed and never deleted by P-Doc while any version may refer to them; a document's commit includes the assets it refers to. A document with a higher `version` than the build knows opens read-only and is never rewritten (A18). Later stages add to the format, each with a test that reads the version before and a test that unknown attributes survive a load and save: `styles` gains Heading 5–6, own styles and list formats (8); paragraph attributes for indents, tabs, breaks, borders and direction (9); `notes`, bookmarks, captions and references (10); `sections` (11); `sources`, `variables` and `details` (14, 16).
 - **Library**: `<root>/private` and `<root>/public`, each a Git repository on `main` with documents at `docs/<slug>-<id8>.pdoc.json`, a `.bin/` folder and a `README.md`. App state (recent, settings, setup progress) lives in the app data folder, never in the repositories.
 - **Saving**: the renderer debounces 800 ms and sends the document to main; main writes atomically (temp file + rename, retried for up to about 2 s while Windows reports the file busy). A recovery copy of unsaved state goes to the app data folder 300 ms after each change while dirty, and once more on close if the last save failed.
-- **Versions**: one commit queue per repository; history from `git log --follow`; content from `git show`; named versions as annotated tags `pdoc/<id8>/<n>`; restore writes old content and commits "Restore …"; diff is a word diff per block in core.
+- **Versions**: one commit queue per repository; history from `git log --follow`; content from `git show`; named versions as annotated tags `pdoc/<file stem>/<sha12>` (the stem ends with the document's id8); restore writes old content and commits "Restore …"; diff is a word diff per block in core.
 - **GitHub**: the credential lives only in Git's helper (Focus Notes SEC-03), read with `git credential fill` when needed, kept in memory, never written, logged or put in an argument. API calls go only to `https://api.github.com` (user, get repository, create repository). Sync: `git fetch`, merge `origin/main` keeping local versions of conflicting documents and writing the remote ones as copies, `git push`. Network failures leave everything local and show "Offline".
 - **Security**: `contextIsolation`, `sandbox`, no `nodeIntegration`, a CSP with no remote scripts, navigation blocked, links opened in the browser only on click and only for `https:`; Electron fuses as Focus Notes; IPC arguments validated in main; file access limited to the library and files the person picked.
 - **Print/PDF**: a hidden window renders the document with `@page` size and margins and the same page breaks as the screen, then `print` or `printToPDF` with header and footer templates.
@@ -258,6 +438,14 @@ apps/desktop/src/cli  `pdoc` command line over core and the library (shares main
 | Export .docx or PDF, 50 pages | in-flow | toast with spinner | ≤ 3 s |
 | Sync | background | status bar | never blocks typing |
 | Repagination after an edit | instant | none | ≤ 16 ms |
+| Repagination with footnotes, sections, columns and split tables (stages 9–12), 50 pages | instant | none | ≤ 16 ms |
+| Insert an image (written beside the document) | responsive | the image shows at once | ≤ 300 ms for 20 MB |
+| Open a 100-page document with 20 images | responsive | page skeleton; images fade in | ≤ 500 ms to editable |
+| Compare two 50-page documents | in-flow | "Comparing…" toast | ≤ 1 s |
+| Fields, captions, cross-references and index refresh after an edit | instant | none | ≤ 16 ms |
+| Equation drawn while typing | instant | none | ≤ 16 ms |
+| Store a version 1 document's images beside it on first open | in-flow | the page shows at once; save state "Storing images…" | ≤ 1 s for 20 images |
+| Export EPUB, .odt or .rtf, 50 pages | in-flow | toast with spinner | ≤ 3 s |
 
 Baselines: `docs/product/perf-baseline.json` (`pnpm perf`).
 
@@ -265,7 +453,7 @@ Baselines: `docs/product/perf-baseline.json` (`pnpm perf`).
 
 Glossary: [copy-glossary.md](../design/copy-glossary.md). Voice: plain, calm and specific; say what happened and what to do next; sentence case; no exclamation marks; "you" for the person, "P-Doc" for the app.
 
-Failure words: "Couldn't save. Retrying…"; "P-Doc can't write to *folder*. Your text is kept; free space or choose another folder."; "You're offline. Changes are saved on this computer and sync when you're back."; "Sync problem: *reason*. Your documents are safe on this computer."; "This token can't create repositories. It needs the repo scope."; "Two versions of *title* were edited apart. Both are kept."; "Couldn't export: *reason*."; "Install Git to keep versions."; "This image is larger than 2 MB. Make it smaller and try again."
+Failure words: "Couldn't save. Retrying…"; "P-Doc can't write to *folder*. Your text is kept; free space or choose another folder."; "You're offline. Changes are saved on this computer and sync when you're back."; "Sync problem: *reason*. Your documents are safe on this computer."; "This token can't create repositories. It needs the repo scope."; "Two versions of *title* were edited apart. Both are kept."; "Couldn't export: *reason*."; "Install Git to keep versions."; "This image is larger than 2 MB. Make it smaller and try again." (20 MB from stage 7); "Image missing"; "Reference missing"; "Can't read this: *reason*." (equations); "No problems found." (accessibility check); "Made with a newer P-Doc. Update to edit it."; "*n* changes kept as comments"; "Source missing"; "No voice is installed. Add one in Windows Settings > Time and language > Speech."; "Make *n* documents and *m* images public?"
 
 ## 9. Assumptions and risks
 
@@ -276,23 +464,44 @@ Failure words: "Couldn't save. Retrying…"; "P-Doc can't write to *folder*. You
 | A3 | Writers accept documents stored as JSON rather than .docx | Desirability | Medium (P2) | Focus Notes uses plain files; JSON diffs well. Stage 6: a .docx round-trips (export then Open from file keeps headings, emphasis, links, lists and tables; unit `export-docx`, e2e `import-export`), so a Word file is one command away | Writers use export when they need .docx | Ask the owner after a week of use | Native .docx storage | Partly settled: the technical half holds; the owner's use settles the rest |
 | A4 | Insert/delete suggestions cover review needs without formatting tracking | Usability | Medium (P5) | Docs and Word track formatting (W R-003) | Reviewing a fixture with text edits feels complete | Try-it in stage 4 | Add format suggestions | Open: e2e `review` and `comments` review a fixture of text edits end to end; the owner's try-it settles it |
 | A5 | Research never alters third-party documents | Ethics | High | Anonymous visitors to the public doc are in Suggesting | The rig never types or clicks in the page | Review `research/rig` | — | Held |
-| A6 | Embedded images up to 2 MB keep files workable in Git | Viability | Medium (P1, P2) | Measured 2026-10-28 (`PDOC_MEASURE=1` unit `a6-measure`): 100 pages with 20 images at the 2 MB cap make a 54 MB file (over GitHub's 50 MB warning) and 454 MB of Git objects after 11 versions (40 MB once packed); 20 typical 300 KB images make 8.5 MB and 67 MB. Every version stores the whole file again | A 100-page fixture with 20 images stays under 20 MB | Measure in stage 6 | Store images beside the file | Disproved: images move beside the document, each stored once (O4, stage P0) |
+| A6 | Embedded images up to 2 MB keep files workable in Git | Viability | Medium (P1, P2) | Measured 2026-10-28 (`PDOC_MEASURE=1` unit `a6-measure`): 100 pages with 20 images at the 2 MB cap make a 54 MB file (over GitHub's 50 MB warning) and 454 MB of Git objects after 11 versions (40 MB once packed); 20 typical 300 KB images make 8.5 MB and 67 MB. Every version stores the whole file again | A 100-page fixture with 20 images stays under 20 MB | Measure in stage 6 | Store images beside the file | Disproved: images move beside the document, each stored once (O4, stage 7) |
 | A7 | A clear warning before Move to Public prevents accidental publishing | Usability | High (P6) | None | No move without the confirmation; tests prove it | e2e | Two-step confirmation | Open |
+| A8 | Footnotes can sit at the foot of their page with block-level pagination: each page's text area shrinks by its notes | Feasibility | High (P4) | None; Word and Docs both do it | A 20-page fixture with 40 notes (some long enough to continue) has the same pages and the same notes on each page on screen and in the PDF | A spike at the start of stage 10, then e2e | Notes at the end of each section | Open |
+| A9 | Images that wrap text paginate with their paragraph | Feasibility | Medium (P4) | Floats take no height in the flow, so measuring blocks may miss them | A fixture with 6 wrapped images has the same pages on screen and in the PDF | e2e in stage 7 | Break text only | Open |
+| A10 | Paragraphs can split across pages at line boundaries, the same on screen and in print | Feasibility | High (P4) | Today a paragraph moves whole, leaving space at the foot of a page; Word splits it | A fixture of long paragraphs leaves no more than one line of space at a page foot (widow and orphan on) and breaks at the same lines in the PDF | A spike at the start of stage 9 | O2 (block-level reopens: splitting below the block); A8 continued notes, A11 rows that break inside, A13 balanced columns; DoD 9.3, 10.1, 11.2, 12.2 | Open. Fallback: paragraphs move whole and Keep lines together is always on; then notes don't continue (10.1 drops "continuing"), rows overflow (12.2 breaks only between rows) and columns aren't balanced (11.2 drops "balance") |
+| A11 | Long tables break between rows with header rows repeated, the same on screen and in print | Feasibility | Medium (P4) | Today a tall table overflows its page | A 3-page table breaks at the same rows on screen and in the PDF, header repeated | e2e in stage 12 | Tall tables overflow (today) | Open |
+| A12 | Sections can have their own paper and orientation on screen and in the PDF (Chromium named pages) | Feasibility | High (P4) | Chromium supports CSS named pages in print | A portrait, landscape, portrait fixture gives a PDF with those page sizes and the same page count | A spike at the start of stage 11 | Orientation stays whole-document (O3's old default); headers and columns still per section | Open |
+| A13 | Columns paginate the same on screen and in print | Feasibility | High (P4) | None | A two-column 10-page fixture fills and balances columns the same on screen and in the PDF | Spike in stage 11 | Columns only in Pageless and print, not paged on screen | Open |
+| A14 | Automatic hyphenation works offline in Electron on Windows | Feasibility | Low | Chromium's hyphenation dictionaries normally download | Long words break with hyphens on screen and in the PDF with no network | Unit plus e2e in stage 11 | Bundle hyphenation patterns | Open |
+| A15 | Formatting suggestions accept and reject exactly | Feasibility | Medium (P5) | Insert and delete suggestions already do (PD5) | Accept all gives the suggested formatting, reject all the original, on a fixture of mixed changes | Unit in stage 13 | Formatting applies directly (O6 today) | Open |
+| A16 | Power features don't clutter the everyday path | Usability | High (P3) | Docs and Word hide most of them in menus | The toolbar keeps its groups at 1280 px; every new command is in a menu and command search; the owner's try-it doesn't find a common task harder | e2e sweep of command search per stage; owner try-it | Move items into a "More tools" menu | Open |
+| A17 | LaTeX equations become Word equations Word can open and edit | Feasibility | Medium (J13, J16) | MathML converts to Word's OMML | A .docx with 10 equations opens in Word with editable equations | Unit on the XML; owner opens it in Word | Equations as pictures in .docx | Open |
+| A18 | An older P-Doc never damages a document saved by a newer one | Feasibility | High (P1) | The editor drops nodes and attributes it doesn't know, and J11 means two computers can run different builds | A version 2 file opened by a build that knows only version 1 is read-only and byte-for-byte unchanged after closing and syncing | Unit `format` from stage 7 (version gate); round-trip of unknown attributes in each of stages 8–16 | Read-only open of newer files | Open |
+| A19 | Page-number features settle: contents, index, cross-references and page fields don't make page counts oscillate | Feasibility | High (P4) | Word re-runs until stable; a number's width can push a line to the next page | A 50-page fixture with contents, index and page references reaches a stable layout within 2 passes | Unit `paginate` in stage 10 | Page numbers update on the next idle pass, never in the same frame | Open |
+| A20 | Line-level layout (split paragraphs, notes, columns) fits the 16 ms repagination budget on 50 pages | Feasibility | High (P3, P4) | Block-level repagination is 2.7 ms p95 today | `pnpm perf` repagination p95 ≤ 16 ms with split paragraphs on the 50-page fixture | The stage 9 spike measures it | Repaginate only from the changed page on | Open |
 
 ## 10. Decisions
 
 | # | Question | Options | Recommendation | Decided |
 |---|---|---|---|---|
 | O1 | Editor engine | TipTap/ProseMirror · Lexical · own contenteditable | TipTap 3 (Focus Notes uses it; transactions fit suggestions) | TipTap 3.31.4 |
-| O2 | Pagination | Block-level page breaks with spacers · CSS paged media engine | Block-level spacers (one editable surface); a block taller than a page overflows its page | Block-level (A1 confirmed in stage 2) |
-| O3 | Per-section orientation and headers (W R-001, W R-002) | Sections in v1 · whole-document page setup | Whole-document in v1 | Working default: whole-document |
-| O4 | Images | Embedded data URLs · files beside the document | Files beside the document, stored once by content (A6 disproved embedding) | Beside the document (stage P0) |
+| O2 | Pagination | Block-level page breaks with spacers · CSS paged media engine | Block-level spacers (one editable surface); a block taller than a page overflows its page | Block-level (A1 confirmed in stage 2). Reopened by the parity audit: stage 9 decides line-level splitting (A10, A20) |
+| O3 | Per-section orientation and headers (W R-001, W R-002) | Sections in v1 · whole-document page setup | Whole-document in v1; sections with the parity work | Sections in stage 11 (A12, A13) |
+| O4 | Images | Embedded data URLs · files beside the document | Files beside the document, stored once by content (A6 disproved embedding) | Beside the document (stage 7) |
 | O5 | Two repositories or one with a private submodule (Focus Notes) | Two sibling repositories · submodule | Two sibling repositories (simpler moves, no submodule state) | Two repositories |
-| O6 | Formatting changes in Suggesting | Track · apply directly | Apply directly in v1 (A4) | Apply directly |
+| O6 | Formatting changes in Suggesting | Track · apply directly | Apply directly in v1 (A4); track with the parity work | Track from stage 13 (A15) |
 | O7 | Storage format | JSON · .docx · Markdown | JSON (lossless, diffable) with exports | JSON |
 | O8 | Version cadence | Every save · on pause and close · manual | 60 s pause, close/switch, at least every 10 min | As stated |
 | O9 | Real-time co-editing | Yes · no | No (non-goal) | No |
 | O10 | Platforms | Windows · all three | Windows packages now (NSIS + portable) | Windows |
+| O12 | Document tabs (Docs) | Tabs · one flow with headings | One flow: the outline and Go to cover it; tabs have no .docx or PDF form | Later (parity audit) |
+| O13 | Equations | KaTeX (MIT) from LaTeX, MathML to OMML for .docx · MathJax · own editor | KaTeX: fast, offline, MIT; LaTeX is the source in the file | KaTeX; the OMML converter's licence checked before use |
+| O14 | Citation styles | Own formatter for APA 7, MLA 9, Chicago author-date · citeproc-js with CSL | Own formatter: citeproc-js is CPAL/AGPL, which the licence rule doesn't allow | Own formatter |
+| O15 | Image files | `assets/<sha256>.<ext>` per repository, referenced by path · a folder per document | Content-addressed per repository: one copy across documents and versions; moves copy what they need | Content-addressed |
+| O16 | Code highlighting | lowlight + highlight.js (MIT, BSD-3) · Shiki | lowlight: small, works in ProseMirror decorations | lowlight |
+| O17 | Read aloud | System voices through Web Speech (offline) · a bundled voice | System voices | System voices |
+| O18 | Own templates | App data · the private repository | The private repository (`templates/`), so they sync and have history | Private repository |
+| O19 | Footnote content | Inline node holding its note · separate list keyed by id | Separate `notes` list keyed by id with an inline reference (survives copy, cut and suggestions; mirrors Word) | Decide in the stage 10 spike |
 | O11 | GitHub sign-in | Own OAuth app · Git's helper (GCM/gh) · token | Git's helper or a pasted token, as Focus Notes (no client secret in the app) | Git's helper + token |
 
 Execution choices (research rig, test isolation) are working defaults W1–W8 in the [work plan](../work/work-plan.md).
