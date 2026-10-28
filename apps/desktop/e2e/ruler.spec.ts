@@ -8,7 +8,14 @@ async function view(page: Page, item: string): Promise<void> {
 
 /** Drags a ruler marker by dx (and dy) pixels, in steps, the way a hand does. */
 async function drag(page: Page, mark: Locator, dx: number, dy = 0): Promise<void> {
-  const b = (await mark.boundingBox())!;
+  // The ruler re-renders a frame after each change; take the box only once it holds still.
+  let b = (await mark.boundingBox())!;
+  for (let i = 0; i < 20; i++) {
+    await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+    const n = (await mark.boundingBox())!;
+    if (n.x === b.x && n.y === b.y) break;
+    b = n;
+  }
   const x = b.x + b.width / 2;
   const y = b.y + b.height / 2;
   await page.mouse.move(x, y);

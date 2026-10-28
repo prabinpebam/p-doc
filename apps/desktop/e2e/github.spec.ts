@@ -123,7 +123,17 @@ test("5.1–5.3 first run: Connect GitHub signs in with a token, sets up both re
   doc.title = "Renamed elsewhere";
   writeFileSync(path, JSON.stringify(doc, null, 2) + "\n");
   git("commit", "-qam", "Rename elsewhere");
-  git("push", "-q", "origin", "main");
+  // Auto-sync may be pushing at the same moment; like a real second computer, pull and push again.
+  for (let i = 0; ; i++) {
+    try {
+      git("push", "-q", "origin", "main");
+      break;
+    } catch (e) {
+      if (i >= 4) throw e;
+      await new Promise((r) => setTimeout(r, 500));
+      git("pull", "-q", "--rebase", "origin", "main");
+    }
+  }
   await page.getByRole("menuitem", { name: "File" }).click();
   await page.getByRole("menuitem", { name: /^Sync now/ }).click();
   await expect(page.locator("#doc-title")).toHaveValue("Renamed elsewhere", SYNCED);

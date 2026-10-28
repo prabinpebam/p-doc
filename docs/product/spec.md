@@ -692,7 +692,13 @@ What a person meets, beyond the flows above:
 - **Indents** use Word's meaning: Left is where the body lines start; First line pushes the first line in and Hanging pulls it out (into the margin if Left is 0, as Word allows).
 - **Tabs.** Tab types a tab in a paragraph; it reaches the next stop or, past them, the next half inch. Right tabs end the text at the stop, centre tabs centre it, decimal tabs line up the first full stop. Leaders fill the gap with dots, dashes or a line.
 - **View > Show ruler** (V13): the page's margins shaded, the paragraph's first line, hanging, left and right indents and its tab stops, measured from the margin. See §4.11 item 3. It follows the cursor into list items and table cells; while a document can't be typed in its markers stay where they are, and it's hidden while an older version is shown.
+
+  ![Ruler](screens/v15-ruler.png)
+
 - **View > Show non-printing characters** (Ctrl+Shift+P): ¶, · for spaces (including at the end of a wrapped line), → for tabs (← in right-to-left paragraphs), ↵ for line breaks, and a labelled dashed line at a page break. Print, PDF and exports never carry them.
+
+  ![Non-printing characters with a dot-leader tab, a hanging indent, a bordered and shaded paragraph and a right-to-left one](screens/v16-paragraph-marks.png)
+
 - **Line and page breaks.** Keep with next, Keep lines together, Page break before, and Widow and orphan control (on unless turned off for a paragraph). A paragraph splits across pages at a line, never leaving one line alone at a page's foot or head.
 - **Borders and direction.** Top, bottom, left and right borders, a shading colour, and Left to right or Right to left.
 - **Format > Sort…** sorts the selected paragraphs, the list the cursor is in, or a table's rows by a column (with a header row kept first), A to Z or Z to A; numbers sort as numbers and case doesn't change the order. Undo returns the old order in one step.

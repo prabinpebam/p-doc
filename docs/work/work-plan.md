@@ -39,7 +39,7 @@ The spec and its Definitions of Done. Assumptions are tracked there (A1–A17). 
 | IP | Packaging check (early, before the parity stages) | 17.1 risk | `pnpm --filter @p-doc/desktop package:dir` then `package:smoke` | Done |
 | I7 | Stage 7 Images beside the document | 7.1–7.7 | integrity unit test first (temp repos, fake GitHub); vitest; e2e; `pnpm perf`; `a6-measure` | Done |
 | IL | Layout spike, before the pagination stages, 60 minutes at most: paragraphs split at lines on screen and in the PDF (A10), its repagination cost (A20), per-section paper in print (A12), columns on screen and in print (A13); notes and settling page numbers (A8, A19) decided by design and tested in stage 10. Each failing assumption takes its register fallback, logged | 9.3, 9.7, 10.1, 10.6, 11.1, 11.2, 12.2 | unit `paginate`; e2e `pagination` split fixture; probe PDFs | Done |
-| I9 | Stage 9 Paragraph layout | 9.1–9.7 | A10 built in IL; vitest; e2e; `pnpm perf` | Not started |
+| I9 | Stage 9 Paragraph layout | 9.1–9.7 | A10 built in IL; vitest; e2e; `pnpm perf` | Done |
 | I10 | Stage 10 References | 10.1–10.5 | A8 spike first; vitest; e2e; `pnpm perf` | Not started |
 | I11 | Stage 11 Sections and page layout | 11.1–11.7 | A12 and A13 spikes first; vitest; e2e; `pnpm perf` | Not started |
 | I12 | Stage 12 Tables, code and equations | 12.1–12.5 | vitest; e2e; licence check for new dependencies | Not started |

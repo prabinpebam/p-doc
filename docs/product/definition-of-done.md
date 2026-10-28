@@ -188,13 +188,13 @@ A person can lay paragraphs out like in Word: indents, tabs, a ruler, spacing, p
 
 | # | Done when | Evidence | Result |
 |---|---|---|---|
-| 9.1 | Custom line spacing, left, right, first-line and hanging indents, and tab stops with leaders show on screen, in the PDF and in .docx (U46) | unit `paragraph`; e2e `paragraph` | |
-| 9.2 | The ruler shows margins, indents and tabs and dragging changes them; clicking adds a tab (U46) | e2e `ruler` | |
-| 9.3 | Paragraphs split across pages at lines, the same on screen and in the PDF, with widow and orphan control; keep with next, keep lines together and page break before hold (U47, A10, A20). A10 and A20 hold (IL), so the fallback is not needed | e2e `pagination` split fixture; unit `paginate` | |
-| 9.4 | Borders, shading and right-to-left paragraphs show, print and export to .docx (U48) | e2e `paragraph`; unit `export-docx` | |
-| 9.5 | Non-printing characters show and never print (U49) | e2e `paragraph` (PDF text has no ¶) | |
-| 9.6 | Sort orders paragraphs, list items and table rows, numbers in number order; Undo returns (U50) | unit `sort`; e2e `paragraph` | |
-| 9.7 | Repagination stays ≤ 16 ms on 50 pages with split paragraphs (§7) | `pnpm perf` | |
+| 9.1 | Custom line spacing, left, right, first-line and hanging indents, and tab stops with leaders show on screen, in the PDF and in .docx (U46) | unit `paragraph`; e2e `paragraph` | Pass 2026-10-28: e2e `paragraph` sets 1.5 spacing, left, right, first-line and hanging indents and a right tab with dot leaders through Format > Paragraph; the page, the PDF and the .docx (`w:ind`, `w:spacing`, `w:tabs` with leader) all carry them; unit `paragraph` (Word's Left semantics both ways) |
+| 9.2 | The ruler shows margins, indents and tabs and dragging changes them; clicking adds a tab (U46) | e2e `ruler` | Pass 2026-10-28: e2e `ruler`: margins shaded and the text area aligned with the paragraph; first-line, hanging and left markers dragged, right indent by keyboard, each one Undo step; click adds a left tab, the type button cycles to Right; Tab reaches the new stop; a tab dragged off is removed; double-click opens Paragraph on Tabs |
+| 9.3 | Paragraphs split across pages at lines, the same on screen and in the PDF, with widow and orphan control; keep with next, keep lines together and page break before hold (U47, A10, A20). A10 and A20 hold (IL), so the fallback is not needed | e2e `pagination` split fixture; unit `paginate` | Pass 2026-10-28: e2e `pagination` split fixture (a paragraph splits at a line, PDF text read page by page) and keep test (keep with next, keep lines together and page break before move whole blocks on screen and in the PDF); unit `paginate` widow and orphan cases |
+| 9.4 | Borders, shading and right-to-left paragraphs show, print and export to .docx (U48) | e2e `paragraph`; unit `export-docx` | Pass 2026-10-28: e2e `paragraph` borders, shading and a right-to-left paragraph show on the page and in the PDF; unit `export-docx` writes `w:pBdr`, `w:shd`, `w:bidi` |
+| 9.5 | Non-printing characters show and never print (U49) | e2e `paragraph` (PDF text has no ¶) | Pass 2026-10-28: e2e `paragraph`: Ctrl+Shift+P shows ¶, · and →; the printed HTML body and the PDF text have none of them |
+| 9.6 | Sort orders paragraphs, list items and table rows, numbers in number order; Undo returns (U50) | unit `sort`; e2e `paragraph` | Pass 2026-10-28: unit `sort` (paragraphs, list items, table rows; numbers in number order, descending, case); e2e `paragraph` sorts five lines with Format > Sort and one Undo returns them |
+| 9.7 | Repagination stays ≤ 16 ms on 50 pages with split paragraphs (§7) | `pnpm perf` | Pass 2026-10-28: repagination after an edit p95 6.9 ms (budget 16) on 50 pages with split paragraphs; keystroke p95 1 ms; all 10 budgets pass |
 
 ### Stage 10: References
 
