@@ -7,6 +7,7 @@ import { editorExtensions } from "../editor/setup.ts";
 import { insertImageFiles, replaceImageFile, selectedImage, type ImageHost } from "../editor/image.ts";
 import { jumpToBlock } from "../editor/blocks.ts";
 import { showMarks } from "../editor/marks.ts";
+import { textEnd } from "../editor/notes.ts";
 import { geometry, pageLayout, setPageSetup, type Layout } from "../editor/pages.ts";
 import { attachEditor, changed, detachEditor, getEditor } from "../session.ts";
 import { app, openDialog, toast } from "../state.ts";
@@ -188,7 +189,8 @@ export function PageArea() {
           // A click on the grey canvas below the text puts the cursor at the end, as on paper.
           if (e.target === e.currentTarget) {
             e.preventDefault();
-            getEditor()?.commands.focus("end");
+            const ed = getEditor();
+            if (ed) ed.chain().focus().setTextSelection(textEnd(ed.state)).run();
           }
         }}
       >

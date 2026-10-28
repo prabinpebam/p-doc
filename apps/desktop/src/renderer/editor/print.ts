@@ -8,21 +8,25 @@ import { CSS_PX_PER_INCH, headerFooterText, styleCss, type PDocFile } from "@p-d
 import type { PrintRequest } from "../../shared/api.ts";
 import tokensCss from "@p-doc/tokens/tokens.css?inline";
 import pageCss from "../styles/page.css?inline";
-import { geometry, layoutNow } from "./pages.ts";
+import { geometry, layoutNow, noteRest, type Layout } from "./pages.ts";
 
 // The editor's own state: selection, find highlights, the empty-document placeholder.
 const EDITOR_ONLY = ["ProseMirror-selectednode", "selectedCell", "pd-match", "pd-match-current", "has-focus", "is-empty", "is-editor-empty", "is-cropping", "is-resizing", "pd-np-space"];
 // Drawn only on screen: resize handles, the crop frame, and an image whose file is missing (exports skip it).
 const SCREEN_ONLY = ".pd-np-break, .column-resize-handle, .pd-img-handle, .pd-crop, .pd-img-missing, .pd-img.is-missing";
+// Footnotes drawn at a page foot print with their sheet (sheetNotes), not with the notes after the text.
+const PLACED = ".pd-note--placed, .pd-note-rest";
 
 /**
  * A block's HTML without the editor's own state (selection, find highlights, resize handles): one part,
  * or for a paragraph split across pages (A10) one part per page, cut where the page breaks inside it.
  */
-function blockHtml(node: Node | null): string[] {
+function blockHtml(node: Node | null, top?: number): string[] {
   if (!(node instanceof HTMLElement)) return [""];
   if (node.matches(".pd-img.is-missing")) return [""];
   const c = node.cloneNode(true) as HTMLElement;
+  if (top != null) c.style.top = `${top}px`;
+  else for (const x of c.querySelectorAll(PLACED)) x.remove();
   for (const x of [c, ...c.querySelectorAll<HTMLElement>("*")]) {
     x.removeAttribute("contenteditable");
     x.removeAttribute("draggable");
@@ -60,6 +64,65 @@ const esc = (s: string) => s.replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&
 const hf = (cls: string, which: "header" | "footer", text: string, align: string) =>
   `<div class="${cls} pd-hf" data-hf="${which}" data-align="${align}"><span class="pd-hf-text">${esc(text)}</span></div>`;
 
+/**
+ * A copy of a part of a continued footnote with the text outside its window hidden: the screen only clips it, but
+ * a PDF would keep the clipped words, so they would be found (and copied) twice.
+ */
+function visiblePart(live: HTMLElement): HTMLElement {
+  const box = live.getBoundingClientRect();
+  const walker = document.createTreeWalker(live, NodeFilter.SHOW_TEXT);
+  const r = document.createRange();
+  // For each text node (in order), the ranges of characters drawn outside the window.
+  const hidden: [number, number][][] = [];
+  for (let t = walker.nextNode() as Text | null; t; t = walker.nextNode() as Text | null) {
+    const spans: [number, number][] = [];
+    for (let i = 0; i < t.length; i++) {
+      r.setStart(t, i);
+      r.setEnd(t, i + 1);
+      const c = r.getBoundingClientRect();
+      const mid = (c.top + c.bottom) / 2;
+      const out = c.height > 0 && (mid < box.top || mid > box.bottom);
+      const last = spans.at(-1);
+      if (out) {
+        if (last && last[1] === i) last[1] = i + 1;
+        else spans.push([i, i + 1]);
+      }
+    }
+    hidden.push(spans);
+  }
+  const copy = live.cloneNode(true) as HTMLElement;
+  const texts: Text[] = [];
+  const w2 = document.createTreeWalker(copy, NodeFilter.SHOW_TEXT);
+  for (let t = w2.nextNode() as Text | null; t; t = w2.nextNode() as Text | null) texts.push(t);
+  texts.forEach((t, k) => {
+    for (const [a, b] of [...(hidden[k] ?? [])].reverse()) {
+      const part = t.splitText(a);
+      part.splitText(b - a);
+      const span = document.createElement("span");
+      span.style.visibility = "hidden";
+      part.replaceWith(span);
+      span.append(part);
+    }
+  });
+  return copy;
+}
+
+/** The footnotes at the foot of one sheet's pages, where the layout put them. */
+function sheetNotes(view: EditorView, layout: Layout, k: number): string {
+  const out: string[] = [];
+  for (const r of layout.rests) {
+    if (r.sheet !== k) continue;
+    const live = [...view.dom.querySelectorAll<HTMLElement>(`.pd-note-rest[data-id="${CSS.escape(r.id)}"]`)].find((x) => Math.abs(parseFloat(x.style.top) - r.top) < 0.5);
+    out.push(...blockHtml(live ? visiblePart(live) : noteRest(view, r), r.y));
+  }
+  for (const n of layout.notes) {
+    if (n.sheet !== k) continue;
+    const el = view.dom.querySelector<HTMLElement>(`.pd-notes > .pd-note[data-id="${CSS.escape(n.id)}"]`);
+    out.push(...blockHtml(el && n.cut != null ? visiblePart(el) : el, n.y));
+  }
+  return out.join("");
+}
+
 export interface PrintDoc {
   request: PrintRequest;
   /** Pages in Pages mode; null when pageless (the printer lays it out). */
@@ -85,9 +148,9 @@ export function printDocument(doc: PDocFile, view: EditorView): PrintDoc {
     at = `@page { size: ${g.width}px ${g.height}px; margin: 0 }`;
     margins = { top: 0, bottom: 0, left: 0, right: 0 };
     body = layout.sheets
-      .map((sh) => {
+      .map((sh, k) => {
         const last = sh.page + sh.span - 1;
-        return `<section class="print-sheet" style="--sheet-height: ${sh.span * g.height}px">${hf("print-head", "header", headerFooterText(p, "header", sh.page, layout.pages), p.headerAlign)}<div class="pd-content">${Array.from({ length: sh.end - sh.start }, (_, j) => part(sh.start + j)).join("")}</div>${hf("print-foot", "footer", headerFooterText(p, "footer", last, layout.pages), p.footerAlign)}</section>`;
+        return `<section class="print-sheet" style="--sheet-height: ${sh.span * g.height}px">${hf("print-head", "header", headerFooterText(p, "header", sh.page, layout.pages), p.headerAlign)}<div class="pd-content">${Array.from({ length: sh.end - sh.start }, (_, j) => part(sh.start + j)).join("")}${sheetNotes(view, layout, k)}</div>${hf("print-foot", "footer", headerFooterText(p, "footer", last, layout.pages), p.footerAlign)}</section>`;
       })
       .join("");
   } else {

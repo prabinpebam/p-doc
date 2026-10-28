@@ -17,6 +17,7 @@ import { ConnectDialog, GitHubSection, SyncProblemDialog } from "./GitHubSetting
 import { ImageAltDialog, ImageOptionsDialog } from "./ImageDialogs.tsx";
 import { ParagraphDialog } from "./ParagraphDialog.tsx";
 import { SortDialog } from "./SortDialog.tsx";
+import { NotesDialog } from "./NotesDialog.tsx";
 
 export function Dialogs() {
   const d = app.use((s) => s.dialog);
@@ -58,6 +59,8 @@ export function Dialogs() {
       return <ParagraphDialog tab={d.tab} />;
     case "sort":
       return <SortDialog />;
+    case "notes":
+      return <NotesDialog />;
   }
 }
 

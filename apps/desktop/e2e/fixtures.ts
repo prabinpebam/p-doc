@@ -97,6 +97,28 @@ export function bigDocument(pages: number): unknown {
   return { type: "doc", content };
 }
 
+/**
+ * About `pages` Letter pages of prose with `notes` footnotes spread through it. Each note starts with a marker
+ * ("Q7Q") that tells which note a page shows; every fifth note is long.
+ */
+export function notesDocument(pages: number, notes: number): unknown {
+  const paras = pages * 10;
+  const every = Math.max(1, Math.floor(paras / notes));
+  const content: unknown[] = [];
+  const box: unknown[] = [];
+  for (let i = 0; i < paras; i++) {
+    if (i % 30 === 0) content.push(h(1, `Part ${i / 30 + 1}`, `part-${i / 30 + 1}`));
+    const k = i / every + 1;
+    if (i % every === 0 && k <= notes) {
+      const id = `fn${k}`;
+      content.push({ type: "paragraph", content: [text(prose(40, i)), { type: "noteRef", attrs: { id, kind: "footnote" } }, text(` ${prose(30, i + 1)}`)] });
+      box.push({ type: "note", attrs: { id, kind: "footnote" }, content: [p(`Q${k}Q ${prose(k % 5 === 0 ? 120 : 15 + (k % 4) * 10, k)}`)] });
+    } else content.push(p(prose(70, i)));
+  }
+  if (box.length) content.push({ type: "notes", attrs: { footFormat: "decimal", endFormat: "lowerRoman" }, content: box });
+  return { type: "doc", content };
+}
+
 /** A plain SVG image of the given size and colour, as a data URL (documents from before stage 7 had these). */
 export function svgImage(w: number, h: number, fill = "#4a7bd0"): string {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><rect width="${w}" height="${h}" fill="${fill}"/><circle cx="${w / 2}" cy="${h / 2}" r="${Math.min(w, h) / 4}" fill="#f2c14e"/></svg>`;

@@ -8,6 +8,7 @@ import { cleanCrop, defaultStyles, STYLE_LABELS, TEXT_WIDTH, type PageSetup, typ
 import type { Theme } from "../shared/api.ts";
 import { applyStyle, clearBlockDirectFormatting, currentStyle, indent, insertAtomBlock, setBlockAttrs, currentBlock, styleFromSelection } from "./editor/blocks.ts";
 import { endCrop, imageUi, selectedImage, startCrop } from "./editor/image.ts";
+import { convertNote, insertNote, noteAt } from "./editor/notes.ts";
 import { copyDoc, deleteDoc } from "./ops.ts";
 import { downloadAs, downloadPdf, openFromFile, printDoc } from "./output.ts";
 import { flush, getEditor, newDoc, syncSelection, updateDoc } from "./session.ts";
@@ -289,6 +290,10 @@ const commands: Command[] = [
   { id: "insert.toc", label: "Table of contents", keywords: "toc contents", run: withEditor((e) => insertAtomBlock(e, "tableOfContents")), enabled: canEdit },
   { id: "insert.headerFooter", label: "Header and footer", keywords: "page number count footer header", global: true, run: () => openDialog({ kind: "headerFooter" }), enabled: hasDoc },
   { id: "insert.special", label: "Special characters…", keywords: "symbol emoji character", run: () => openDialog({ kind: "specialChars" }), enabled: canEdit },
+  { id: "insert.footnote", label: "Footnote", keys: ["Ctrl+Alt+F"], keywords: "note reference citation foot of page", run: withEditor((e) => insertNote(e, "footnote")), enabled: canEdit },
+  { id: "insert.endnote", label: "Endnote", keys: ["Ctrl+Alt+D"], keywords: "note reference citation end of document", run: withEditor((e) => insertNote(e, "endnote")), enabled: canEdit },
+  { id: "notes.toEndnote", label: "Convert to endnote", keywords: "footnote note", run: withEditor(convertNote), enabled: () => canEdit() && noteAt(ed()!.state)?.kind === "footnote" },
+  { id: "notes.toFootnote", label: "Convert to footnote", keywords: "endnote note", run: withEditor(convertNote), enabled: () => canEdit() && noteAt(ed()!.state)?.kind === "endnote" },
   { id: "insert.comment", label: "Comment", keys: ["Ctrl+Alt+M"], keywords: "note annotate review", run: startComment, enabled: hasEditor },
 
   // Format > Text
@@ -429,6 +434,7 @@ const commands: Command[] = [
   // Format > Paragraph (U46–U50)
   { id: "format.paragraph", label: "Paragraph…", keywords: "indent spacing first line hanging keep with next lines together page break before widow orphan border shading background right to left rtl direction", run: () => openDialog({ kind: "paragraph" }), enabled: () => canEdit() && !!ed() && !!currentBlock(ed()!) },
   { id: "format.tabs", label: "Tabs…", keywords: "tab stops leader dots decimal", run: () => openDialog({ kind: "paragraph", tab: "tabs" }), enabled: () => canEdit() && !!ed() && !!currentBlock(ed()!) },
+  { id: "format.notes", label: "Notes…", keywords: "footnote endnote numbering number format convert all roman letters symbols", run: () => openDialog({ kind: "notes" }), enabled: canEdit },
   { id: "format.sort", label: "Sort…", keywords: "sort order alphabetical a to z ascending descending table rows list", run: () => openDialog({ kind: "sort" }), enabled: canEdit },
   {
     id: "format.clear",
@@ -578,7 +584,7 @@ export const MENUS: Menu[] = [
     id: "insert",
     label: "Insert",
     key: "I",
-    items: ["insert.image", { label: "Table", items: ["insert.table2", "insert.table3", "insert.table4", "insert.table5"] }, "insert.link", "insert.hr", "insert.pageBreak", "insert.toc", "insert.headerFooter", "insert.special", "-", "insert.comment"],
+    items: ["insert.image", { label: "Table", items: ["insert.table2", "insert.table3", "insert.table4", "insert.table5"] }, "insert.link", "insert.hr", "insert.pageBreak", "insert.toc", "insert.headerFooter", "insert.special", "-", "insert.footnote", "insert.endnote", "-", "insert.comment"],
   },
   {
     id: "format",
@@ -600,6 +606,7 @@ export const MENUS: Menu[] = [
       "format.paragraph",
       "format.tabs",
       "format.sort",
+      { label: "Notes", items: ["format.notes", "-", "notes.toEndnote", "notes.toFootnote"] },
       "-",
       "format.clear",
     ],

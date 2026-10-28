@@ -42,3 +42,5 @@ Words P-Doc uses, and the words it doesn't. Sentence case everywhere; no exclama
 | ruler | The scale above the page with the margins, indents and tab stops | guide, measure bar |
 | non-printing characters | ¶, ·, → and ↵ shown on screen and never printed | formatting marks, hidden characters, pilcrows |
 | Sort | Put paragraphs, list items or table rows in order, A to Z or Z to A | order, arrange |
+| footnote / endnote | A numbered note at the foot of the page / at the end of the document; its number is the note reference | citation (for a note), annotation, comment |
+| note reference | The small number in the text that a footnote or endnote belongs to | marker, anchor, callout |

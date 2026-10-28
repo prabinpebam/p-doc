@@ -23,7 +23,8 @@ export type Dialog =
   | { kind: "imageAlt" }
   | { kind: "imageOptions" }
   | { kind: "paragraph"; tab?: ParagraphTab }
-  | { kind: "sort" };
+  | { kind: "sort" }
+  | { kind: "notes" };
 
 /** The Paragraph dialog's tabs (spec §4.11). */
 export type ParagraphTab = "indents" | "breaks" | "borders" | "tabs";

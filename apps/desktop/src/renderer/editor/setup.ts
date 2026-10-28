@@ -2,13 +2,14 @@
 import { commands, Extension, type AnyExtension } from "@tiptap/core";
 import { Selection, TextSelection } from "@tiptap/pm/state";
 import { Placeholder, TrailingNode } from "@tiptap/extensions";
-import { extensions, Suggest, TocSync } from "@p-doc/core";
+import { extensions, NotesSync, Suggest, TocSync } from "@p-doc/core";
 import { FindHighlight } from "./find.ts";
 import { ImageFiles, LiveImage, type ImageHost } from "./image.ts";
 import { Pages } from "./pages.ts";
 import { Tabs } from "./tabs.ts";
 import { NonPrinting } from "./marks.ts";
 import { CommentDraft } from "./review.ts";
+import { NotesKeys, textEnd } from "./notes.ts";
 
 /**
  * TipTap's `focus` waits a frame before focusing, so keys pressed straight after a toolbar or menu
@@ -39,7 +40,9 @@ const DocEnds = Extension.create({
   addKeyboardShortcuts() {
     const go = (end: boolean, extend: boolean) => () => {
       const { state, view } = this.editor;
-      const target = end ? Selection.atEnd(state.doc) : Selection.atStart(state.doc);
+      // The end of the text, not of the notes after it (in a note: the end of the notes).
+      const inNotes = state.selection.$head.node(1)?.type.name === "notes";
+      const target = end ? (inNotes ? Selection.atEnd(state.doc) : textEnd(state)) : Selection.atStart(state.doc);
       const sel = extend ? TextSelection.between(state.selection.$anchor, target.$head) : target;
       view.dispatch(state.tr.setSelection(sel).scrollIntoView());
       return true;
@@ -55,9 +58,11 @@ export function editorExtensions(o: { author: string; images: () => ImageHost })
       SyncFocus,
       DocEnds,
       // As in Word and Google Docs, a table, rule, break, image or code block is never the last block.
-      TrailingNode.configure({ node: "paragraph", notAfter: ["paragraph", "heading", "blockquote", "bulletList", "orderedList", "taskList"] }),
+      TrailingNode.configure({ node: "paragraph", notAfter: ["paragraph", "heading", "blockquote", "bulletList", "orderedList", "taskList", "notes"] }),
       Placeholder.configure({ placeholder: "Start writing" }),
       TocSync,
+      NotesSync,
+      NotesKeys,
       Suggest.configure({ author: o.author }),
       CommentDraft,
       FindHighlight,

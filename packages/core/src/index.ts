@@ -14,3 +14,4 @@ export * from "./styles.ts";
 export * from "./convert.ts";
 export * from "./paragraph.ts";
 export * from "./sort.ts";
+export * from "./notes.ts";

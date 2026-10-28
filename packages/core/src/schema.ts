@@ -13,6 +13,7 @@ import { PImage } from "./image.ts";
 import { TableKit } from "@tiptap/extension-table";
 import { TaskList, TaskItem } from "@tiptap/extension-list";
 import { cleanLayout, layoutCss, lineHeightCss, Tab } from "./paragraph.ts";
+import { Note, NoteRef, Notes, NotesDoc } from "./notes.ts";
 
 export const TEXTBLOCKS = ["paragraph", "heading"] as const;
 
@@ -197,8 +198,10 @@ export interface SchemaOptions {
 /** The extensions that define P-Doc's content. */
 export function extensions(options: SchemaOptions = {}): AnyExtension[] {
   return [
+    NotesDoc,
     StarterKit.configure({
-      heading: { levels: [1, 2, 3, 4] },
+      document: false,
+      heading: { levels: [1, 2, 3, 4, 5, 6] },
       link: { openOnClick: false, autolink: true, HTMLAttributes: { rel: "noopener noreferrer", target: null } },
       trailingNode: false,
     }),
@@ -218,6 +221,9 @@ export function extensions(options: SchemaOptions = {}): AnyExtension[] {
     CommentMark,
     PageBreak,
     TableOfContents,
+    NoteRef,
+    Note,
+    Notes,
     ...(options.extra ?? []),
   ];
 }

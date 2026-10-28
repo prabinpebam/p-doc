@@ -7,6 +7,7 @@ import { extensions } from "./schema.ts";
 import { styleCss } from "./styles.ts";
 import { acceptAll } from "./suggestions.ts";
 import { nodeText } from "./outline.ts";
+import { noteLabelsOf, notesListOf, withNoteLabels } from "./notes.ts";
 
 type Mark = NonNullable<JSONContent["marks"]>[number];
 
@@ -31,7 +32,7 @@ function dropComments(node: JSONContent): JSONContent {
 // ------------------------------------------------------------------------------ HTML
 
 export function contentToHTML(content: JSONContent): string {
-  return generateHTML(content, extensions());
+  return withNoteLabels(noteLabelsOf(content), () => generateHTML(content, extensions()));
 }
 
 const escapeHtml = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -59,6 +60,10 @@ img { max-width: 100%; }
 .pd-toc .pd-toc-l2 { padding-left: 1.5em; } .pd-toc .pd-toc-l3 { padding-left: 3em; }
 ul[data-type="taskList"] { list-style: none; padding-left: 0.5em; }
 ul[data-type="taskList"] li { display: flex; gap: 0.5em; }
+.pd-note-ref a { text-decoration: none; }
+.pd-notes { margin-top: 2em; border-top: 1px solid #999; padding-top: 0.5em; }
+.pd-note > p:first-child::before { content: var(--pd-n) " "; vertical-align: super; font-size: 0.7em; }
+.pd-note > p { margin: 0 0 0.25em; }
 </style>
 </head>
 <body>
@@ -79,9 +84,17 @@ export function fromHTML(html: string): JSONContent {
 
 const mdEscape = (s: string) => s.replace(/([\\`*_[\]<>])/g, "\\$1").replace(/^(\s*)([#>+-]|\d+\.)(\s)/, "$1\\$2$3");
 
+/** Markdown footnote names of the notes being written ([^1]); endnotes whose label a footnote has get an "e". */
+let mdNotes: Map<string, string> | null = null;
+
 function inlineMd(nodes: JSONContent[] | undefined): string {
   let out = "";
   for (const n of nodes ?? []) {
+    if (n.type === "noteRef") {
+      const name = mdNotes?.get(String(n.attrs?.id ?? ""));
+      if (name) out += `[^${name}]`;
+      continue;
+    }
     if (n.type === "hardBreak") {
       out += "  \n";
       continue;
@@ -180,10 +193,38 @@ function tableMd(table: JSONContent): string {
   return [line(rows[0]!), `|${" --- |".repeat(cols)}`, ...rows.slice(1).map(line)].join("\n");
 }
 
+/** Each note's label, made unique across footnotes and endnotes (both may count 1, 2, 3). */
+function uniqueLabels(content: JSONContent): Map<string, string> {
+  const labels = noteLabelsOf(content);
+  const kinds = new Map(notesListOf(content).map((n) => [n.id, n.kind]));
+  const used = new Set<string>();
+  const out = new Map<string, string>();
+  for (const [id, label] of labels) {
+    let name = label;
+    if (kinds.get(id) === "endnote" && used.has(name)) name = `e${label}`;
+    while (used.has(name)) name += "'";
+    used.add(name);
+    out.set(id, name);
+  }
+  return out;
+}
+
 export function toMarkdown(doc: PDocFile | JSONContent): string {
   const content = finalContent(contentOf(doc));
-  const blocks = (content.content ?? []).flatMap((b) => blockMd(b));
-  return `${blocks.join("\n\n").replace(/\n{3,}/g, "\n\n").trim()}\n`;
+  mdNotes = uniqueLabels(content);
+  try {
+    const blocks = (content.content ?? []).filter((b) => b.type !== "notes").flatMap((b) => blockMd(b));
+    // Notes as Markdown footnotes, in number order (footnotes, then endnotes).
+    for (const n of notesListOf(content)) {
+      const name = mdNotes.get(n.id);
+      if (!name) continue;
+      const body = n.content.flatMap((c) => blockMd(c)).join("\n\n").replace(/\n/g, "\n    ");
+      blocks.push(`[^${name}]: ${body}`);
+    }
+    return `${blocks.join("\n\n").replace(/\n{3,}/g, "\n\n").trim()}\n`;
+  } finally {
+    mdNotes = null;
+  }
 }
 
 export function fromMarkdown(md: string): JSONContent {
@@ -224,9 +265,19 @@ function blockText(n: JSONContent, indent = ""): string[] {
   }
 }
 
+/** Note references as "[1]", the way plain text shows them. */
+function refsAsText(n: JSONContent, labels: Map<string, string>): JSONContent {
+  if (n.type === "noteRef") return { type: "text", text: `[${labels.get(String(n.attrs?.id ?? "")) ?? ""}]` };
+  return n.content ? { ...n, content: n.content.map((c) => refsAsText(c, labels)) } : n;
+}
+
 export function toText(doc: PDocFile | JSONContent): string {
   const content = finalContent(contentOf(doc));
-  return `${(content.content ?? []).flatMap((b) => blockText(b)).join("\n").trimEnd()}\n`;
+  const labels = uniqueLabels(content);
+  const lines = (content.content ?? []).filter((b) => b.type !== "notes").flatMap((b) => blockText(refsAsText(b, labels)));
+  const notes = notesListOf(content).filter((n) => labels.has(n.id));
+  if (notes.length) lines.push("", "――――――――――", ...notes.map((n) => `[${labels.get(n.id)}] ${n.content.map((c) => nodeText(refsAsText(c, labels))).join("\n")}`));
+  return `${lines.join("\n").trimEnd()}\n`;
 }
 
 export function fromText(text: string): JSONContent {

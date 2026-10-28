@@ -92,6 +92,7 @@ export function Ruler() {
   const [m, setM] = useState<{ frame: Frame; para: Para } | null>(null);
   const [kind, setKind] = useState<TabAlign>("left");
   const [drag, setDrag] = useState<{ marker: Marker; at: number; off: boolean; moved: boolean } | null>(null);
+  const keyed = useRef<{ mk: Marker; at: number; para: Para } | null>(null);
   const inches = usesInches();
   const step = inches ? 1 / 16 : 0.25 / 2.54;
 
@@ -169,7 +170,12 @@ export function Ruler() {
     const dir = { ArrowLeft: f.rtl ? 1 : -1, ArrowRight: f.rtl ? -1 : 1 }[e.key];
     if (dir) {
       e.preventDefault();
-      commit(mk, Math.min(width, Math.max(0, valueOf(mk) + dir * step * (e.shiftKey ? 4 : 1))));
+      // A key pressed again before the ruler measures the last step goes on from that step, not from before it.
+      const last = keyed.current;
+      const from = last && last.mk === mk && last.para === p ? last.at : valueOf(mk);
+      const at = Math.min(width, Math.max(0, from + dir * step * (e.shiftKey ? 4 : 1)));
+      keyed.current = { mk, at, para: p };
+      commit(mk, at);
     } else if ((e.key === "Delete" || e.key === "Backspace") && typeof mk === "number") {
       e.preventDefault();
       commit(mk, 0, true);

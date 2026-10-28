@@ -17,6 +17,19 @@ const sample = (): JSONContent => ({
   ],
 });
 
+const withNotes = (): JSONContent => ({
+  type: "doc",
+  content: [
+    { type: "paragraph", content: [{ type: "text", text: "Claim" }, { type: "noteRef", attrs: { id: "a", kind: "footnote" } }, { type: "text", text: " and more" }, { type: "noteRef", attrs: { id: "b", kind: "endnote" } }] },
+    { type: "paragraph", content: [{ type: "text", text: "Second" }, { type: "noteRef", attrs: { id: "c", kind: "footnote" } }] },
+    { type: "notes", attrs: { footFormat: "decimal", endFormat: "decimal" }, content: [
+      { type: "note", attrs: { id: "a", kind: "footnote" }, content: [{ type: "paragraph", content: [{ type: "text", text: "Source one" }] }] },
+      { type: "note", attrs: { id: "c", kind: "footnote" }, content: [{ type: "paragraph", content: [{ type: "text", text: "Source two" }] }] },
+      { type: "note", attrs: { id: "b", kind: "endnote" }, content: [{ type: "paragraph", content: [{ type: "text", text: "An endnote" }] }] },
+    ] },
+  ],
+});
+
 describe("export", () => {
   it("writes Markdown with headings, emphasis, links, lists and tables, suggestions applied", () => {
     const md = toMarkdown(createDocument({ content: sample() }));
@@ -41,6 +54,23 @@ describe("export", () => {
   it("writes plain text", () => {
     const txt = toText(createDocument({ content: sample() }));
     expect(txt).toContain("Plan\nSome bold and link\n• one\n• two\n1. first\nA\tB\n1\t2\nkept added\n");
+  });
+});
+
+describe("export notes (10.1)", () => {
+  it("writes notes as linked numbers with the notes listed at the end, in HTML, Markdown and text", () => {
+    const doc = createDocument({ content: withNotes() });
+    const html = toHTML(doc);
+    expect(html).toMatch(/<sup[^>]*pd-note-ref[^>]*><a href="#note-a" id="ref-a">1<\/a><\/sup>/);
+    expect(html).toMatch(/<div[^>]*id="note-b"[^>]*>/);
+    expect(html).toContain("Source two");
+    const md = toMarkdown(doc);
+    expect(md).toContain("Claim[^1] and more[^e1]");
+    expect(md).toContain("Second[^2]");
+    expect(md).toMatch(/\[\^1\]: Source one\n\n\[\^2\]: Source two\n\n\[\^e1\]: An endnote\n$/);
+    const text = toText(doc);
+    expect(text).toContain("Claim[1] and more[e1]");
+    expect(text).toMatch(/\[1\] Source one\n\[2\] Source two\n\[e1\] An endnote\n$/);
   });
 });
 

@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Page } from "@playwright/test";
 import { expect, launch, quit, test } from "./helpers.ts";
-import { imageDocument, load, longDocument, settled, splitDocument } from "./fixtures.ts";
+import { imageDocument, load, longDocument, notesDocument, settled, splitDocument } from "./fixtures.ts";
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 
 interface ScreenSheet {
@@ -349,5 +349,52 @@ test("9.3 keep with next, keep lines together and page break before move blocks 
   expect(printed.length).toBe(pages);
   expect(printed[0]!.endsWith(`Filler${k - 1}`), "page 1 ends before the kept paragraph").toBe(true);
   expect(printed[1]!.startsWith("Keptintro")).toBe(true);
+  await quit(l);
+});
+
+test("10.1 A8 footnotes sit at the foot of the page that has their number, and each PDF page has the same notes", async () => {
+  const saveDir = mkdtempSync(join(tmpdir(), "pdoc-pdf-"));
+  const l = await launch({ env: { PDOC_SAVE_DIR: saveDir } });
+  const { page } = l;
+  const NOTES = 24;
+  await load(page, notesDocument(12, NOTES));
+  const art = page.getByTestId("page");
+  await expect.poll(async () => Number(await art.getAttribute("data-pages"))).toBeGreaterThanOrEqual(10);
+  await settled(page);
+  await expect(page.locator(".pd-note--placed")).toHaveCount(NOTES);
+
+  // Which sheet each reference and the start of each note are drawn on (prose sheets are one page each).
+  const screen = await page.evaluate(() => {
+    const art = document.querySelector<HTMLElement>("[data-testid=page]")!;
+    const root = art.querySelector<HTMLElement>(".pd-content")!;
+    // A page ends at the foot of its sheet break's fill; its footnotes are drawn over that fill.
+    const breaks = [...root.querySelectorAll<HTMLElement>(".pd-sheet-break")].map((b) => b.querySelector(".pd-sheet-fill")!.getBoundingClientRect().bottom);
+    const sheetOf = (el: Element) => breaks.filter((t) => t < el.getBoundingClientRect().top).length;
+    const refs = Object.fromEntries([...root.querySelectorAll<HTMLElement>("sup[data-type=note-ref]")].map((r) => [r.dataset.id!, sheetOf(r)]));
+    const notes = [...root.querySelectorAll<HTMLElement>(".pd-note--placed")].map((n) => ({ id: n.dataset.id!, sheet: sheetOf(n), marker: /Q\d+Q/.exec(n.textContent ?? "")![0], cut: n.classList.contains("pd-note--cut") }));
+    const pageBottom = (i: number) => (i < breaks.length ? breaks[i]! : root.getBoundingClientRect().bottom);
+    const inside = [...root.querySelectorAll<HTMLElement>(".pd-note--placed")].every((n) => {
+      const r = n.getBoundingClientRect();
+      return r.top < pageBottom(breaks.filter((t) => t < r.top).length);
+    });
+    return { pages: Number(art.dataset.pages), sheets: breaks.length + 1, refs, notes, inside };
+  });
+  expect(screen.sheets).toBe(screen.pages);
+  for (const n of screen.notes) expect(n.sheet, `${n.marker} is on the page of its number`).toBe(screen.refs[n.id]);
+  expect(screen.inside).toBe(true);
+  expect(new Set(screen.notes.map((n) => n.sheet)).size, "notes on many pages").toBeGreaterThanOrEqual(8);
+  await page.locator(".pd-note--placed").nth(4).scrollIntoViewIfNeeded();
+  await page.screenshot({ path: test.info().outputPath("notes.png") });
+
+  await page.getByRole("menuitem", { name: "File" }).click();
+  await page.getByRole("menuitem", { name: /^Download/ }).click();
+  await page.getByRole("menuitem", { name: /^PDF document/ }).click();
+  await expect(page.getByText(new RegExp(`^Saved Untitled document\\.pdf · ${screen.pages} pages$`))).toBeVisible({ timeout: 20_000 });
+  const printed = await pdfPages(join(saveDir, readdirSync(saveDir).find((n) => n.endsWith(".pdf"))!));
+  expect(printed.length).toBe(screen.pages);
+  for (const n of screen.notes) {
+    const on = printed.flatMap((t, i) => (t.includes(n.marker) ? [i] : []));
+    expect(on, `${n.marker} prints on the same page`).toEqual([n.sheet]);
+  }
   await quit(l);
 });

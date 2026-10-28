@@ -14,6 +14,12 @@
   --doc-gap: 0.75em;
   --doc-code-pad: 0.1em 0.3em;
   --doc-toc-indent: 1.5em;
+  /* Notes: the space kept above a page's footnotes (read by the page layout, so in px), the rule drawn in it. */
+  --doc-note-sep: 16px;
+  --doc-note-rule: 33%;
+  --doc-note-gap: 0.2em;
+  --doc-note-ref-size: 0.7em;
+  --doc-note-num-gap: 0.2em;
 }
 
 .page {
@@ -578,6 +584,96 @@
   font-weight: var(--weight-semibold);
 }
 
+/*
+ * Footnotes and endnotes (spec §4.12). Numbers are never stored: --pd-n is set from the order of the
+ * references (live, by decorations; in exports, on the note). In pages mode each footnote is drawn at
+ * the foot of the page its reference is on (editor/pages.ts); endnotes stay after the text.
+ */
+.pd-note-ref {
+  font-size: var(--doc-note-ref-size);
+  line-height: 0;
+  vertical-align: super;
+  cursor: pointer;
+}
+
+.pd-note-ref::after {
+  content: var(--pd-n, none);
+}
+
+.pd-note-ref a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.pd-notes {
+  padding-top: calc(var(--doc-note-sep) / 2);
+}
+
+.pd-notes::before {
+  content: "";
+  display: block;
+  width: var(--doc-note-rule);
+  padding-bottom: calc(var(--doc-note-sep) / 2);
+  border-top: var(--border-hairline) solid var(--color-page-muted);
+}
+
+.pd-note {
+  position: relative;
+  padding-top: var(--doc-note-gap);
+}
+
+.pd-note > p:first-child::before {
+  content: var(--pd-n, none);
+  padding-right: var(--doc-note-num-gap);
+  font-size: var(--doc-note-ref-size);
+  line-height: 0;
+  vertical-align: super;
+}
+
+.paged .pd-notes {
+  padding-top: 0;
+}
+
+.paged .pd-notes::before {
+  content: none;
+}
+
+.paged .pd-note--first-end {
+  margin-top: var(--doc-note-sep);
+}
+
+.pd-note--placed,
+.pd-note-rest {
+  position: absolute;
+  inset-inline: 0;
+  margin: 0;
+}
+
+/* A note that goes on over the page: the part that fits here, the rest at the top of the next page's notes. */
+.pd-note--cut,
+.pd-note-rest {
+  clip-path: inset(calc(var(--doc-note-sep) * -1) 0 0 0);
+}
+
+.pd-note-rest > .pd-note {
+  pointer-events: none;
+}
+
+/* The number was shown on the page before; a PDF would otherwise keep it as hidden text. */
+.pd-note-rest > .pd-note > p:first-child::before {
+  visibility: hidden;
+}
+
+.pd-note--page-first::before,
+.paged .pd-note--first-end::before {
+  content: "";
+  position: absolute;
+  top: calc(var(--doc-note-sep) / -2);
+  left: 0;
+  width: var(--doc-note-rule);
+  border-top: var(--border-hairline) solid var(--color-page-muted);
+}
+
 .pd-insertion {
   color: var(--color-insertion);
   text-decoration: underline;
@@ -682,9 +778,14 @@
 }
 
 .print-sheet > .pd-content {
+  position: relative;
   flex: 1;
   min-height: 0;
   padding: 0 var(--page-pad-right) 0 var(--page-pad-left);
+}
+
+.print-sheet :is(.pd-note--placed, .pd-note-rest) {
+  inset-inline: var(--page-pad-left) var(--page-pad-right);
 }
 
 .print-head,

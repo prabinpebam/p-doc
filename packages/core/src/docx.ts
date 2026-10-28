@@ -5,6 +5,8 @@ import {
   BorderStyle,
   DeletedTextRun,
   Document,
+  EndnoteReferenceRun,
+  FootnoteReferenceRun,
   ExternalHyperlink,
   HorizontalPositionAlign,
   HorizontalPositionRelativeFrom,
@@ -39,6 +41,7 @@ import mammoth from "mammoth";
 import { PAPER, type PDocFile, type StyleDef } from "./format.ts";
 import { fromHTML } from "./convert.ts";
 import { nodeText } from "./outline.ts";
+import { notesListOf } from "./notes.ts";
 import { BORDER_SIDES, cleanLayout } from "./paragraph.ts";
 import { cleanCrop, dataImageParts, imageInfo } from "./image.ts";
 
@@ -66,6 +69,8 @@ interface Ctx {
   listInstance: number;
   revision: number;
   maxImageWidth: number;
+  /** Word's id of each note (footnotes and endnotes count separately). */
+  noteIds: Map<string, { kind: "footnote" | "endnote"; num: number }>;
 }
 
 function runs(nodes: JSONContent[] | undefined, ctx: Ctx, extra: { font?: string } = {}): ParagraphChild[] {
@@ -82,6 +87,11 @@ function runs(nodes: JSONContent[] | undefined, ctx: Ctx, extra: { font?: string
     if (n.type === "image") {
       const img = imageRun(n, ctx);
       if (img) out.push(img);
+      continue;
+    }
+    if (n.type === "noteRef") {
+      const note = ctx.noteIds.get(String(n.attrs?.id ?? ""));
+      if (note) out.push(note.kind === "endnote" ? new EndnoteReferenceRun(note.num) : new FootnoteReferenceRun(note.num));
       continue;
     }
     if (n.type !== "text") continue;
@@ -237,6 +247,9 @@ function blocks(nodes: JSONContent[] | undefined, ctx: Ctx, list?: { ref: string
       case "pageBreak":
         out.push(new Paragraph({ children: [new PageBreak()] }));
         break;
+      case "notes":
+        // Written as Word's own footnotes and endnotes (see toDocx).
+        break;
       case "image": {
         const img = imageRun(n, ctx);
         const wraps = n.attrs?.wrap === "left" || n.attrs?.wrap === "right";
@@ -311,7 +324,16 @@ export async function toDocx(doc: PDocFile): Promise<Uint8Array> {
   const p = doc.page;
   const paper = PAPER[p.size];
   const landscape = p.orientation === "landscape";
-  const ctx: Ctx = { doc, listInstance: 0, revision: 1, maxImageWidth: Math.round((((landscape ? paper.height : paper.width) - p.margins.left - p.margins.right) * 96)) };
+  const ctx: Ctx = { doc, listInstance: 0, revision: 1, maxImageWidth: Math.round((((landscape ? paper.height : paper.width) - p.margins.left - p.margins.right) * 96)), noteIds: new Map() };
+  const footnotes: Record<string, { children: Paragraph[] }> = {};
+  const endnotes: Record<string, { children: Paragraph[] }> = {};
+  const notes = notesListOf(doc.content);
+  const count = { footnote: 0, endnote: 0 };
+  for (const n of notes) ctx.noteIds.set(n.id, { kind: n.kind, num: ++count[n.kind] });
+  for (const n of notes) {
+    const paras = blocks(n.content, ctx).filter((b): b is Paragraph => b instanceof Paragraph);
+    (n.kind === "endnote" ? endnotes : footnotes)[String(ctx.noteIds.get(n.id)!.num)] = { children: paras.length ? paras : [new Paragraph({ children: [] })] };
+  }
   const children = blocks(doc.content.content, ctx);
   const s = doc.styles;
   const levels = (format: (typeof LevelFormat)[keyof typeof LevelFormat], text: (l: number) => string) =>
@@ -320,6 +342,8 @@ export async function toDocx(doc: PDocFile): Promise<Uint8Array> {
     creator: "P-Doc",
     title: doc.title,
     features: { trackRevisions: false },
+    ...(count.footnote ? { footnotes } : {}),
+    ...(count.endnote ? { endnotes } : {}),
     styles: {
       default: { document: { run: styleRun(s.normal), paragraph: styleParagraph(s.normal) } },
       paragraphStyles: [
@@ -375,6 +399,46 @@ export async function fromDocx(data: Uint8Array): Promise<DocxImport> {
   );
   const warnings = result.messages.filter((m) => m.type === "warning").map((m) => m.message);
   // Images are blocks in P-Doc; Word wraps each in a paragraph, which would leave an empty one behind.
-  const html = result.value.replace(/<p>((?:<img [^>]*\/?>)+)<\/p>/g, "$1");
-  return { content: fromHTML(html), warnings };
+  const html = wordNotes(result.value.replace(/<p>((?:<img [^>]*\/?>)+)<\/p>/g, "$1"));
+  return { content: orderNotes(fromHTML(html)), warnings };
+}
+
+/**
+ * Word's footnotes and endnotes as P-Doc notes. Mammoth writes each reference as a linked "[n]" and the notes as
+ * one list at the end, each with a link back ("↑").
+ */
+export function wordNotes(html: string): string {
+  const first = html.search(/<li id="(?:footnote|endnote)-\d+">/);
+  const listStart = first < 0 ? -1 : html.lastIndexOf("<ol>", first);
+  let body = html;
+  let notes = "";
+  if (listStart >= 0 && html.trimEnd().endsWith("</ol>")) {
+    body = html.slice(0, listStart);
+    const items = html.slice(listStart + 4, html.trimEnd().length - 5).split(/(?=<li id="(?:footnote|endnote)-\d+">)/);
+    for (const item of items) {
+      const m = /^<li id="(footnote|endnote)-(\d+)">([\s\S]*)<\/li>\s*$/.exec(item);
+      if (!m) continue;
+      const text = m[3]!.replace(/\s*<a href="#(?:footnote|endnote)-ref-\d+">↑<\/a>/g, "");
+      notes += `<div data-type="note" data-id="w${m[1]![0]}${m[2]}" data-kind="${m[1]}">${/^\s*<p[\s>]/.test(text) ? text : `<p>${text}</p>`}</div>`;
+    }
+  }
+  body = body.replace(/<sup><a href="#(footnote|endnote)-(\d+)" id="(?:footnote|endnote)-ref-\d+">[^<]*<\/a><\/sup>/g, (_, kind: string, n: string) => `<sup data-type="note-ref" data-id="w${kind[0]}${n}" data-kind="${kind}"></sup>`);
+  return notes ? `${body}<section data-type="notes">${notes}</section>` : body;
+}
+
+/** Notes in the order P-Doc keeps them: footnotes, then endnotes, each in the order of their references. */
+function orderNotes(content: JSONContent): JSONContent {
+  const blocks = content.content ?? [];
+  const box = blocks.find((b) => b.type === "notes");
+  if (!box) return content;
+  const order: string[] = [];
+  const walk = (n: JSONContent) => {
+    if (n.type === "noteRef" && n.attrs?.id) order.push(String(n.attrs.id));
+    n.content?.forEach(walk);
+  };
+  blocks.filter((b) => b !== box).forEach(walk);
+  const rank = (n: JSONContent) => (n.attrs?.kind === "endnote" ? 1e6 : 0) + (order.indexOf(String(n.attrs?.id)) + 1 || 5e5);
+  const notes = (box.content ?? []).filter((n) => order.includes(String(n.attrs?.id))).sort((a, b) => rank(a) - rank(b));
+  const rest = blocks.filter((b) => b !== box);
+  return { ...content, content: notes.length ? [...rest, { ...box, content: notes }] : rest };
 }

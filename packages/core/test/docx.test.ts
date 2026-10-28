@@ -96,7 +96,42 @@ describe("export-docx", () => {
   });
 });
 
+const withNotes = (): JSONContent => ({
+  type: "doc",
+  content: [
+    { type: "paragraph", content: [{ type: "text", text: "Claim" }, { type: "noteRef", attrs: { id: "a", kind: "footnote" } }, { type: "text", text: " and more" }, { type: "noteRef", attrs: { id: "b", kind: "endnote" } }] },
+    { type: "paragraph", content: [{ type: "text", text: "Second" }, { type: "noteRef", attrs: { id: "c", kind: "footnote" } }] },
+    { type: "notes", attrs: { footFormat: "decimal", endFormat: "decimal" }, content: [
+      { type: "note", attrs: { id: "a", kind: "footnote" }, content: [{ type: "paragraph", content: [{ type: "text", text: "Source one" }] }] },
+      { type: "note", attrs: { id: "c", kind: "footnote" }, content: [{ type: "paragraph", content: [{ type: "text", text: "Source two" }] }] },
+      { type: "note", attrs: { id: "b", kind: "endnote" }, content: [{ type: "paragraph", content: [{ type: "text", text: "An endnote" }] }] },
+    ] },
+  ],
+});
+
 describe("import-docx", () => {
+  it("round-trips footnotes and endnotes as Word's own notes (10.1)", async () => {
+    const bytes = await toDocx(createDocument({ content: withNotes() }));
+    const files = (await (await import("jszip")).default.loadAsync(bytes)).files;
+    expect(Object.keys(files)).toEqual(expect.arrayContaining(["word/footnotes.xml", "word/endnotes.xml"]));
+    const { content } = await fromDocx(bytes);
+    const refs: string[] = [];
+    const walk = (n: JSONContent) => {
+      if (n.type === "noteRef") refs.push(String(n.attrs?.kind));
+      n.content?.forEach(walk);
+    };
+    content.content!.filter((b) => b.type !== "notes").forEach(walk);
+    expect(refs).toEqual(["footnote", "endnote", "footnote"]);
+    expect(nodeText(content.content![0]!)).toBe("Claim and more");
+    const box = content.content!.at(-1)!;
+    expect(box.type).toBe("notes");
+    expect(box.content!.map((n) => [n.attrs?.kind, nodeText(n)])).toEqual([
+      ["footnote", "Source one"],
+      ["footnote", "Source two"],
+      ["endnote", "An endnote"],
+    ]);
+  });
+
   it("measures images", () => {
     const bytes = Uint8Array.from(Buffer.from(PNG.split(",")[1]!, "base64"));
     expect(imageSize(bytes)).toEqual({ width: 2, height: 1, type: "png" });

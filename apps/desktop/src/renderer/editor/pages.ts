@@ -6,8 +6,8 @@
 import { Extension } from "@tiptap/core";
 import { Plugin, PluginKey, type EditorState, type Transaction } from "@tiptap/pm/state";
 import { Decoration, DecorationSet, type EditorView, type NodeView } from "@tiptap/pm/view";
-import type { Node as PMNode } from "@tiptap/pm/model";
-import { CSS_PX_PER_INCH, headerFooterText, pageInches, paginate, sheetsOf, type BlockBox, type HfAlign, type PageSetup, type Sheet, type TocEntry } from "@p-doc/core";
+import { DOMSerializer, type Node as PMNode } from "@tiptap/pm/model";
+import { CSS_PX_PER_INCH, headerFooterText, notesOf, pageInches, paginate, sheetsOf, type BlockBox, type HfAlign, type NoteBox, type PageSetup, type Sheet, type TocEntry } from "@p-doc/core";
 import { createStore } from "../lib/store.ts";
 
 /** A page's geometry in CSS pixels, rounded as the page is drawn. */
@@ -43,6 +43,38 @@ export interface Layout {
   splits: ({ pos: number; left: number; right: number } | null)[];
   /** Page of each heading, by id, for the table of contents. */
   headings: Record<string, number>;
+  /** Footnotes at the foot of their page (A8). */
+  notes: PlacedNote[];
+  /** The rest of each footnote continued from the page before. */
+  rests: PlacedNote[];
+}
+
+/**
+ * A footnote (or the rest of one) at the foot of a page: `y` from the top of its sheet's text, `top`
+ * from the top of the editor; `cut` is how much of the note this page shows (the rest goes on the next).
+ */
+export interface PlacedNote {
+  id: string;
+  page: number;
+  sheet: number;
+  y: number;
+  top: number;
+  height: number;
+  cut?: number;
+  /** The first on its page: the separator is drawn above it. */
+  first: boolean;
+}
+
+/** The gap drawn between sheets (px), read once from its token. */
+let gapPx = -1;
+function pageGap(): number {
+  if (gapPx >= 0) return gapPx;
+  const probe = document.createElement("div");
+  probe.style.cssText = "position:absolute;visibility:hidden;height:var(--c-page-gap)";
+  document.body.append(probe);
+  gapPx = probe.getBoundingClientRect().height;
+  probe.remove();
+  return gapPx;
 }
 
 /** The page a document position is on: a split paragraph's later lines are on the pages after. */
@@ -108,6 +140,17 @@ function measure(view: EditorView): void {
   const contentLeft = domRect.left + (parseFloat(getComputedStyle(view.dom).paddingLeft) || 0) * scale;
   const contentRight = domRect.right - (parseFloat(getComputedStyle(view.dom).paddingRight) || 0) * scale;
   const headingAt: [string, number][] = [];
+  // Footnotes: each one's height and lines, by id, from where it is drawn now (at a page foot or after the text).
+  const box = notesOf(view.state.doc);
+  const noteEls = new Map<string, { el: HTMLElement; height: number }>();
+  if (box)
+    box.node.forEach((n, off) => {
+      if (n.attrs.kind !== "footnote") return;
+      const e = view.nodeDOM(box.pos + 1 + off);
+      // A note cut at a page foot is drawn shorter than it is: its whole height is its content's.
+      if (e instanceof HTMLElement) noteEls.set(String(n.attrs.id), { el: e, height: e.classList.contains("pd-note--cut") ? e.scrollHeight : e.getBoundingClientRect().height / scale });
+    });
+  const noteIds: string[] = [];
   // Each block's height is where its bottom is less where the block before it ended (or its sheet began):
   // that counts margins, and any gap where a block that can't sit beside a float moved below it.
   const rootCs = getComputedStyle(view.dom);
@@ -137,6 +180,27 @@ function measure(view: EditorView): void {
         };
       }
     }
+    let notes: NoteBox[] | undefined;
+    if (noteEls.size && node.type.name !== "notes") {
+      node.descendants((n, p) => {
+        if (n.type.name !== "noteRef" || n.attrs.kind !== "footnote") return;
+        const m = noteEls.get(String(n.attrs.id));
+        if (!m) return;
+        const at = offset + 1 + p;
+        noteIds.push(String(n.attrs.id));
+        (notes ??= []).push({
+          height: m.height,
+          // The line the number is on: lines() has measured where each line starts.
+          line: () => {
+            const starts = lineStarts.get(i)?.pos ?? [];
+            let k = 0;
+            while (k + 1 < starts.length && starts[k + 1]! <= at) k++;
+            return k;
+          },
+          lines: () => measureLines(view, m.el, m.el.getBoundingClientRect().top, [], scale).bottoms,
+        });
+      });
+    }
     const layout = (node.attrs.layout ?? null) as { keepNext?: boolean; keepLines?: boolean; breakBefore?: boolean; widows?: boolean } | null;
     boxes.push({
       height,
@@ -147,10 +211,12 @@ function measure(view: EditorView): void {
       keepNext: !!layout?.keepNext,
       keepLines: !!layout?.keepLines,
       breakBefore: !!layout?.breakBefore,
+      notes,
     });
     if (node.type.name === "heading" && node.attrs.id) headingAt.push([String(node.attrs.id), i]);
   });
-  const p = paginate(boxes, g.content);
+  const sep = parseFloat(rootCs.getPropertyValue("--doc-note-sep")) || 0;
+  const p = paginate(boxes, g.content, { noteSep: sep });
   const sheets = sheetsOf(p);
   const headings: Record<string, number> = {};
   for (const [id, i] of headingAt) headings[id] = p.pageOf[i] ?? 1;
@@ -160,7 +226,63 @@ function measure(view: EditorView): void {
     const pos = l?.pos[sh.startLine];
     return l && pos != null ? { pos, left: l.left, right: l.right } : null;
   });
-  apply(view, settle(layoutOf(view.state), { pages: p.pages, sheets, pageOf: p.pageOf, fills: p.fills, splits, headings }));
+  const placed = placeNotes(p.notes, noteIds, noteEls, sheets, g, parseFloat(rootCs.paddingTop) || 0);
+  apply(view, settle(layoutOf(view.state), { pages: p.pages, sheets, pageOf: p.pageOf, fills: p.fills, splits, headings, ...placed }));
+}
+
+/**
+ * Where each footnote is drawn: the notes of a page stack up from the foot of its text area, the rest
+ * of a note continued from the page before first, under the separator.
+ */
+function placeNotes(
+  places: { page: number; cut?: number }[],
+  ids: string[],
+  els: Map<string, { height: number }>,
+  sheets: Sheet[],
+  g: Geometry,
+  padTop: number,
+): { notes: PlacedNote[]; rests: PlacedNote[] } {
+  const notes: PlacedNote[] = [];
+  const rests: PlacedNote[] = [];
+  if (!ids.length) return { notes, rests };
+  const gap = pageGap();
+  const tops: number[] = [];
+  let acc = 0;
+  for (const sh of sheets) {
+    tops.push(acc);
+    acc += sh.span * g.height + gap;
+  }
+  const sheetOf = (page: number) => {
+    const k = sheets.findIndex((sh) => page >= sh.page && page < sh.page + sh.span);
+    return k < 0 ? sheets.length - 1 : k;
+  };
+  const byPage = new Map<number, { id: string; size: number; cut?: number; rest?: boolean; height: number }[]>();
+  const add = (page: number, x: { id: string; size: number; cut?: number; rest?: boolean; height: number }) => {
+    const list = byPage.get(page) ?? [];
+    list.push(x);
+    byPage.set(page, list);
+  };
+  ids.forEach((id, k) => {
+    const at = places[k];
+    const height = els.get(id)?.height ?? 0;
+    if (!at) return;
+    if (at.cut != null) {
+      add(at.page, { id, size: at.cut, cut: at.cut, height });
+      add(at.page + 1, { id, size: height - at.cut, cut: at.cut, rest: true, height });
+    } else add(at.page, { id, size: height, height });
+  });
+  for (const [page, list] of byPage) {
+    const k = sheetOf(page);
+    const sh = sheets[k]!;
+    const area = list.reduce((sum, x) => sum + x.size, 0);
+    let y = (page - sh.page) * g.height + g.content - area;
+    list.forEach((x, j) => {
+      const placed: PlacedNote = { id: x.id, page, sheet: k, y, top: padTop + tops[k]! + y, height: x.size, first: j === 0, ...(x.cut != null ? { cut: x.cut } : {}) };
+      (x.rest ? rests : notes).push(placed);
+      y += x.size;
+    });
+  }
+  return { notes, rests };
 }
 
 /**
@@ -249,9 +371,12 @@ function sameLayout(a: Layout | null, b: Layout | null): boolean {
     a.splits.every((s, k) => s?.pos === b.splits[k]?.pos) &&
     a.fills.every((f, k) => Math.abs(f - b.fills[k]!) < 0.5) &&
     a.pageOf.length === b.pageOf.length &&
-    JSON.stringify(a.headings) === JSON.stringify(b.headings)
+    JSON.stringify(a.headings) === JSON.stringify(b.headings) &&
+    notesKey(a) === notesKey(b)
   );
 }
+
+const notesKey = (l: Layout) => [...l.notes, ...l.rests].map((n) => `${n.id}:${n.page}:${n.top.toFixed(0)}:${n.height.toFixed(0)}:${n.cut?.toFixed(0) ?? ""}`).join(",");
 
 /** The page setup the sheet breaks were drawn with ("" for none): header text changes redraw them. */
 let drawn = "";
@@ -264,6 +389,8 @@ function apply(view: EditorView, layout: Layout | null): void {
   }
   view.dispatch(view.state.tr.setMeta(pagesKey, layout).setMeta("addToHistory", false));
   pageLayout.set({ layout });
+  // Footnotes moved to (or from) a page foot change their own size and the text's: measure again.
+  if (layout && notesKey(layout) !== (old ? notesKey(old) : "")) schedule();
 }
 
 function el(tag: string, cls: string, text?: string): HTMLElement {
@@ -316,7 +443,48 @@ function decorations(doc: PMNode, layout: Layout, s: PageSetup): DecorationSet {
     const key = ["sheet", k, sh.page, split ? `${split.pos}:${split.left.toFixed(1)}:${split.right.toFixed(1)}` : "", layout.pages, layout.fills[k]!.toFixed(1), s.header, s.footer, s.firstHeader, s.firstFooter, s.differentFirstPage, s.headerAlign, s.footerAlign].join("|");
     decos.push(Decoration.widget(at, () => sheetBreak(s, layout, k), { side: -1, key, ignoreSelection: true, stopEvent: () => true }));
   });
-  return DecorationSet.create(doc, [...decos, ...tocDecos(doc, layout)]);
+  return DecorationSet.create(doc, [...decos, ...tocDecos(doc, layout), ...noteDecos(doc, layout)]);
+}
+
+/**
+ * Footnotes drawn at the foot of their page: each note is placed where the layout put it (cut short when
+ * it continues), and the rest of a continued note is drawn at the top of the next page's notes.
+ */
+function noteDecos(doc: PMNode, layout: Layout): Decoration[] {
+  const box = notesOf(doc);
+  if (!box || (!layout.notes.length && !layout.rests.length)) return [];
+  const byId = new Map(layout.notes.map((n) => [n.id, n]));
+  const decos: Decoration[] = [];
+  box.node.forEach((n, off) => {
+    const at = byId.get(String(n.attrs.id));
+    if (!at || n.attrs.kind !== "footnote") return;
+    const from = box.pos + 1 + off;
+    const cls = `pd-note--placed${at.first ? " pd-note--page-first" : ""}${at.cut != null ? " pd-note--cut" : ""}`;
+    const style = `top: ${at.top.toFixed(2)}px${at.cut != null ? `; height: ${at.cut.toFixed(2)}px` : ""}`;
+    decos.push(Decoration.node(from, from + n.nodeSize, { class: cls, style }, { placedNote: true }));
+  });
+  for (const r of layout.rests) {
+    const key = ["rest", r.id, r.top.toFixed(1), r.height.toFixed(1), r.cut?.toFixed(1)].join("|");
+    decos.push(Decoration.widget(box.pos + 1, (view) => noteRest(view, r), { side: -1, key, ignoreSelection: true, stopEvent: () => true, placedNote: true }));
+  }
+  return decos;
+}
+
+/** The rest of a continued footnote: the note drawn again, shifted up by the part shown on the page before. */
+export function noteRest(view: EditorView, r: PlacedNote): HTMLElement {
+  const outer = el("div", `pd-note-rest${r.first ? " pd-note--page-first" : ""}`);
+  outer.contentEditable = "false";
+  outer.style.top = `${r.top.toFixed(2)}px`;
+  outer.style.height = `${r.height.toFixed(2)}px`;
+  outer.dataset.id = r.id;
+  const box = notesOf(view.state.doc);
+  box?.node.forEach((n) => {
+    if (String(n.attrs.id) !== r.id) return;
+    const inner = DOMSerializer.fromSchema(view.state.schema).serializeNode(n) as HTMLElement;
+    inner.style.marginTop = `${-(r.cut ?? 0).toFixed(2)}px`;
+    outer.append(inner);
+  });
+  return outer;
 }
 
 /** Tables of contents show page numbers: their node view reads them from this decoration. */
@@ -336,8 +504,8 @@ function tocDecos(doc: PMNode, layout: Layout): Decoration[] {
 function remap(deco: DecorationSet, tr: Transaction, layout: Layout | null): DecorationSet {
   const mapped = deco.map(tr.mapping, tr.doc);
   if (!layout) return mapped;
-  const old = mapped.find(undefined, undefined, (spec) => "tocPages" in spec);
-  const fresh = tocDecos(tr.doc, layout);
+  const old = mapped.find(undefined, undefined, (spec) => "tocPages" in spec || "placedNote" in spec);
+  const fresh = [...tocDecos(tr.doc, layout), ...noteDecos(tr.doc, layout)];
   if (!old.length && !fresh.length) return mapped;
   return mapped.remove(old).add(tr.doc, fresh);
 }
