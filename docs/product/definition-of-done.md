@@ -183,14 +183,14 @@ A person can make the document look their way once and reuse it: their own style
 A person can lay paragraphs out like in Word: indents, tabs, a ruler, spacing, page-break control, borders, right-to-left text, sorting, and the marks that show it all.
 
 - **Delivers:** U46–U50
-- **Settles:** A10
+- **Settles:** A10 and A20 were settled early, by the layout spike (IL); this stage adds the paragraph controls on top
 - **Try it:** View > Show ruler → drag the first-line indent → add a right tab with dot leaders and type a name, Tab, a page number → Format > Paragraph → Keep with next on a heading at a page foot → it moves with its paragraph → long paragraphs break across pages with no big gaps → Ctrl+Shift+P shows ¶ and → → select five lines, Format > Sort.
 
 | # | Done when | Evidence | Result |
 |---|---|---|---|
 | 9.1 | Custom line spacing, left, right, first-line and hanging indents, and tab stops with leaders show on screen, in the PDF and in .docx (U46) | unit `paragraph`; e2e `paragraph` | |
 | 9.2 | The ruler shows margins, indents and tabs and dragging changes them; clicking adds a tab (U46) | e2e `ruler` | |
-| 9.3 | Paragraphs split across pages at lines, the same on screen and in the PDF, with widow and orphan control; keep with next, keep lines together and page break before hold (U47, A10, A20). If the A10 spike fails: paragraphs move whole and Keep lines together is always on, and this row says so | e2e `pagination` split fixture; unit `paginate` | |
+| 9.3 | Paragraphs split across pages at lines, the same on screen and in the PDF, with widow and orphan control; keep with next, keep lines together and page break before hold (U47, A10, A20). A10 and A20 hold (IL), so the fallback is not needed | e2e `pagination` split fixture; unit `paginate` | |
 | 9.4 | Borders, shading and right-to-left paragraphs show, print and export to .docx (U48) | e2e `paragraph`; unit `export-docx` | |
 | 9.5 | Non-printing characters show and never print (U49) | e2e `paragraph` (PDF text has no ¶) | |
 | 9.6 | Sort orders paragraphs, list items and table rows, numbers in number order; Undo returns (U50) | unit `sort`; e2e `paragraph` | |

@@ -7,7 +7,7 @@ import { Extension } from "@tiptap/core";
 import { Plugin, PluginKey, type EditorState, type Transaction } from "@tiptap/pm/state";
 import { Decoration, DecorationSet, type EditorView, type NodeView } from "@tiptap/pm/view";
 import type { Node as PMNode } from "@tiptap/pm/model";
-import { CSS_PX_PER_INCH, headerFooterText, pageInches, paginate, sheetsOf, type HfAlign, type PageSetup, type Sheet, type TocEntry } from "@p-doc/core";
+import { CSS_PX_PER_INCH, headerFooterText, pageInches, paginate, sheetsOf, type BlockBox, type HfAlign, type PageSetup, type Sheet, type TocEntry } from "@p-doc/core";
 import { createStore } from "../lib/store.ts";
 
 /** A page's geometry in CSS pixels, rounded as the page is drawn. */
@@ -36,8 +36,23 @@ export interface Layout {
   pageOf: number[];
   /** Space left at the end of the sheet before each sheet (px); 0 for the first. */
   fills: number[];
+  /**
+   * For a sheet that starts inside a split paragraph (A10): the document position of its first line,
+   * and the paragraph's left and right inset from the text area (px), so the break spans the page.
+   */
+  splits: ({ pos: number; left: number; right: number } | null)[];
   /** Page of each heading, by id, for the table of contents. */
   headings: Record<string, number>;
+}
+
+/** The page a document position is on: a split paragraph's later lines are on the pages after. */
+export function pageAt(layout: Layout, index: number, pos: number): number {
+  let page = layout.pageOf[index] ?? 1;
+  layout.sheets.forEach((sh, k) => {
+    const split = layout.splits[k];
+    if (split && sh.start === index && pos >= split.pos) page = sh.page;
+  });
+  return page;
 }
 
 /** The layout for views outside the editor (sheets, page count, the status bar). */
@@ -86,7 +101,12 @@ function measure(view: EditorView): void {
   const g = geometry(s);
   const sheet = view.dom.closest<HTMLElement>(".page");
   const scale = sheet ? sheet.getBoundingClientRect().width / g.width || 1 : 1;
-  const boxes: { height: number; pageBreak: boolean; float?: number }[] = [];
+  const boxes: BlockBox[] = [];
+  /** Line starts of the paragraphs asked for their lines, by block index. */
+  const lineStarts = new Map<number, { pos: number[]; left: number; right: number }>();
+  const domRect = view.dom.getBoundingClientRect();
+  const contentLeft = domRect.left + (parseFloat(getComputedStyle(view.dom).paddingLeft) || 0) * scale;
+  const contentRight = domRect.right - (parseFloat(getComputedStyle(view.dom).paddingRight) || 0) * scale;
   const headingAt: [string, number][] = [];
   // Each block's height is where its bottom is less where the block before it ended (or its sheet began):
   // that counts margins, and any gap where a block that can't sit beside a float moved below it.
@@ -96,6 +116,7 @@ function measure(view: EditorView): void {
     const el = view.nodeDOM(offset);
     let height = 0;
     let float: number | undefined;
+    let lines: (() => number[]) | undefined;
     if (el instanceof HTMLElement && el.getClientRects().length) {
       const before = el.previousElementSibling;
       if (before?.classList.contains("pd-sheet-break")) flowEnd = before.getBoundingClientRect().bottom;
@@ -103,18 +124,94 @@ function measure(view: EditorView): void {
       const r = el.getBoundingClientRect();
       const top = Math.min(flowEnd, r.top - (parseFloat(cs.marginTop) || 0) * scale);
       const bottom = r.bottom + (parseFloat(cs.marginBottom) || 0) * scale;
-      height = Math.max(0, bottom - top) / scale;
+      // A break drawn inside a split paragraph is not the paragraph's own height.
+      const inner = [...el.querySelectorAll<HTMLElement>(".pd-sheet-break")].map((b) => b.getBoundingClientRect());
+      height = Math.max(0, bottom - top - inner.reduce((sum, b) => sum + b.height, 0)) / scale;
       if (cs.float !== "none") [float, height] = [height, 0];
       else flowEnd = bottom;
+      if (node.type.name === "paragraph" && cs.float === "none") {
+        lines = () => {
+          const m = measureLines(view, el, top, inner, scale);
+          lineStarts.set(i, { pos: m.pos, left: (r.left - contentLeft) / scale, right: (contentRight - r.right) / scale });
+          return m.bottoms;
+        };
+      }
     }
-    boxes.push({ height, pageBreak: node.type.name === "pageBreak", float });
+    boxes.push({ height, pageBreak: node.type.name === "pageBreak", float, lines, widows: true });
     if (node.type.name === "heading" && node.attrs.id) headingAt.push([String(node.attrs.id), i]);
   });
   const p = paginate(boxes, g.content);
   const sheets = sheetsOf(p);
   const headings: Record<string, number> = {};
   for (const [id, i] of headingAt) headings[id] = p.pageOf[i] ?? 1;
-  apply(view, settle(layoutOf(view.state), { pages: p.pages, sheets, pageOf: p.pageOf, fills: sheets.map((sh) => (sh.start === 0 ? 0 : (p.push.get(sh.start) ?? 0))), headings }));
+  const splits = sheets.map((sh) => {
+    if (!sh.startLine) return null;
+    const l = lineStarts.get(sh.start);
+    const pos = l?.pos[sh.startLine];
+    return l && pos != null ? { pos, left: l.left, right: l.right } : null;
+  });
+  apply(view, settle(layoutOf(view.state), { pages: p.pages, sheets, pageOf: p.pageOf, fills: p.fills, splits, headings }));
+}
+
+/**
+ * A paragraph's lines (A10): where each line starts in the document, and the boundary below each line
+ * but the last, from the block's top in page px. Breaks already drawn inside it are taken out, so the
+ * lines measure as if the paragraph were whole.
+ */
+function measureLines(view: EditorView, el: HTMLElement, top: number, inner: DOMRect[], scale: number): { bottoms: number[]; pos: number[] } {
+  const shift = (y: number) => inner.reduce((sum, b) => (b.bottom <= y + 1 ? sum + b.height : sum), 0);
+  const lines: { top: number; bottom: number; pos: number }[] = [];
+  const add = (r: { top: number; bottom: number }, at: () => number) => {
+    const t = r.top - shift(r.top);
+    const b = r.bottom - shift(r.top);
+    const last = lines[lines.length - 1];
+    // Glyph boxes can be taller than the line, so neighbouring lines overlap: compare their middles.
+    if (last && Math.abs((t + b) / 2 - (last.top + last.bottom) / 2) < Math.min(b - t, last.bottom - last.top) / 2) {
+      last.top = Math.min(last.top, t);
+      last.bottom = Math.max(last.bottom, b);
+    } else lines.push({ top: t, bottom: b, pos: at() });
+  };
+  const range = document.createRange();
+  const charTop = (node: Text, o: number) => {
+    range.setStart(node, o);
+    range.setEnd(node, o + 1);
+    const r = range.getBoundingClientRect();
+    return r.height ? r.top : -Infinity;
+  };
+  const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT, {
+    acceptNode: (n) => ((n as Element).classList?.contains("pd-sheet-break") ? NodeFilter.FILTER_REJECT : n.nodeType === Node.TEXT_NODE || n.nodeName === "BR" ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP),
+  });
+  for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+    if (n.nodeName === "BR") {
+      const r = (n as Element).getBoundingClientRect();
+      if (r.height) add(r, () => view.posAtDOM(n!.parentNode!, Array.prototype.indexOf.call(n!.parentNode!.childNodes, n)));
+      continue;
+    }
+    const text = n as Text;
+    if (!text.length) continue;
+    range.selectNodeContents(text);
+    const rects = [...range.getClientRects()].filter((r) => r.width > 0.5 && r.height > 0);
+    let from = 0;
+    rects.forEach((r, j) => {
+      if (j > 0) {
+        // The first character on this rect's line.
+        let lo = from + 1;
+        let hi = text.length - 1;
+        while (lo < hi) {
+          const mid = (lo + hi) >> 1;
+          if (charTop(text, mid) >= r.top - 1) hi = mid;
+          else lo = mid + 1;
+        }
+        from = lo;
+      }
+      const at = from;
+      add(r, () => view.posAtDOM(text, at));
+    });
+  }
+  range.detach();
+  const bottoms: number[] = [];
+  for (let k = 0; k + 1 < lines.length; k++) bottoms.push(((lines[k]!.bottom + lines[k + 1]!.top) / 2 - top) / scale);
+  return { bottoms, pos: lines.map((l) => l.pos) };
 }
 
 /** The layout drawn before the one on screen, and whether the document or setup changed since. */
@@ -138,7 +235,8 @@ function sameLayout(a: Layout | null, b: Layout | null): boolean {
   return (
     a.pages === b.pages &&
     a.sheets.length === b.sheets.length &&
-    a.sheets.every((s, k) => s.start === b.sheets[k]!.start && s.span === b.sheets[k]!.span) &&
+    a.sheets.every((s, k) => s.start === b.sheets[k]!.start && s.startLine === b.sheets[k]!.startLine && s.span === b.sheets[k]!.span) &&
+    a.splits.every((s, k) => s?.pos === b.splits[k]?.pos) &&
     a.fills.every((f, k) => Math.abs(f - b.fills[k]!) < 0.5) &&
     a.pageOf.length === b.pageOf.length &&
     JSON.stringify(a.headings) === JSON.stringify(b.headings)
@@ -182,6 +280,12 @@ function sheetBreak(s: PageSetup, layout: Layout, k: number): HTMLElement {
   root.contentEditable = "false";
   root.dataset.pageEnd = String(end);
   root.style.setProperty("--fill", `${layout.fills[k]!.toFixed(2)}px`);
+  const split = layout.splits[k];
+  if (split) {
+    root.classList.add("pd-sheet-break--inside");
+    root.style.setProperty("--inset-left", `${split.left.toFixed(2)}px`);
+    root.style.setProperty("--inset-right", `${split.right.toFixed(2)}px`);
+  }
   root.append(
     el("div", "pd-sheet-fill"),
     hfArea("pd-sheet-foot", headerFooterText(s, "footer", end, layout.pages), s.footerAlign, end),
@@ -197,8 +301,10 @@ function decorations(doc: PMNode, layout: Layout, s: PageSetup): DecorationSet {
   const decos: Decoration[] = [];
   layout.sheets.forEach((sh, k) => {
     if (k === 0 || offsets[sh.start] == null) return;
-    const key = ["sheet", k, sh.page, layout.pages, layout.fills[k]!.toFixed(1), s.header, s.footer, s.firstHeader, s.firstFooter, s.differentFirstPage, s.headerAlign, s.footerAlign].join("|");
-    decos.push(Decoration.widget(offsets[sh.start]!, () => sheetBreak(s, layout, k), { side: -1, key, ignoreSelection: true, stopEvent: () => true }));
+    const split = layout.splits[k];
+    const at = split ? split.pos : offsets[sh.start]!;
+    const key = ["sheet", k, sh.page, split ? `${split.pos}:${split.left.toFixed(1)}:${split.right.toFixed(1)}` : "", layout.pages, layout.fills[k]!.toFixed(1), s.header, s.footer, s.firstHeader, s.firstFooter, s.differentFirstPage, s.headerAlign, s.footerAlign].join("|");
+    decos.push(Decoration.widget(at, () => sheetBreak(s, layout, k), { side: -1, key, ignoreSelection: true, stopEvent: () => true }));
   });
   return DecorationSet.create(doc, [...decos, ...tocDecos(doc, layout)]);
 }

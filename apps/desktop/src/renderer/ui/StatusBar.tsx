@@ -3,7 +3,7 @@ import { useMemo } from "react";
 import { Add20Regular, ArrowSync16Regular, CloudCheckmark16Regular, CloudOff16Regular, Subtract20Regular, Warning16Regular } from "@fluentui/react-icons";
 import { runCommand } from "../commands.ts";
 import { getEditor } from "../session.ts";
-import { pageLayout } from "../editor/pages.ts";
+import { pageAt, pageLayout } from "../editor/pages.ts";
 import { app, openDialog } from "../state.ts";
 import { MARKUP_NAMES, setMarkup } from "../review.ts";
 import { syncLabel, syncNow } from "../sync.ts";
@@ -55,7 +55,7 @@ export function StatusBar() {
   const editor = getEditor();
   const docRef = editor?.state.doc;
   const words = useMemo(() => (docRef ? countWords(docRef.textBetween(0, docRef.content.size, " ", " ")) : 0), [docRef]);
-  const page = layout && editor ? (layout.pageOf[editor.state.selection.$from.index(0)] ?? 1) : null;
+  const page = layout && editor ? pageAt(layout, editor.state.selection.$from.index(0), editor.state.selection.from) : null;
   return (
     <footer className="statusbar" data-region aria-label="Status">
       {layout && page != null && (

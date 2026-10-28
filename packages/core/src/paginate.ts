@@ -15,13 +15,24 @@ export interface BlockBox {
   pageBreak?: boolean;
   /** Height of a floated block (with its margins); its `height` in the flow is usually 0. */
   float?: number;
+  /**
+   * A block that may split between lines (A10): the bottom of each line but the last, from the block's
+   * top. Asked only when the block crosses a page end.
+   */
+  lines?: () => number[];
+  /** Widow and orphan control: a split leaves at least two lines on each side. */
+  widows?: boolean;
 }
 
 export interface Pagination {
-  /** Page number (1-based) of each block. */
+  /** Page number (1-based) of each block (of its first line, for a split block). */
   pageOf: number[];
-  /** Index of the first block on each page (a page a tall block overflows into has no entry of its own). */
+  /** Index of the block each sheet starts in (a page a tall block overflows into has no entry of its own). */
   starts: number[];
+  /** The line of that block each sheet starts at: 0 for its top, n when its first n lines are on the page before. */
+  startLines: number[];
+  /** Space left at the foot of the page before each sheet (px); 0 for the first. */
+  fills: number[];
   pages: number;
   /** Space to add before a block so it starts at the top of its page (px), by block index. */
   push: Map<number, number>;
@@ -33,39 +44,113 @@ export function paginate(blocks: BlockBox[], pageContentHeight: number): Paginat
   const h = Math.max(1, pageContentHeight);
   const pageOf: number[] = [];
   const starts: number[] = [0];
+  const startLines: number[] = [0];
+  const fills: number[] = [0];
   const push = new Map<number, number>();
   let page = 1;
   let used = 0;
   /** Bottom of the lowest float on the page, from the top of the page's text. */
   let floats = 0;
   let breakNext = false;
+  const newSheet = (i: number, line: number, fill: number) => {
+    if (line === 0) push.set(i, fill);
+    page++;
+    starts.push(i);
+    startLines.push(line);
+    fills.push(fill);
+    used = 0;
+    floats = 0;
+  };
+  /** Lines the fragment from line `at` (at `offset` px into the block) fits in `room`, by the widow rule. */
+  const fitting = (ls: number[], at: number, offset: number, room: number, widows: boolean): number => {
+    let end = at;
+    while (end < ls.length && ls[end]! - offset <= room + EPS) end++;
+    if (!widows) return end;
+    const total = ls.length + 1;
+    if (total - end < 2) end = total - 2;
+    // A first line alone at the foot of a page (orphan) moves on with the rest.
+    if (at === 0 && end < 2) return 0;
+    return Math.max(at, end);
+  };
   blocks.forEach((b, i) => {
     const need = Math.max(b.height, b.float ?? 0);
-    if (i > 0 && (breakNext || (Math.max(used, floats) > 0 && used + need > h + EPS))) {
-      push.set(i, Math.max(0, h - Math.max(used, floats)));
-      page++;
-      starts.push(i);
-      used = 0;
-      floats = 0;
-    }
+    const full = () => Math.max(used, floats) > 0;
+    if (i > 0 && breakNext) newSheet(i, 0, Math.max(0, h - Math.max(used, floats)));
     breakNext = Boolean(b.pageBreak);
-    pageOf.push(page);
-    if (b.float) floats = Math.min(h, Math.max(floats, used + b.float));
-    used += b.height;
-    if (used > h + EPS) {
-      const extra = Math.ceil((used - EPS) / h) - 1;
-      page += extra;
-      used -= extra * h;
+    const fits = !full() || used + need <= h + EPS;
+    if (fits && b.height <= h - used + EPS) {
+      pageOf.push(page);
+      if (b.float) floats = Math.min(h, Math.max(floats, used + b.float));
+      used += b.height;
+      return;
+    }
+    if (!b.lines || b.float) {
+      if (!fits) newSheet(i, 0, Math.max(0, h - Math.max(used, floats)));
+      pageOf.push(page);
+      if (b.float) floats = Math.min(h, Math.max(floats, used + b.float));
+      used += b.height;
+      if (used > h + EPS) {
+        const extra = Math.ceil((used - EPS) / h) - 1;
+        page += extra;
+        used -= extra * h;
+      }
+      return;
+    }
+    // Split between lines: as many as fit on each page, the rest on the next.
+    const ls = b.lines();
+    const widows = Boolean(b.widows);
+    let at = 0;
+    let offset = 0;
+    let first = true;
+    for (;;) {
+      const rest = b.height - offset;
+      if (rest <= h - used + EPS) {
+        if (first) pageOf.push(page);
+        used += rest;
+        return;
+      }
+      // On an empty page the rule gives way: the lines have nowhere better to go.
+      const end = fitting(ls, at, offset, h - used, widows && full());
+      if (end === at) {
+        if (!full()) {
+          // Nothing fits on an empty page: the next line goes on anyway (one taller than a page overflows).
+          if (at >= ls.length) {
+            if (first) pageOf.push(page);
+            used += rest;
+            const extra = Math.ceil((used - EPS) / h) - 1;
+            page += extra;
+            used -= extra * h;
+            return;
+          }
+          const fill = Math.max(0, h - (ls[at]! - offset));
+          if (first) pageOf.push(page);
+          first = false;
+          offset = ls[at]!;
+          at += 1;
+          newSheet(i, at, fill);
+          continue;
+        }
+        newSheet(i, at, Math.max(0, h - Math.max(used, floats)));
+        continue;
+      }
+      if (first) pageOf.push(page);
+      first = false;
+      const fill = Math.max(0, h - Math.max(used + ls[end - 1]! - offset, floats));
+      offset = ls[end - 1]!;
+      at = end;
+      newSheet(i, at, fill);
     }
   });
-  return { pageOf, starts, pages: page, push };
+  return { pageOf, starts, startLines, fills, pages: page, push };
 }
 
 /** A run of blocks laid out on one sheet: one page, or several when a tall block overflows its page. */
 export interface Sheet {
   /** First block index. */
   start: number;
-  /** One past the last block index. */
+  /** The line of the first block the sheet starts at (0: its top). */
+  startLine: number;
+  /** One past the last block index (a block split onto the next sheet counts in both). */
   end: number;
   /** Page number (1-based) of the sheet's first page. */
   page: number;
@@ -75,11 +160,16 @@ export interface Sheet {
 
 export function sheetsOf(p: Pagination): Sheet[] {
   const n = p.pageOf.length;
+  let page = 1;
   return p.starts.map((start, k) => {
-    const end = p.starts[k + 1] ?? n;
-    const page = p.pageOf[start] ?? 1;
-    const nextPage = k + 1 < p.starts.length ? (p.pageOf[p.starts[k + 1]!] ?? page + 1) : p.pages + 1;
-    return { start, end, page, span: Math.max(1, nextPage - page) };
+    const next = p.starts[k + 1];
+    const nextLine = p.startLines[k + 1] ?? 0;
+    const end = next == null ? n : next + (nextLine > 0 ? 1 : 0);
+    // A sheet that starts inside a split block is the page after the one before it.
+    const first = k === 0 ? 1 : (p.startLines[k] ?? 0) > 0 ? page : (p.pageOf[start] ?? page);
+    const nextPage = next == null ? p.pages + 1 : nextLine > 0 ? first + 1 : (p.pageOf[next] ?? first + 1);
+    page = first + Math.max(1, nextPage - first);
+    return { start, startLine: p.startLines[k] ?? 0, end, page: first, span: Math.max(1, nextPage - first) };
   });
 }
 

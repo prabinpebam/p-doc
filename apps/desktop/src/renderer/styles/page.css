@@ -49,6 +49,28 @@
   user-select: none;
 }
 
+/* A break inside a split paragraph (A10): it spans the page from the paragraph's insets and takes none of its text styles. */
+.pd-sheet-break--inside {
+  margin: 0 calc(-1 * (var(--page-pad-right) + var(--inset-right))) 0 calc(-1 * (var(--page-pad-left) + var(--inset-left)));
+  text-indent: 0;
+  text-align: start;
+  font-style: normal;
+  font-weight: 400;
+  letter-spacing: normal;
+  line-height: normal;
+}
+
+/* The parts of a split paragraph in print: space after only at its end, space before only at its start. */
+.pd-split-head {
+  margin-bottom: 0 !important;
+}
+
+.pd-split-tail {
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+  text-indent: 0 !important;
+}
+
 .pd-sheet-fill {
   height: var(--fill);
 }

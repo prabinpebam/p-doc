@@ -18,7 +18,7 @@ The spec and its Definitions of Done. Assumptions are tracked there (A1–A17). 
 | Goal mode | Make this production-ready: every stage built with tests as its evidence, packaged |
 | Attention | Keep going unattended |
 | Time | Until stages 1–17 are done or blocked on the owner; a handoff at every stage boundary so another session can resume |
-| Scope | Stages 1–17 in order (§3). The cut line is the parity audit: Add rows are in; Later and Skip rows are out unless the owner moves them |
+| Scope | Stages 1–17 in the order of §3 (after stage 7: the layout spike, then 9–12, 13, 8, 14, 15, 16a, 16b). The cut line is the parity audit: Add rows are in; Later and Skip rows are out unless the owner moves them |
 | Never touch | The owner's real GitHub account and repositories, real documents (`Documents\P-Doc`), real app settings; third-party documents (research) |
 | May merge, push, deploy | Local commits only. No push, no remote creation, no release |
 | Escalate when | A credential, a licence choice, deleting the owner's files, anything public |
@@ -38,21 +38,29 @@ The spec and its Definitions of Done. Assumptions are tracked there (A1–A17). 
 | IA | Parity audit: parity table, U39–U80, flows, A8–A17, O12–O19, DoD stages 7–16, this plan | spec, DoD | Slate runtime check; `grounding-critic` | Done |
 | IP | Packaging check (early, before the parity stages) | 17.1 risk | `pnpm --filter @p-doc/desktop package:dir` then `package:smoke` | Done |
 | I7 | Stage 7 Images beside the document | 7.1–7.7 | integrity unit test first (temp repos, fake GitHub); vitest; e2e; `pnpm perf`; `a6-measure` | Done |
-| I8 | Stage 8 Styles and lists | 8.1–8.6 | vitest; e2e | Not started |
-| I9 | Stage 9 Paragraph layout | 9.1–9.7 | A10 spike first; vitest; e2e; `pnpm perf` | Not started |
+| IL | Layout spike, before the pagination stages, 60 minutes at most: paragraphs split at lines on screen and in the PDF (A10), its repagination cost (A20), per-section paper in print (A12), columns on screen and in print (A13); notes and settling page numbers (A8, A19) decided by design and tested in stage 10. Each failing assumption takes its register fallback, logged | 9.3, 9.7, 10.1, 10.6, 11.1, 11.2, 12.2 | unit `paginate`; e2e `pagination` split fixture; probe PDFs | Done |
+| I9 | Stage 9 Paragraph layout | 9.1–9.7 | A10 built in IL; vitest; e2e; `pnpm perf` | Not started |
 | I10 | Stage 10 References | 10.1–10.5 | A8 spike first; vitest; e2e; `pnpm perf` | Not started |
 | I11 | Stage 11 Sections and page layout | 11.1–11.7 | A12 and A13 spikes first; vitest; e2e; `pnpm perf` | Not started |
 | I12 | Stage 12 Tables, code and equations | 12.1–12.5 | vitest; e2e; licence check for new dependencies | Not started |
 | I13 | Stage 13 Review power | 13.1–13.6 | vitest; e2e; `pnpm perf` | Not started |
+| I8 | Stage 8 Styles and lists (moved after 13: no layout risk) | 8.1–8.6 | vitest; e2e | Not started |
 | I14 | Stage 14 Citations, index and fields | 14.1–14.3 | vitest; e2e | Not started |
 | I15 | Stage 15 Navigation and windows | 15.1–15.5 | vitest; e2e | Not started |
-| I16 | Stage 16 Library, files and proofing | 16.1–16.6 | vitest; e2e | Not started |
+| I16a | Stage 16, first half: library, folders, details, templates | 16.1–16.3 | vitest; e2e | Not started |
+| I16b | Stage 16, second half: spelling, accessibility check, EPUB, .odt and .rtf | 16.4–16.6 | vitest; e2e; export validators | Not started |
 | I17 | Stage 17 Install | 17.1–17.3 | `pnpm package`; packaged smoke e2e | Not started |
 | IZ | Against the promise (DoD §4), PD9, final `pnpm perf` | PD1–PD9 | review; `pnpm perf` | Not started |
 
 **Try it:** each stage's "Try it" in the Definitions of Done.
 
 **How each parity stage runs** (from the stage 6 review): the risky part first (an integrity test for stage 7; a pagination spike for 9–12, taking the register's fallback if it fails, and logging it), then the build, one e2e journey per stage plus unit tests, the DoD rows filled, the spec's "As built", a commit, and a handoff. A stage that grows past its user-can statements is cut to them and the rest queued as Later in the parity audit.
+
+**Cadence (progress review after stage 7):**
+- **Checks by tier.** Each change: `pnpm typecheck`, the touched package's unit tests, and the stage's own e2e spec. Each stage: full unit, full e2e and the command-search sweep (8.6's check, run every stage). `pnpm perf` only for stages with a performance row (9, 10, 11, 13) and at IZ.
+- **Commits** per group of DoD rows, so no more than about an hour of work is ever uncommitted.
+- **A stage runs 90 minutes at most** before a review. If it runs over, these go to Later first: read aloud (15.5), hyphenation and drop caps (11.5), and citation styles beyond APA, MLA and Chicago (14.1).
+- **Write-ups** are kept to the DoD rows, the spec's "As built" and the landing row.
 
 ## 4. Decisions taken as working defaults
 
@@ -86,5 +94,6 @@ The spec and its Definitions of Done. Assumptions are tracked there (A1–A17). 
 | IA | Done 2026-10-28 | `docs/product/parity.md`: 146 capabilities from the GD and W knowledge bases (42 Have, 81 Add, 8 Later, 15 Skip; counted by script; 149 after stage 7 added three image rows: 43 Have, 82 Add, 9 Later, 15 Skip). Spec J13–J18, U39–U80, flows §4.9–§4.18, V11–V18, A8–A20, O12–O19; DoD stages 7–17. `grounding-critic` review: 12 findings, all folded in (the newer-format read-only rule A18, O2 reopened with A19 and A20, repository-relative image paths, the folder-to-Public confirmation, testable rows 15.3, 15.5, 16.1, 16.4, 16.5) |
 | IP | Done 2026-10-28 | `package:dir` builds `release/win-unpacked` (asar 41.8 MB: the built `out/` only, no node_modules; main and preload import only Node built-ins and Electron). `package:smoke` launches it with its own folders: window loaded 1.4 s after launch, no renderer errors, Git 2.56 found. Playwright can't attach to a packaged build (the inspect fuse is off, as intended), so the smoke reads the app's log; main now logs window loaded, load failures, renderer errors and a gone renderer. For stage 17: no app icon yet, source maps ship in the asar, signtool runs with no certificate |
 | I7 | Done 2026-10-29 | 30 e2e journeys pass (`images` new: insert by paste, drop and file; resize, align, wrap, crop, replace, alt text, drag to move; a missing image shows "Image missing" and is left out of a web page; a newer-format file opens read-only, shows the parts it knows and is unchanged after quitting; pagination 7.5 with floats); 143 unit tests (`assets-integrity` against temp repos and a fake GitHub; `image` 11, including `knownContent`); `pnpm typecheck`; `pnpm lint:design` clean; `pnpm perf` within every budget, including opening a 100-page document with 20 large pictures (p95 90 ms, budget 500) and showing a 20 MB picture (p95 143 ms, budget 300). `a6-measure`: the fixture is a 0.7 MB file with 40 MB of pictures beside it; 10 more versions add 0.2 MB. DoD 7.1–7.7 Pass; A9 Validated. Cold start re-recorded at p95 552 ms (stage 6 at HEAD measured the same on this machine). Found and fixed: a missing image showed the broken-image icon; a newer document showed an empty page (unknown parts are now dropped from the read-only view) |
+| IL | Done 2026-10-29 | A10 holds: the paginator splits a paragraph at a line start, with widow and orphan control (two lines each side; on an empty page the rule gives way; a paragraph taller than a page splits more than once); line boxes are measured only for a paragraph that crosses a page end. e2e `9.3 A10` (new, 24-paragraph fixture, one of 900 words): every page foot has less than two lines of space, and each PDF page read with pdfjs starts and ends with the same words as on screen; `2.1` and `7.5` updated for sheets that start inside a paragraph. Unit `paginate` 14 (6 new). A20 holds: `pnpm perf` repagination p95 7.7 ms (budget 16), all budgets met. A12 and A13 hold in print (Electron probe: portrait, landscape, portrait pages; two balanced columns). A8 and A19 designed in the register. Found and fixed: line grouping merged neighbouring lines whose glyph boxes overlap, so no paragraph split. Dev dependency `pdfjs-dist` 6.4.299 (Apache-2.0) |
 
 **Not checked:** live Word UI and signed-in Google Docs surfaces (no test accounts).

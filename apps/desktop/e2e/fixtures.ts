@@ -63,6 +63,18 @@ export function longDocument(): unknown {
   return { type: "doc", content };
 }
 
+/**
+ * Long paragraphs for splitting at lines (A10): every word is numbered, so the text at the top and foot
+ * of each page tells where it broke. One paragraph is longer than a page.
+ */
+export function splitDocument(): unknown {
+  let n = 0;
+  const words = (count: number) => Array.from({ length: count }, () => `${WORDS[n % WORDS.length]}${++n}`).join(" ");
+  const content: unknown[] = [h(1, "Split fixture", "split")];
+  for (let i = 0; i < 24; i++) content.push(p(words(i === 9 ? 900 : 40 + ((i * 37) % 160))));
+  return { type: "doc", content };
+}
+
 /** A short document with headings for the table of contents. */
 export function headedDocument(pages = 3): unknown {
   const content: unknown[] = [];

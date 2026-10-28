@@ -15,10 +15,13 @@ const EDITOR_ONLY = ["ProseMirror-selectednode", "selectedCell", "pd-match", "pd
 // Drawn only on screen: resize handles, the crop frame, and an image whose file is missing (exports skip it).
 const SCREEN_ONLY = ".column-resize-handle, .pd-img-handle, .pd-crop, .pd-img-missing, .pd-img.is-missing";
 
-/** A block's HTML without the editor's own state (selection, find highlights, resize handles). */
-function blockHtml(node: Node | null): string {
-  if (!(node instanceof HTMLElement)) return "";
-  if (node.matches(".pd-img.is-missing")) return "";
+/**
+ * A block's HTML without the editor's own state (selection, find highlights, resize handles): one part,
+ * or for a paragraph split across pages (A10) one part per page, cut where the page breaks inside it.
+ */
+function blockHtml(node: Node | null): string[] {
+  if (!(node instanceof HTMLElement)) return [""];
+  if (node.matches(".pd-img.is-missing")) return [""];
   const c = node.cloneNode(true) as HTMLElement;
   for (const x of [c, ...c.querySelectorAll<HTMLElement>("*")]) {
     x.removeAttribute("contenteditable");
@@ -27,7 +30,25 @@ function blockHtml(node: Node | null): string {
     x.classList.remove(...EDITOR_ONLY);
   }
   for (const x of c.querySelectorAll(SCREEN_ONLY)) x.remove();
-  return c.outerHTML;
+  const parts: string[] = [];
+  let rest = c;
+  for (;;) {
+    const cut = rest.querySelector(".pd-sheet-break");
+    if (!cut) break;
+    const head = rest.cloneNode(true) as HTMLElement;
+    const r = document.createRange();
+    r.setStartBefore(head.querySelector(".pd-sheet-break")!);
+    r.setEndAfter(head.lastChild!);
+    r.deleteContents();
+    head.classList.add("pd-split-head");
+    parts.push(head.outerHTML);
+    r.setStartBefore(rest.firstChild!);
+    r.setEndAfter(cut);
+    r.deleteContents();
+    rest.classList.add("pd-split-tail");
+  }
+  parts.push(rest.outerHTML);
+  return parts;
 }
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]!);
@@ -44,8 +65,11 @@ export interface PrintDoc {
 export function printDocument(doc: PDocFile, view: EditorView): PrintDoc {
   const p = doc.page;
   const g = geometry(p);
-  const blocks: string[] = [];
+  const blocks: string[][] = [];
   view.state.doc.forEach((_n, off) => void blocks.push(blockHtml(view.nodeDOM(off))));
+  /** The next part of each block to print: a split block gives one part to each sheet it is on. */
+  const next = blocks.map(() => 0);
+  const part = (i: number) => blocks[i]![Math.min(next[i]!++, blocks[i]!.length - 1)]!;
   const layout = p.mode === "pages" ? layoutNow() : null;
   const width = layout ? g.width : g.width - g.left - g.right;
   const vars = `--page-width: ${width}px; --page-pad-top: ${g.top}px; --page-pad-bottom: ${g.bottom}px; --page-pad-left: ${g.left}px; --page-pad-right: ${g.right}px; --page-color: ${esc(p.color)}; --doc-font: ${esc(doc.styles.normal.fontFamily)}`;
@@ -59,13 +83,13 @@ export function printDocument(doc: PDocFile, view: EditorView): PrintDoc {
     body = layout.sheets
       .map((sh) => {
         const last = sh.page + sh.span - 1;
-        return `<section class="print-sheet" style="--sheet-height: ${sh.span * g.height}px">${hf("print-head", "header", headerFooterText(p, "header", sh.page, layout.pages), p.headerAlign)}<div class="pd-content">${blocks.slice(sh.start, sh.end).join("")}</div>${hf("print-foot", "footer", headerFooterText(p, "footer", last, layout.pages), p.footerAlign)}</section>`;
+        return `<section class="print-sheet" style="--sheet-height: ${sh.span * g.height}px">${hf("print-head", "header", headerFooterText(p, "header", sh.page, layout.pages), p.headerAlign)}<div class="pd-content">${Array.from({ length: sh.end - sh.start }, (_, j) => part(sh.start + j)).join("")}</div>${hf("print-foot", "footer", headerFooterText(p, "footer", last, layout.pages), p.footerAlign)}</section>`;
       })
       .join("");
   } else {
     at = `@page { size: ${g.width}px ${g.height}px; margin: ${g.top}px ${g.right}px ${g.bottom}px ${g.left}px }`;
     margins = { top: inch(g.top), bottom: inch(g.bottom), left: inch(g.left), right: inch(g.right) };
-    body = `<section class="print-flow"><div class="pd-content">${blocks.join("")}</div></section>`;
+    body = `<section class="print-flow"><div class="pd-content">${blocks.map((b) => b.join("")).join("")}</div></section>`;
   }
   const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:"><title>${esc(doc.title)}</title><style>${tokensCss}\n${pageCss}\n${styleCss(doc.styles, ".print-doc .pd-content")}\n${at}</style></head><body class="print-body"><main class="print-doc${layout ? " paged" : ""}" style="${vars}">${body}</main></body></html>`;
   return { request: { html, title: doc.title, size: { width: inch(g.width), height: inch(g.height) }, margins }, pages: layout?.pages ?? null };
