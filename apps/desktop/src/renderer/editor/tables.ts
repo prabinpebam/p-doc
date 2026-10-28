@@ -1,6 +1,7 @@
 /** Table operations beyond rows and columns (U60): equal column widths, and what the cells at the caret carry. */
 import type { Editor } from "@tiptap/core";
-import { CellSelection, TableMap } from "@tiptap/pm/tables";
+import { closeHistory } from "@tiptap/pm/history";
+import { CellSelection, selectedRect, TableMap } from "@tiptap/pm/tables";
 
 /** Cell shading: light enough that black text keeps its contrast, as in Docs and Word. */
 export const SHADES: [string, string][] = [
@@ -65,4 +66,67 @@ export function distributeColumns(editor: Editor): boolean {
   });
   editor.view.dispatch(tr);
   return true;
+}
+
+/** Table properties (U60): the selected columns' width (px, null for automatic) and the selected cells' border and padding. */
+export interface CellProps {
+  width: number | null;
+  borderWidth: number | null;
+  borderColor: string | null;
+  padding: number | null;
+}
+
+export const BORDER_WIDTHS: [number, string][] = [
+  [0, "None"],
+  [0.5, "½ pt"],
+  [1, "1 pt"],
+  [1.5, "1½ pt"],
+  [2.25, "2¼ pt"],
+  [3, "3 pt"],
+];
+export const BORDER_COLOURS: [string, string][] = [
+  ["#000000", "Black"],
+  ["#999999", "Grey"],
+  ["#1a73e8", "Blue"],
+  ["#188038", "Green"],
+  ["#c5221f", "Red"],
+];
+
+/** What the dialog starts with: the values the selected cells share (null where they differ or are unset). */
+export function cellProps(editor: Editor): CellProps {
+  const v = (name: string) => (cellAttr(editor, name) ?? null) as never;
+  const rect = selectedRect(editor.state);
+  let width: number | null = null;
+  const at = rect.map.map[rect.top * rect.map.width + rect.left]!;
+  const cell = rect.table.nodeAt(at);
+  const w = cell?.attrs.colwidth as number[] | null;
+  if (w) width = w[rect.left - rect.map.colCount(at)] ?? null;
+  return { width, borderWidth: v("borderWidth"), borderColor: v("borderColor"), padding: v("padding") };
+}
+
+/** Sets the selected columns' width and the selected cells' border and padding, as one Undo step. */
+export function applyCellProps(editor: Editor, p: CellProps): void {
+  const { state } = editor;
+  const rect = selectedRect(state);
+  const { map, table, tableStart } = rect;
+  const tr = state.tr;
+  const inRect = new Set(map.cellsInRect(rect));
+  const done = new Set<number>();
+  for (const at of map.map) {
+    if (done.has(at)) continue;
+    done.add(at);
+    const node = table.nodeAt(at)!;
+    const attrs = { ...node.attrs };
+    const col = map.colCount(at);
+    const span = Number(attrs.colspan ?? 1);
+    const touches = col < rect.right && col + span > rect.left;
+    if (touches) {
+      const widths = Array.from({ length: span }, (_, i) => ((attrs.colwidth as number[] | null)?.[i] ?? 0) as number);
+      for (let i = 0; i < span; i++) if (col + i >= rect.left && col + i < rect.right) widths[i] = p.width ?? 0;
+      attrs.colwidth = widths.every((x) => x > 0) ? widths : null;
+    }
+    if (inRect.has(at)) Object.assign(attrs, { borderWidth: p.borderWidth, borderColor: p.borderWidth ? p.borderColor : null, padding: p.padding });
+    tr.setNodeMarkup(tableStart + at, undefined, attrs);
+  }
+  if (tr.docChanged) editor.view.dispatch(closeHistory(tr));
 }

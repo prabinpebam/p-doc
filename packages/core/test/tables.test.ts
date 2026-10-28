@@ -21,7 +21,7 @@ const table: JSONContent = {
         cell("Qty", { colwidth: [80], background: "#cfe2f3" }, "tableHeader"),
       ],
     },
-    { type: "tableRow", content: [cell("Ada", { colwidth: [120], valign: "middle" }), cell("Merged across two", { colspan: 2, colwidth: [200, 80], valign: "bottom" })] },
+    { type: "tableRow", content: [cell("Ada", { colwidth: [120], valign: "middle", borderWidth: 1.5, borderColor: "#1a73e8", padding: 6 }), cell("Merged across two", { colspan: 2, colwidth: [200, 80], valign: "bottom", borderWidth: 0 })] },
   ],
 };
 const doc = () => {
@@ -35,11 +35,14 @@ describe("tables (U60)", () => {
     const html = toHTML(doc());
     expect(html).toContain('<col style="width: 120px;">');
     expect(html).toContain('<th style="background-color: #cfe2f3;" colwidth="120">');
-    expect(html).toContain('<td style="vertical-align: bottom;" colspan="2" colwidth="200,80">');
+    expect(html).toMatch(/<td style="[^"]*vertical-align: bottom[^"]*"[^>]*colspan="2"[^>]*colwidth="200,80"/);
     const back = fromHTML(html).content![0]!;
     const [head, row] = back.content!;
     expect(head!.content![0]!.attrs).toMatchObject({ colwidth: [120], background: "#cfe2f3" });
-    expect(row!.content![0]!.attrs).toMatchObject({ valign: "middle" });
+    expect(row!.content![0]!.attrs).toMatchObject({ valign: "middle", borderWidth: 1.5, borderColor: "#1a73e8", padding: 6 });
+    expect(html).toContain("border: 1.5pt solid #1a73e8");
+    expect(html).toContain("padding: 6pt");
+    expect(html).toContain("border: none");
     expect(row!.content![1]!.attrs).toMatchObject({ colspan: 2, colwidth: [200, 80], valign: "bottom" });
   });
 
@@ -60,6 +63,9 @@ describe("tables (U60)", () => {
     expect(xml).toContain('<w:vAlign w:val="center"/>');
     expect(xml).toContain('<w:vAlign w:val="bottom"/>');
     expect(xml).toContain("<w:tblHeader/>");
+    expect(xml).toMatch(/<w:tcBorders><w:top w:val="single" w:color="1A73E8" w:sz="12"\/>/);
+    expect(xml).toMatch(/<w:tcBorders><w:top w:val="none"/);
+    expect(xml).toContain('<w:tcMar><w:top w:type="dxa" w:w="120"/>');
   });
 
   it("fills the line in Word when no width was set", async () => {

@@ -18,6 +18,7 @@ import { ImageAltDialog, ImageOptionsDialog } from "./ImageDialogs.tsx";
 import { ParagraphDialog } from "./ParagraphDialog.tsx";
 import { SortDialog } from "./SortDialog.tsx";
 import { NotesDialog } from "./NotesDialog.tsx";
+import { TableDialog } from "./TableDialog.tsx";
 import { BookmarkDialog } from "./BookmarkDialog.tsx";
 import { ContentsDialog } from "./ContentsDialog.tsx";
 import { EquationDialog } from "./EquationDialog.tsx";
@@ -66,6 +67,8 @@ export function Dialogs() {
       return <SortDialog />;
     case "notes":
       return <NotesDialog />;
+    case "table":
+      return <TableDialog />;
     case "bookmark":
       return <BookmarkDialog />;
     case "contents":

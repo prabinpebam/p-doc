@@ -345,6 +345,8 @@ function blocks(nodes: JSONContent[] | undefined, ctx: Ctx, list?: { ref: string
                     width: fixed && c.attrs?.colwidth ? { size: (c.attrs.colwidth as number[]).reduce((a, b) => a + b, 0) * 15, type: WidthType.DXA } : undefined,
                     shading: c.attrs?.background ? { fill: hex(c.attrs.background as string), type: ShadingType.CLEAR, color: "auto" } : undefined,
                     verticalAlign: c.attrs?.valign === "middle" ? VerticalAlign.CENTER : c.attrs?.valign === "bottom" ? VerticalAlign.BOTTOM : undefined,
+                    borders: c.attrs?.borderWidth == null ? undefined : cellBorders(Number(c.attrs.borderWidth), c.attrs.borderColor as string | null),
+                    margins: c.attrs?.padding == null ? undefined : (["top", "bottom", "left", "right"] as const).reduce((m, s) => ({ ...m, [s]: Math.round(Number(c.attrs!.padding) * 20) }), {}),
                     children: blocks(c.content, ctx).filter((b): b is Paragraph => b instanceof Paragraph).concat([]) as Paragraph[],
                   }),
               ),
@@ -363,6 +365,12 @@ function blocks(nodes: JSONContent[] | undefined, ctx: Ctx, list?: { ref: string
     }
   }
   return out;
+}
+
+/** A cell's four borders: `w` pt (eighths of a point in Word), none at 0. */
+function cellBorders(w: number, colour: string | null) {
+  const side = w > 0 ? { style: BorderStyle.SINGLE, size: Math.max(2, Math.round(w * 8)), color: hex(colour ?? "#000000") ?? "000000" } : { style: BorderStyle.NONE, size: 0, color: "auto" };
+  return { top: side, bottom: side, left: side, right: side };
 }
 
 function hfParagraph(text: string, align: HfAlign): Paragraph {

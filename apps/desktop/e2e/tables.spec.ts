@@ -93,12 +93,38 @@ test("12.1 tables: merge and split, a header row, drag and distribute widths, sh
   await page.keyboard.press("Control+y");
   await expect.poll(async () => new Set(await widths(page)).size).toBe(1);
 
+  // Table properties on two cells: their columns 1.5 in wide, a 1½ pt blue border and 6 pt padding; one Undo step.
+  await dragCells(page, rows.nth(2).locator("td").nth(1), rows.nth(2).locator("td").nth(2));
+  await menu(page, "Format", /^Table$/, /^Table properties/);
+  const dlg = page.getByRole("dialog", { name: "Table properties" });
+  await dlg.getByLabel("Column width (in)").fill("40");
+  await expect(dlg.getByText("Enter a width from 0.3 to 22 inches, or leave it empty.")).toBeVisible();
+  await expect(dlg.getByRole("button", { name: "Apply" })).toBeDisabled();
+  await dlg.getByLabel("Column width (in)").fill("1.5");
+  await dlg.getByLabel("Cell padding (pt)").fill("6");
+  await dlg.getByLabel("Border", { exact: true }).selectOption({ label: "1½ pt" });
+  await dlg.getByLabel("Border colour").selectOption({ label: "Blue" });
+  await dlg.getByRole("button", { name: "Apply" }).click();
+  await expect(dlg).toHaveCount(0);
+  await expect.poll(async () => (await widths(page)).slice(1, 3)).toEqual([144, 144]);
+  const styled = rows.nth(2).locator("td").nth(1);
+  await expect(styled).toHaveCSS("border-top-color", "rgb(26, 115, 232)");
+  await expect(styled).toHaveCSS("border-top-width", "2px");
+  await expect(styled).toHaveCSS("padding-left", "8px");
+  await expect(rows.nth(1).locator("td").nth(1)).not.toHaveCSS("border-top-color", "rgb(26, 115, 232)");
+  await page.keyboard.press("Control+z");
+  await expect(styled).not.toHaveCSS("padding-left", "8px");
+  await page.keyboard.press("Control+y");
+  await expect(styled).toHaveCSS("padding-left", "8px");
+
   // Word: the grid and each cell's width, the shading, the vertical alignment and the header row.
   await menu(page, "File", /^Download/, /^Microsoft Word/);
   await expect(page.getByText(/^Saved Tables\.docx/)).toBeVisible({ timeout: 20_000 });
   const xml = zipText(readFileSync(join(saveDir, "Tables.docx")), "word/document.xml");
   expect(xml.match(/<w:gridCol w:w="(\d+)"\/>/g)?.length).toBe(4);
-  expect(new Set(xml.match(/<w:gridCol w:w="(\d+)"\/>/g)).size).toBe(1);
+  expect([...xml.matchAll(/<w:gridCol w:w="(\d+)"\/>/g)].map((m) => m[1]).slice(1, 3)).toEqual(["2160", "2160"]);
+  expect(xml.match(/<w:top w:val="single" w:color="1A73E8" w:sz="12"\/>/g)?.length).toBe(2);
+  expect(xml).toContain('<w:tcMar><w:top w:type="dxa" w:w="120"/>');
   expect(xml.match(/<w:shd w:fill="CFE2F3"/g)?.length).toBe(4);
   expect(xml).toContain('<w:vAlign w:val="center"/>');
   expect(xml).toContain("<w:tblHeader/>");

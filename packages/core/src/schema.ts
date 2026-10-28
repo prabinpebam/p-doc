@@ -21,7 +21,7 @@ import { Bookmark } from "./refs.ts";
 export const TEXTBLOCKS = ["paragraph", "heading"] as const;
 
 const VALIGN = ["middle", "bottom"];
-/** A table cell's shading and vertical alignment (U60); widths are the table's own `colwidth`. */
+/** A table cell's shading, vertical alignment, border (pt, 0 for none, and colour) and padding (pt) (U60); widths are the table's own `colwidth`. */
 export const CellFormat = Extension.create({
   name: "cellFormat",
   addGlobalAttributes() {
@@ -45,11 +45,29 @@ export const CellFormat = Extension.create({
             },
             renderHTML: (a: Record<string, unknown>) => (a.valign ? { style: `vertical-align: ${a.valign}` } : {}),
           },
+          borderWidth: {
+            default: null,
+            parseHTML: (el: HTMLElement) => num(el.getAttribute("data-border-width")),
+            renderHTML: (a: Record<string, unknown>) =>
+              a.borderWidth == null ? {} : { "data-border-width": a.borderWidth, style: a.borderWidth === 0 ? "border: none" : `border: ${a.borderWidth}pt solid ${a.borderColor ?? "#000000"}` },
+          },
+          borderColor: {
+            default: null,
+            parseHTML: (el: HTMLElement) => colourHex(el.getAttribute("data-border-color") ?? ""),
+            renderHTML: (a: Record<string, unknown>) => (a.borderColor ? { "data-border-color": a.borderColor } : {}),
+          },
+          padding: {
+            default: null,
+            parseHTML: (el: HTMLElement) => num(el.getAttribute("data-padding")),
+            renderHTML: (a: Record<string, unknown>) => (a.padding == null ? {} : { "data-padding": a.padding, style: `padding: ${a.padding}pt` }),
+          },
         },
       },
     ];
   },
 });
+
+const num = (v: string | null) => (v != null && v !== "" && Number.isFinite(Number(v)) ? Number(v) : null);
 
 /** `rgb(…)` (how a browser reports a colour) or `#rgb` as `#rrggbb`. */
 function colourHex(c: string): string | null {

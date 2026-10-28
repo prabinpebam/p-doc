@@ -410,6 +410,7 @@ const commands: Command[] = [
   { id: "table.merge", label: "Merge cells", keywords: "table join combine", run: chain((c) => c.mergeCells()), enabled: () => canEdit() && !!ed()?.can().mergeCells() },
   { id: "table.split", label: "Split cell", keywords: "table unmerge", run: chain((c) => c.splitCell()), enabled: () => canEdit() && !!ed()?.can().splitCell() },
   { id: "table.headerRow", label: "Header row", keywords: "table heading repeat title row", run: chain((c) => c.toggleHeaderRow()), checked: () => !!ed() && hasHeaderRow(ed()!), enabled: () => canEdit() && !!ed()?.isActive("table") },
+  { id: "table.props", label: "Table properties…", keywords: "table column width border padding cell", run: () => openDialog({ kind: "table" }), enabled: () => canEdit() && !!ed()?.isActive("table") },
   { id: "table.distribute", label: "Distribute columns", keywords: "table equal even column widths", run: withEditor((e) => void distributeColumns(e)), enabled: () => canEdit() && !!ed()?.isActive("table") },
   ...[["", "No shading"] as [string, string], ...SHADES.map(([label, c]): [string, string] => [c, label])].map(
     ([c, label]): Command => ({
@@ -650,6 +651,7 @@ export const MENUS: Menu[] = [
           "table.distribute",
           { label: "Cell shading", items: ["table.shade.none", ...SHADES.map(([l]) => `table.shade.${l.toLowerCase().replace(/ /g, "-")}`)] },
           { label: "Vertical alignment", items: ["table.valign.top", "table.valign.middle", "table.valign.bottom"] },
+          "table.props",
           "-",
           "table.deleteRow",
           "table.deleteCol",
