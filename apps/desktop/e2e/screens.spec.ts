@@ -1,0 +1,57 @@
+/** Screenshots for the docs site (docs/product/screens), not a test: PDOC_CAPTURE=1 npx playwright test screens */
+import { execFileSync } from "node:child_process";
+import { mkdirSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { editor, expect, launch, quit, tempDirs, test } from "./helpers.ts";
+import { fakeHelperConfig, startFakeGitHub } from "../test/fakes/fake-github.ts";
+
+const out = join(import.meta.dirname, "..", "..", "..", "docs", "product", "screens");
+const TOKEN = "ghp_e2eFakeToken0123456789abcdefABCDEF";
+
+test("capture stage 5 screens", async () => {
+  test.skip(process.env.PDOC_CAPTURE !== "1", "Docs screenshots: PDOC_CAPTURE=1 npx playwright test screens");
+  mkdirSync(out, { recursive: true });
+  const fake = await startFakeGitHub();
+  fake.users.set(TOKEN, { login: "ada", id: 7, name: "Ada Lovelace", scopes: "repo" });
+  fake.addRepo("ada", "p-doc-public", { private: false, files: { "README.md": "x\n" } });
+  const dirs = tempDirs();
+  execFileSync("git", ["config", "--file", dirs.gitConfig, "credential.helper", fakeHelperConfig(join(dirname(dirs.gitConfig), "vault.json"))]);
+  const l = await launch({ dirs, setup: false, env: { PDOC_GITHUB_API: fake.api, PDOC_GITHUB_REMOTE: fake.remote } });
+  const { page } = l;
+  await page.setViewportSize({ width: 1100, height: 720 });
+  const shot = (n: string) => page.screenshot({ path: join(out, `${n}.png`) });
+  await expect(page.getByRole("heading", { name: "Welcome to P-Doc" })).toBeVisible();
+  await shot("v9-1-welcome");
+  await page.getByRole("button", { name: "Connect GitHub" }).click();
+  await expect(page.getByRole("heading", { name: "Sign in to GitHub" })).toBeVisible();
+  await page.getByRole("button", { name: "Paste a token" }).click();
+  await page.getByLabel(/Personal access token/).fill(TOKEN);
+  await shot("v9-2-sign-in-token");
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await expect(page.getByTestId("signed-in")).toBeVisible();
+  await shot("v9-3-signed-in");
+  await page.getByRole("button", { name: "Continue" }).click();
+  await expect(page.getByLabel("Name")).toHaveValue("Ada Lovelace");
+  await shot("v9-4-identity");
+  await page.getByRole("button", { name: "Continue" }).click();
+  await expect(page.getByTestId("repo-state-public")).toHaveText("Already exists");
+  await shot("v9-5-repositories-taken");
+  await page.getByRole("button", { name: "Use it anyway" }).click();
+  await page.getByRole("button", { name: "Set up" }).click();
+  await expect(page.getByRole("heading", { name: "You're set" })).toBeVisible({ timeout: 30_000 });
+  await shot("v9-6-done");
+  await page.getByRole("button", { name: "Start writing" }).click();
+  await expect(editor(page)).toBeFocused();
+  await page.keyboard.type("Notes that sync to GitHub.");
+  await page.keyboard.press("Control+Alt+s");
+  await expect(page.getByTestId("sync-state")).toHaveText("Synced", { timeout: 30_000 });
+  await expect(page.getByTestId("save-state")).toHaveText("Saved · synced", { timeout: 30_000 });
+  await shot("v1-synced");
+  await page.getByRole("menuitem", { name: "File" }).click();
+  await page.getByRole("menuitem", { name: "Settings" }).click();
+  await expect(page.getByTestId("github-account")).toBeVisible();
+  await page.getByRole("heading", { name: "GitHub" }).scrollIntoViewIfNeeded();
+  await shot("v10-settings-github");
+  await quit(l);
+  await fake.close();
+});

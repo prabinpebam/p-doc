@@ -61,6 +61,7 @@ export const dirty = () => rev !== savedRev;
 export function changed(): void {
   rev++;
   if (app.get().save !== "error") app.set({ save: "saving" });
+  markPending();
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = setTimeout(() => void save(), config.saveDelayMs);
   if (!recoveryTimer)
@@ -70,6 +71,13 @@ export function changed(): void {
       const doc = snapshot();
       if (current && doc && dirty()) window.pdoc.recovery.put(current, doc);
     }, config.recoveryDelayMs);
+}
+
+/** Edits not yet a version aren't on GitHub; main counts them too, but only tells us at the next sync or version. */
+function markPending(): void {
+  const { sync, current } = app.get();
+  if (!sync || !current || sync.state.kind === "off" || sync.pending.some((p) => sameRef(p, current))) return;
+  app.set({ sync: { ...sync, pending: [...sync.pending, { space: current.space, path: current.path }] } });
 }
 
 /** Changes the open document's settings (title, page, styles, comments) and saves them like typing. */

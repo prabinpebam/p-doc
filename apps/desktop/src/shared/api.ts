@@ -30,6 +30,8 @@ export type LeftPanel = "library" | "outline" | null;
 export interface Settings {
   version: 1;
   firstRun: "pending" | "done";
+  /** Where an unfinished first run stopped, so the next start resumes there (spec §4.1). */
+  firstRunStep: FirstRunStep;
   theme: Theme;
   /** Percent. */
   zoom: number;
@@ -41,6 +43,93 @@ export interface Settings {
   pageDefault: PageSetup | null;
   /** The document open when P-Doc last closed. */
   last: DocRef | null;
+  /** The GitHub connection: no token, only who and where (the token stays in Git's helper). */
+  github: GitHubLink | null;
+}
+
+export type FirstRunStep = "welcome" | "git" | "signIn" | "identity" | "repos" | "done";
+
+export interface GitHubLink {
+  login: string;
+  /** Repository names on GitHub (default `p-doc-private`, `p-doc-public`). */
+  names: Record<Space, string>;
+  /** Set up and syncing; false while setup is unfinished or after signing out. */
+  connected: boolean;
+  /** Sync after each version and every 5 minutes (Settings > GitHub). */
+  auto: boolean;
+}
+
+export interface GitHubAccount {
+  login: string;
+  id: number;
+  name: string;
+  /** The address GitHub suggests for commits (`<id>+<login>@users.noreply.github.com`). */
+  noreply: string;
+}
+
+/** Git's version and the sign-in helpers on this computer (first run's Git step). */
+export interface GitCheck {
+  version: string | null;
+  ok: boolean;
+  /** Git Credential Manager is Git's credential helper. */
+  gcm: boolean;
+  /** The GitHub CLI is installed. */
+  gh: boolean;
+}
+
+export type AccountStatus =
+  | { state: "signedIn"; account: GitHubAccount }
+  | { state: "signedOut" }
+  /** Git has a credential but GitHub can't be reached to check it. */
+  | { state: "offline" }
+  /** Git's credential for GitHub no longer works. */
+  | { state: "invalid" };
+
+export interface SignInProgress {
+  message: string;
+  /** The one-time code the browser asks for, when the helper gives one. */
+  code?: string;
+}
+
+export interface SignInResult {
+  account: GitHubAccount;
+  /** Shown under the account, e.g. when the sign-in lasts only until P-Doc closes. */
+  warning?: string;
+}
+
+export type RepoState = "create" | "found" | "ready" | "taken" | "visibility";
+
+export interface RepoPlan {
+  space: Space;
+  owner: string;
+  name: string;
+  state: RepoState;
+}
+
+export interface SetupProgress {
+  space: Space;
+  step: "find" | "create" | "local" | "remote" | "push" | "done";
+}
+
+export type SyncState =
+  | { kind: "off" }
+  | { kind: "syncing" }
+  | { kind: "synced"; at: string }
+  | { kind: "offline"; waiting: number }
+  | { kind: "problem"; reason: string; signIn: boolean };
+
+export interface SyncStatus {
+  state: SyncState;
+  /** Documents with changes GitHub doesn't have yet. */
+  pending: DocRef[];
+}
+
+export interface SyncEvent {
+  status: SyncStatus;
+  /** Documents a sync changed on this computer. */
+  changed: DocRef[];
+  /** Documents edited apart: this computer's stays, GitHub's is kept beside it (spec §4.7 step 5). */
+  kept: { title: string; copy: DocRef }[];
 }
 
 export interface LibraryInfo {
@@ -149,6 +238,32 @@ export interface PDocApi {
     /** A version was made by the cadence (after a pause, on switching documents). */
     onChanged(cb: (ref: DocRef) => void): () => void;
   };
+  /** GitHub: signing in and setting up the two repositories (spec §4.1). */
+  github: {
+    gitCheck(): Promise<GitCheck>;
+    status(): Promise<AccountStatus>;
+    /** Checks the token with GitHub and hands it to Git's helper; rejects with a sentence to show. */
+    signInWithToken(token: string): Promise<SignInResult>;
+    /** Git Credential Manager's window, or the GitHub CLI's browser sign-in. */
+    signInWithBrowser(): Promise<SignInResult>;
+    cancelSignIn(): void;
+    onSignInProgress(cb: (p: SignInProgress) => void): () => void;
+    /** Removes Git's GitHub credential ("Use another account"). */
+    forget(): Promise<void>;
+    /** The name and email Git already has, to prefill the Identity step. */
+    gitIdentity(): Promise<Identity>;
+    plan(names: Record<Space, string>): Promise<RepoPlan[]>;
+    /** Finds or makes both repositories and pushes; safe to run again. */
+    setup(names: Record<Space, string>, useTaken: Space[]): Promise<RepoPlan[]>;
+    onSetupProgress(cb: (p: SetupProgress) => void): () => void;
+    /** Stops syncing and forgets the account in P-Doc; Git keeps its sign-in. */
+    signOut(): Promise<void>;
+  };
+  sync: {
+    status(): Promise<SyncStatus>;
+    now(): Promise<SyncStatus>;
+    onChanged(cb: (e: SyncEvent) => void): () => void;
+  };
   app: {
     /** The main process asks before the window closes; the renderer saves, then calls closeReady. */
     onClosing(cb: () => void): () => void;
@@ -177,3 +292,16 @@ export const DOC_PATH = /^(docs|\.bin)\/[a-z0-9-]+\.pdoc\.json$/;
 export const isSpace = (s: unknown): s is Space => s === "private" || s === "public";
 export const isDocRef = (r: unknown): r is DocRef => !!r && typeof r === "object" && isSpace((r as DocRef).space) && typeof (r as DocRef).path === "string" && DOC_PATH.test((r as DocRef).path);
 export const sameRef = (a: DocRef | null | undefined, b: DocRef | null | undefined) => !!a && !!b && a.space === b.space && a.path === b.path;
+/** A name GitHub accepts for a repository. */
+export const isRepoName = (n: unknown): n is string => typeof n === "string" && /^[A-Za-z0-9._-]{1,100}$/.test(n) && n !== "." && n !== ".." && !n.endsWith(".git");
+export const DEFAULT_REPOS: Record<Space, string> = { private: "p-doc-private", public: "p-doc-public" };
+
+/** The sentence first run shows for a repository that can't be used as it is (spec §4.1). */
+export function planProblem(p: RepoPlan): string | null {
+  if (p.state === "visibility")
+    return p.space === "private"
+      ? `${p.name} is public on GitHub, so it can't hold private documents. Choose another name.`
+      : `${p.name} is private on GitHub. Choose another name, or make it public on GitHub first.`;
+  if (p.state === "taken") return `A repository named ${p.name} already exists and isn't a P-Doc library.`;
+  return null;
+}

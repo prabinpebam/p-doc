@@ -11,6 +11,7 @@ import { fileURLToPath } from "node:url";
 import type { Page } from "@playwright/test";
 import { expect, launch, quit, tempDirs, test } from "../e2e/helpers.ts";
 import { bigDocument, load, settled } from "../e2e/fixtures.ts";
+import { fakeHelperConfig, startFakeGitHub } from "../test/fakes/fake-github.ts";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 const baselineFile = join(root, "docs", "product", "perf-baseline.json");
@@ -280,4 +281,53 @@ test("the version history of a document with 500 versions", async () => {
   expect(await page.getByTestId("version-row").count()).toBe(0);
   record("history500", "Version history list", 300, samples, "From a click on the save state to all 500+ rows drawn: Git log, tags, grouping and rendering");
   await quit(l);
+});
+
+test("typing in a 50-page document while it syncs", async () => {
+  const TOKEN = "ghp_perfFakeToken0123456789abcdefABCDEF";
+  const fake = await startFakeGitHub();
+  fake.users.set(TOKEN, { login: "ada", id: 7, name: "Ada Lovelace", scopes: "repo" });
+  const dirs = tempDirs();
+  execFileSync("git", ["config", "--file", dirs.gitConfig, "credential.helper", fakeHelperConfig(join(dirname(dirs.gitConfig), "vault.json"))]);
+  const l = await launch({ dirs, env: { PDOC_GITHUB_API: fake.api, PDOC_GITHUB_REMOTE: fake.remote } });
+  const { page } = l;
+  await page.evaluate(async (token) => {
+    const p = (window as unknown as { pdoc: { github: { signInWithToken(t: string): Promise<unknown>; setup(n: unknown, u: string[]): Promise<unknown> } } }).pdoc;
+    await p.github.signInWithToken(token);
+    await p.github.setup({ private: "p-doc-private", public: "p-doc-public" }, []);
+  }, TOKEN);
+  await load(page, bigDocument(50));
+  await settled(page);
+  await caretMid(page);
+  // Each round: a sync (which first makes a version of the edits) with a key typed every frame until it ends.
+  const r = await page.evaluate(async () => {
+    const w = window as unknown as { __pdoc: { getEditor(): { view: any } }; pdoc: { sync: { now(): Promise<{ state: { kind: string } }> } } };
+    const view = w.__pdoc.getEditor().view;
+    const out: number[] = [];
+    const kinds: string[] = [];
+    let syncMs = 0;
+    for (let round = 0; round < 4; round++) {
+      let done = false;
+      const t0 = performance.now();
+      const run = w.pdoc.sync.now().then((s) => {
+        kinds.push(s.state.kind);
+        syncMs += performance.now() - t0;
+        done = true;
+      });
+      while (!done) {
+        const t = performance.now();
+        view.dispatch(view.state.tr.insertText("k"));
+        void document.body.offsetHeight;
+        out.push(performance.now() - t);
+        await new Promise((res) => requestAnimationFrame(() => setTimeout(res, 0)));
+      }
+      await run;
+    }
+    return { out, kinds, syncMs };
+  });
+  expect(r.kinds).toEqual(["synced", "synced", "synced", "synced"]);
+  expect(r.out.length).toBeGreaterThanOrEqual(20);
+  record("keystrokeSync50", "Sync (typing while it runs)", 16, r.out, `Keystroke to glyph in a 50-page document during 4 syncs to a local fake GitHub (${Math.round(r.syncMs / 4)} ms each), each pushing a new version`);
+  await quit(l);
+  await fake.close();
 });

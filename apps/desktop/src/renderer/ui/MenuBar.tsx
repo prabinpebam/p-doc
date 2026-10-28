@@ -23,6 +23,7 @@ export function MenuBar() {
   app.use((s) => s.tick);
   app.use((s) => s.settings);
   app.use((s) => s.current);
+  app.use((s) => s.sync?.state.kind);
 
   const close = useCallback((restore: boolean) => {
     setOpen(null);

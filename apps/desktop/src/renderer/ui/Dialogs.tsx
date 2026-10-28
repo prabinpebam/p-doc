@@ -10,6 +10,7 @@ import type { Theme } from "../../shared/api.ts";
 import { Dialog } from "./Dialog.tsx";
 import { countWords } from "./StatusBar.tsx";
 import { HeaderFooterDialog, PageSetupDialog } from "./PageDialogs.tsx";
+import { ConnectDialog, GitHubSection, SyncProblemDialog } from "./GitHubSettings.tsx";
 
 export function Dialogs() {
   const d = app.use((s) => s.dialog);
@@ -39,6 +40,10 @@ export function Dialogs() {
       return <PageSetupDialog />;
     case "headerFooter":
       return <HeaderFooterDialog />;
+    case "connect":
+      return <ConnectDialog />;
+    case "syncProblem":
+      return <SyncProblemDialog />;
   }
 }
 
@@ -413,7 +418,7 @@ function Settings() {
         <h3 id="set-github" className="group-title">
           GitHub
         </h3>
-        <p className="muted">Not connected. Your documents are saved on this computer.</p>
+        <GitHubSection />
       </section>
       <section className="settings-section" aria-labelledby="set-about">
         <h3 id="set-about" className="group-title">

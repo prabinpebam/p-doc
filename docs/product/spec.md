@@ -119,7 +119,7 @@ Waits name their class from the perceived-performance skill: *instant* (< 100 ms
 6. **Repositories** step: "Your documents live in two repositories on your GitHub." Rows: `p-doc-private` **Private** and `p-doc-public` **Public**, each with its state: "Will be created", "Found, will be used", "Ready". **Set up** runs the steps (find or create the repository, clone or init locally, set the remote, first push); each step is idempotent and resumes after quitting. *(background; a tick per step)*
 7. **Done**: "You're set. Documents sync to GitHub when you're online." opens the library with a new document ready.
 
-**Branches:** offline during setup → "You're offline. Setup continues when you're back, or use P-Doc offline now." (the library works at once); a repository with that name exists but isn't a P-Doc library → "A repository named *name* already exists and isn't a P-Doc library." with **Use it anyway** and **Choose another name**; token without the scope → "This token can't create repositories. It needs the repo scope."; quit half-way → the next start resumes at the step that stopped.
+**Branches:** offline during setup → "You're offline. Setup continues when you're back, or use P-Doc offline now." with **Use offline** and **Try again** (the library works at once; **Settings > GitHub > Finish connecting** picks setup up at the step that stopped); a repository with that name exists but isn't a P-Doc library → "A repository named *name* already exists and isn't a P-Doc library." with **Use it anyway** and **Choose another name**; token without the scope → "This token can't create repositories. It needs the repo scope."; quit half-way → the next start resumes at the step that stopped.
 
 **Defaults:** library folder `Documents\P-Doc` (Settings > Storage); repository names `p-doc-private` and `p-doc-public` (editable in the Repositories step); new documents go to Private.
 
@@ -186,7 +186,7 @@ Waits name their class from the perceived-performance skill: *instant* (< 100 ms
 1. **Library** (left panel tab, Ctrl+O): **Private** and **Public** sections listing documents by last edited, with search. A row shows title, edited time and sync state. Row menu: Open, Rename, Make a copy, Move to Public / Move to Private, Show in folder, Delete.
 2. **Delete** moves the file to the repository's `.bin/` (committed), recoverable from **Bin** at the end of the library.
 3. **Move to Public** → dialog: "Make *title* public? Anyone can read it and its history on GitHub from the next sync." with **Move to Public** (warning style) and **Cancel**. The file is moved to `public/` and removed from `private/`, a version in each. Moving back says "Copies already synced stay in the public repository's history."
-4. Sync runs after each version when online and every 5 minutes; **File > Sync now** (Ctrl+Alt+S) runs it at once. The status bar says "Synced", "Syncing…", "Offline · *n* versions waiting", "Not connected to GitHub" or "Sync problem" (click for details).
+4. Sync runs after each version when online and every 5 minutes; **File > Sync now** (Ctrl+Alt+S) makes a version of any unsaved edits and runs it at once. The status bar says "Synced", "Syncing…", "Offline · *n* versions waiting", "Not connected to GitHub" or "Sync problem" (click for details); a click on "Not connected to GitHub" opens Settings, on the others it syncs now. A library row whose latest text isn't on GitHub yet says "Not synced yet".
 5. When the same document changed on two computers, P-Doc keeps this computer's version and saves the other beside it as "*title* (from GitHub *date*)", and says "Two versions of *title* were edited apart. Both are kept." Nothing is overwritten silently.
 
 ### 4.8 Import (U18)
@@ -381,3 +381,44 @@ Engineering notes:
 - `pnpm perf` adds "Review list after an edit" on a 50-page document with 100 suggestions (budget 16 ms; p95 0.2 ms).
 - e2e `review` covers 4.1–4.4 and 4.6 and the toolbar in Viewing; e2e `comments` covers 4.5 end to end, including a restart.
 - Known small gap: Word count counts suggested deletions as words.
+
+### Stage 5: GitHub and first run (built)
+
+What a person meets, beyond the flows above:
+
+- **Welcome.** One card with six step dots (Welcome, Git, Sign in, You, Repositories, Done); **Connect GitHub** has the focus. **Back** on any step returns to the one before without setting anything up. Quitting part-way reopens at the step that stopped.
+
+  ![Welcome](screens/v9-1-welcome.png)
+
+- **Git.** Skipped on its own when Git ≥ 2.40 is there; otherwise **Get Git** and **Check again**.
+- **Sign in.** "Signed in as @login" straight away when Git's helper already has a GitHub sign-in. Otherwise **Sign in with browser** (shown only when Git Credential Manager or the GitHub CLI is installed; the CLI's one-time code is shown with **Cancel**) or **Paste a token**, a password field that checks the token with GitHub: "GitHub didn't accept this token. Check it and try again.", "This token can't create repositories. It needs the repo scope." With no credential helper at all, P-Doc keeps the sign-in until it closes and says so.
+
+  ![Paste a token](screens/v9-2-sign-in-token.png) ![Signed in](screens/v9-3-signed-in.png)
+
+- **You.** Name and email for versions: Git's own name if set, else the GitHub account's; **Use my private GitHub address** fills the noreply address.
+
+  ![Identity](screens/v9-4-identity.png)
+
+- **Repositories.** Both names editable, each with its Private/Public badge and state ("Will be created", "Found, will be used", "Already exists", "Ready"). A name taken by something that isn't a P-Doc library shows the problem with **Use it anyway** (its files are kept; P-Doc adds its `.p-doc` marker) and **Choose another name** (focuses the field). **Set up** shows each step as it runs.
+
+  ![A taken name](screens/v9-5-repositories-taken.png) ![Done](screens/v9-6-done.png)
+
+- **Syncing.** After each version (2 s later, so a burst syncs once), every 5 minutes, at start, and on **Sync now**. The title bar says "Saved · synced" when the open document's latest text is on GitHub, and "Saved to this computer" again after the next edit. When a sync brings in a change to the open document, the page shows it; if there are unsaved edits, they stay and the toast says the other text is in Version history.
+
+  ![Synced](screens/v1-synced.png)
+
+- **Settings > GitHub.** Account, both repositories (`login/name` with their badges), **Sync automatically**, the last sync, **Sync now** and **Sign out** (P-Doc stops syncing and forgets the session's sign-in; Git's helper, the repositories and the documents are untouched, and Settings offers **Connect GitHub** again). Not connected: **Connect GitHub**, or **Finish connecting** after a setup that stopped. **Sync problem** in the status bar opens a dialog with the reason, **Sign in again** when GitHub refused the sign-in, and the number of documents waiting.
+
+  ![Settings](screens/v10-settings-github.png)
+
+- **Privacy.** A Private document never reaches the public repository. **Move to Public** asks first; on the next sync it is in the public repository and gone from the private one's `main` (its earlier private history stays private).
+
+Engineering notes:
+
+- Main: `github.ts` (REST client: user, repo get and create, with offline, 401 and 404 told apart), `account.ts` (sign-in through Git's credential helper: `git credential fill/approve/reject`; GCM's window or `gh auth login --web` for the browser path; P-Doc stores no token), `setup.ts` (idempotent steps, `planProblem` shared with the renderer), `sync.ts` (`Sync`: fetch, merge `origin/main`, and when both sides edited a document keep this computer's file and add GitHub's as "*title* (from GitHub *date*)"; push; `pending` = versions not pushed plus saved edits not yet a version).
+- `status()` reads the running state after its Git calls, so a status answer can't land after a run's final event and leave the window on "Syncing…". The menu bar re-renders on the sync state, so an open File menu enables **Sync now** when a sync ends.
+- The renderer marks the open document pending on its first edit (main only reports at the next version or sync); that drives "Saved · synced" and the library's "Not synced yet".
+- `PDOC_GITHUB_API` and `PDOC_GITHUB_REMOTE` point P-Doc at a fake GitHub (`test/fakes/fake-github.ts`: REST plus smart-HTTP Git over bare repositories, and a fake credential helper). Unit `github` (19 tests) covers account, setup and sync, including conflicts, auth failure and offline; e2e `github` covers 5.1–5.3 and 5.6 and checks the token is in none of P-Doc's data, the library or the log.
+- Docs screenshots: `PDOC_CAPTURE=1 npx playwright test screens` (in `apps/desktop`) writes `docs/product/screens/`.
+- `pnpm perf` adds "Sync (typing while it runs)": a key per frame in a 50-page document during 4 syncs to the fake GitHub, each pushing a version (budget 16 ms; p95 0.8 ms).
+- Known limitations: offline during setup doesn't retry by itself (Settings > Finish connecting does); a version's name syncs, but removing one doesn't reach the other computer; a dirty open document keeps its edits over a change from GitHub (the change is in Version history).

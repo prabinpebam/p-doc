@@ -3,8 +3,8 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync } from "node:f
 import { join } from "node:path";
 import { userInfo } from "node:os";
 import { cleanPage, parseDocument, serializeDocument, type PDocFile } from "@p-doc/core";
-import { writeAtomic } from "./library.ts";
-import { isDocRef, type DocRef, type Recovered, type Settings } from "../shared/api.ts";
+import { writeAtomic, SPACES } from "./library.ts";
+import { DEFAULT_REPOS, isDocRef, isRepoName, type DocRef, type FirstRunStep, type GitHubLink, type Recovered, type Settings } from "../shared/api.ts";
 
 export function defaultSettings(): Settings {
   let name = "Me";
@@ -13,7 +13,18 @@ export function defaultSettings(): Settings {
   } catch {
     // No user name on this system.
   }
-  return { version: 1, firstRun: "pending", theme: "system", zoom: 100, identity: { name, email: "" }, spelling: true, leftPanel: "outline", compact: false, pageDefault: null, last: null };
+  return { version: 1, firstRun: "pending", firstRunStep: "welcome", theme: "system", zoom: 100, identity: { name, email: "" }, spelling: true, leftPanel: "outline", compact: false, pageDefault: null, last: null, github: null };
+}
+
+const STEPS: FirstRunStep[] = ["welcome", "git", "signIn", "identity", "repos", "done"];
+
+function cleanLink(l: unknown): GitHubLink | null {
+  if (!l || typeof l !== "object") return null;
+  const v = l as Partial<GitHubLink>;
+  if (typeof v.login !== "string" || !/^[A-Za-z0-9-]{1,39}$/.test(v.login)) return null;
+  const names = { ...DEFAULT_REPOS };
+  for (const s of SPACES) if (isRepoName(v.names?.[s])) names[s] = v.names[s];
+  return { login: v.login, names, connected: v.connected === true, auto: v.auto !== false };
 }
 
 export class SettingsStore {
@@ -29,7 +40,7 @@ export class SettingsStore {
     } catch {
       // A damaged settings file: start from the defaults.
     }
-    this.value = { ...d, ...read, version: 1, identity: { ...d.identity, ...(read.identity ?? {}) } };
+    this.value = { ...d, ...read, version: 1, identity: { ...d.identity, ...(read.identity ?? {}) }, github: cleanLink(read.github), firstRunStep: STEPS.includes(read.firstRunStep as FirstRunStep) ? read.firstRunStep! : "welcome" };
   }
 
   get(): Settings {
@@ -47,6 +58,9 @@ export class SettingsStore {
     if (typeof patch.compact === "boolean") next.compact = patch.compact;
     if (patch.pageDefault === null || (patch.pageDefault && typeof patch.pageDefault === "object")) next.pageDefault = patch.pageDefault ? cleanPage(patch.pageDefault) : null;
     if (patch.last === null || isDocRef(patch.last)) next.last = patch.last;
+    if (STEPS.includes(patch.firstRunStep as FirstRunStep)) next.firstRunStep = patch.firstRunStep!;
+    if (patch.github === null) next.github = null;
+    else if (patch.github !== undefined) next.github = cleanLink(patch.github) ?? next.github;
     this.value = next;
     writeAtomic(this.file, `${JSON.stringify(next, null, 2)}\n`);
     return this.get();

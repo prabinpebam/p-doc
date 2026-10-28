@@ -10,7 +10,11 @@ import { Library } from "./library.ts";
 import { exported, printDocument, savePdf } from "./output.ts";
 import { RecoveryStore, SettingsStore } from "./state.ts";
 import { Versions } from "./versions.ts";
-import { isDocRef, isSpace, type CreateRequest, type DocRef, type PrintRequest, type Recovered, type Settings } from "../shared/api.ts";
+import { Account, SignInError } from "./account.ts";
+import { GitHubError } from "./github.ts";
+import { planRepos, runSetup, SetupError } from "./setup.ts";
+import { Sync, SyncProblem } from "./sync.ts";
+import { DEFAULT_REPOS, isDocRef, isRepoName, isSpace, type CreateRequest, type DocRef, type PrintRequest, type Recovered, type Settings, type Space } from "../shared/api.ts";
 
 // Isolation for tests and portable use: data and library folders from the environment.
 if (process.env.PDOC_USER_DATA) app.setPath("userData", process.env.PDOC_USER_DATA);
@@ -55,6 +59,46 @@ const identity = () => {
   const id = settings.get().identity;
   return { name: id.name || "P-Doc", email: id.email || "p-doc@localhost" };
 };
+
+const send = (channel: string, ...args: unknown[]) => {
+  if (win && !win.webContents.isDestroyed()) win.webContents.send(`pdoc:${channel}`, ...args);
+};
+const account = new Account({ cwd: dataDir });
+const sync = new Sync({
+  get library() {
+    return library;
+  },
+  account,
+  link: () => settings.get().github,
+  beforeMerge: () => versions.commitAll(),
+  onEvent: (e) => {
+    if (e.status.state.kind !== "syncing") log("sync", e.status.state, { changed: e.changed.length, kept: e.kept.length });
+    send("sync", e);
+  },
+});
+
+/** A sentence for a GitHub step that failed. */
+function githubMessage(e: unknown): string {
+  if (e instanceof SignInError || e instanceof SetupError) return e.message;
+  if ((e instanceof GitHubError && e.offline) || (e instanceof SyncProblem && e.kind === "offline")) return "You're offline. Setup continues when you're back, or use P-Doc offline now.";
+  if (e instanceof GitHubError && e.status === 401) return "GitHub didn't accept the sign-in. Sign in again.";
+  if (e instanceof GitHubError) return `GitHub said: ${e.message}`;
+  if (e instanceof SyncProblem) return e.message;
+  return `Something went wrong: ${(e as Error).message}`;
+}
+
+function cleanNames(n: unknown): Record<Space, string> {
+  const v = (n ?? {}) as Record<string, unknown>;
+  if (!isRepoName(v.private) || !isRepoName(v.public)) throw new SetupError("Repository names can use letters, numbers, hyphens, dots, and underscores.");
+  return { private: v.private, public: v.public };
+}
+
+async function owner(): Promise<string> {
+  if (account.account) return account.account.login;
+  const s = await account.status();
+  if (s.state === "signedIn") return s.account.login;
+  throw new SetupError(s.state === "offline" ? "You're offline. Setup continues when you're back, or use P-Doc offline now." : "Sign in to GitHub first.");
+}
 
 /** Recovery copies hold text newer than the file (they're cleared once it's saved): write them back. */
 function applyRecovery(): Recovered[] {
@@ -232,6 +276,58 @@ function handlers(): void {
   });
   h("versions:copy", (ref: DocRef, s: string) => library.copyVersion(asRef(ref), sha(s)));
   h("versions:commitNow", (ref: DocRef) => versions.commitIfWaiting(asRef(ref)));
+
+  // GitHub (spec §4.1, §4.7). Failures reach the renderer as one sentence to show.
+  const g = (channel: string, fn: (...args: never[]) => unknown) =>
+    h(channel, async (...args: never[]) => {
+      try {
+        return await (fn as (...a: unknown[]) => unknown)(...args);
+      } catch (e) {
+        throw new Error(githubMessage(e));
+      }
+    });
+  g("github:gitCheck", () => account.gitCheck());
+  g("github:status", () => account.status());
+  g("github:gitIdentity", () => account.gitIdentity());
+  const signedIn = (r: { account: { login: string } }) => {
+    const l = settings.get().github;
+    settings.set({ github: { login: r.account.login, names: l?.names ?? DEFAULT_REPOS, connected: false, auto: l?.auto ?? true } });
+    return r;
+  };
+  g("github:signInWithToken", async (token: unknown) => {
+    if (typeof token !== "string" || token.length > 400) throw new SignInError("That doesn't look like a GitHub token.");
+    return signedIn(await account.signInWithToken(token));
+  });
+  g("github:signInWithBrowser", async () => signedIn(await account.signInWithBrowser((p) => send("signInProgress", p))));
+  g("github:forget", () => account.forget());
+  g("github:plan", async (names: unknown) => planRepos(await account.api(), await owner(), cleanNames(names), sync));
+  g("github:setup", async (names: unknown, useTaken: unknown) => {
+    const n = cleanNames(names);
+    const taken = Array.isArray(useTaken) ? useTaken.filter(isSpace) : [];
+    const login = await owner();
+    await library.ensure();
+    await versions.commitAll();
+    const l = settings.get().github;
+    settings.set({ github: { login, names: n, connected: false, auto: l?.auto ?? true } });
+    const plan = await runSetup(await account.api(), login, n, taken, sync, (p) => send("setupProgress", p));
+    settings.set({ github: { login, names: n, connected: true, auto: l?.auto ?? true }, firstRun: "done", firstRunStep: "done" });
+    sync.start();
+    return plan;
+  });
+  g("github:signOut", () => {
+    account.signOut();
+    sync.stop();
+    sync.reset();
+    const l = settings.get().github;
+    if (l) settings.set({ github: { ...l, connected: false } });
+    send("sync", { status: { state: { kind: "off" }, pending: [] }, changed: [], kept: [] });
+  });
+  h("sync:status", () => sync.status());
+  h("sync:now", async () => {
+    // Sync now sends what's on screen: the renderer has saved, so make a version of anything since the last.
+    await versions.commitAll();
+    return (await sync.run()).status;
+  });
   h("app:toggleFullScreen", () => {
     const on = !win?.isFullScreen();
     win?.setFullScreen(on);
@@ -267,8 +363,10 @@ function handlers(): void {
     });
   on("recovery:put", (ref: DocRef, doc: unknown) => recovery.put(asRef(ref), asDoc(doc)));
   on("recovery:clear", (ref: DocRef) => recovery.clear(asRef(ref)));
+  on("github:cancelSignIn", () => account.cancelSignIn());
   on("app:closeReady", () => {
     closeAllowed = true;
+    sync.stop();
     void versions
       .commitAll()
       .then(() => library.settle())
@@ -301,11 +399,13 @@ nativeTheme.on("updated", () => win?.setTitleBarOverlay({ ...themeColors(), heig
 
 void app.whenReady().then(async () => {
   nativeTheme.themeSource = settings.get().theme;
-  library = await Library.open(libraryRoot(), { identity });
+  library = await Library.open(libraryRoot(), { identity, changed: () => sync.soonAfterVersion() });
   log("start", { version: app.getVersion(), library: library.root, git: library.gitVersion });
   if (library.ready) recovered = applyRecovery();
   handlers();
   win = createWindow();
   // Text saved but never made a version (a crash, a forced quit) gets one on the usual cadence.
   if (library.ready) void library.unversioned().then((refs) => refs.forEach((r) => versions.changed(r)), (e) => log("unversioned failed", String(e)));
+  // Sync on start and every 5 minutes once GitHub is set up.
+  if (library.ready && sync.on) win.webContents.once("did-finish-load", () => sync.start());
 });

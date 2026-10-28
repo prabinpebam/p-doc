@@ -57,10 +57,14 @@ export interface LibraryOptions {
   identity: () => Identity;
   /** Git's version; null turns versions off. Detected when left out. */
   git?: string | null;
+  /** Called after a repository gets a new version or version name (sync follows). */
+  changed?: (space: Space) => void;
 }
 
 export class Library {
   private queues = new Map<Space, Promise<unknown>>();
+  /** Called after a repository gets a new version or version name. */
+  changed: (space: Space) => void = () => undefined;
 
   private constructor(
     readonly root: string,
@@ -70,11 +74,18 @@ export class Library {
 
   static async open(root: string, o: LibraryOptions): Promise<Library> {
     const v = o.git === undefined ? await gitVersion() : o.git;
-    return new Library(root, gitSupported(v) ? v : null, o.identity);
+    const lib = new Library(root, gitSupported(v) ? v : null, o.identity);
+    if (o.changed) lib.changed = o.changed;
+    return lib;
   }
 
   get versioned(): boolean {
     return this.gitVersion != null;
+  }
+
+  /** The name and email versions are made with. */
+  author(): Identity {
+    return this.identity();
   }
 
   dir(space: Space): string {
@@ -143,7 +154,8 @@ export class Library {
     return this.summary(ref, doc);
   }
 
-  private freePath(space: Space, doc: PDocFile): string {
+  /** A file name in `docs/` for a document that no other document (or Bin entry) has. */
+  freePath(space: Space, doc: PDocFile): string {
     let path = documentPath(doc);
     for (let n = 2; existsSync(join(this.dir(space), ...path.split("/"))) || existsSync(join(this.dir(space), ".bin", path.slice(5))); n++) path = path.replace(/(-\d+)?\.pdoc\.json$/, `-${n}.pdoc.json`);
     return path;
@@ -232,12 +244,14 @@ export class Library {
       const staged = await git(dir, ["diff", "--cached", "--quiet"], { ok: [0, 1] });
       if (staged.code === 0) return null;
       await git(dir, ["commit", "-q", "-m", message], { identity: this.identity() });
-      return (await git(dir, ["rev-parse", "HEAD"])).stdout.trim();
+      const sha = (await git(dir, ["rev-parse", "HEAD"])).stdout.trim();
+      this.changed(space);
+      return sha;
     });
   }
 
-  /** Runs Git work on a repository after the work already queued there. */
-  private queue<T>(space: Space, run: () => Promise<T>): Promise<T> {
+  /** Runs Git work on a repository after the work already queued there (sync uses it too). */
+  queue<T>(space: Space, run: () => Promise<T>): Promise<T> {
     const next = (this.queues.get(space) ?? Promise.resolve()).then(run, run);
     this.queues.set(space, next.catch(() => null));
     return next;
@@ -324,6 +338,7 @@ export class Library {
       if (clean) await git(dir, ["tag", "-f", "-a", tag, v.sha, "-m", clean], { identity: this.identity() });
       else await git(dir, ["tag", "-d", tag], { ok: [0, 1] });
     });
+    this.changed(ref.space);
   }
 
   /**

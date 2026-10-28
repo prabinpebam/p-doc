@@ -17,6 +17,7 @@ import { cursorBlockIndex, jumpToBlock, moveHeadingSection } from "../editor/blo
 import { copyDoc, deleteDoc, restoreDoc, showInFolder } from "../ops.ts";
 import { focusEditor, getEditor, newDoc, openDoc } from "../session.ts";
 import { app, openDialog, shownPanel, updateSettings } from "../state.ts";
+import { unsynced } from "../sync.ts";
 import { MenuList, useOutside, type MenuItemSpec } from "./Menu.tsx";
 
 export function edited(iso: string, now = new Date()): string {
@@ -130,6 +131,7 @@ function RowMenu({ d }: { d: DocSummary }) {
 }
 
 function DocRow({ d, current }: { d: DocSummary; current: boolean }) {
+  const waiting = app.use((s) => !d.bin && !!s.settings?.github?.connected && unsynced(s.sync, d));
   return (
     <li className={`doc-row${current ? " current" : ""}`}>
       {d.bin ? (
@@ -140,7 +142,10 @@ function DocRow({ d, current }: { d: DocSummary; current: boolean }) {
       ) : (
         <button type="button" className="doc-open" aria-current={current ? "page" : undefined} onClick={() => void openDoc(d)}>
           <span className="doc-title">{d.title}</span>
-          <span className="doc-meta">{edited(d.modified)}</span>
+          <span className="doc-meta">
+            {edited(d.modified)}
+            {waiting ? " · Not synced yet" : ""}
+          </span>
         </button>
       )}
       {d.bin ? (

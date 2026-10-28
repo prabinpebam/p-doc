@@ -9,6 +9,7 @@ import { printDocument } from "./editor/print.ts";
 import { app, shownPanel, toast } from "./state.ts";
 import { backToCurrent, history, loadHistory } from "./versions.ts";
 import { reviewItems } from "./review.ts";
+import { applySync, loadSync } from "./sync.ts";
 import { sameRef } from "../shared/api.ts";
 import { CommandSearch } from "./ui/CommandSearch.tsx";
 import { Dialogs } from "./ui/Dialogs.tsx";
@@ -61,6 +62,7 @@ async function start(): Promise<void> {
     return;
   }
   app.set({ phase: "ready" });
+  if (settings.github?.connected) void loadSync();
   for (const r of await window.pdoc.recovery.take()) toast(`Recovered unsaved changes to ${r.doc.title}`);
   await refreshList();
   const { docs } = app.get();
@@ -171,13 +173,16 @@ export function App() {
     // A version made by the cadence shows up in an open history at once.
     const offVersions = window.pdoc.versions.onChanged((ref) => {
       if (app.get().history && sameRef(app.get().current, ref)) void loadHistory();
+      if (app.get().settings?.github?.connected) void loadSync();
     });
+    const offSync = window.pdoc.sync.onChanged((e) => void applySync(e));
     window.addEventListener("keydown", onKeyCapture, true);
     window.addEventListener("keydown", onKey);
     return () => {
       offClosing();
       offFull();
       offVersions();
+      offSync();
       window.removeEventListener("keydown", onKeyCapture, true);
       window.removeEventListener("keydown", onKey);
     };

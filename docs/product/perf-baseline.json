@@ -6,16 +6,16 @@
       "wait": "Cold start to editable page",
       "budgetMs": 2000,
       "samples": 5,
-      "medianMs": 443,
-      "p95Ms": 451,
+      "medianMs": 428,
+      "p95Ms": 438,
       "note": "From launch to an editable page, including Playwright's connection"
     },
     "keystroke50": {
       "wait": "Keystroke to glyph, 50-page document",
       "budgetMs": 16,
       "samples": 100,
-      "medianMs": 0.7,
-      "p95Ms": 0.9,
+      "medianMs": 0.6,
+      "p95Ms": 0.8,
       "note": "Transaction, editor update and browser layout for one character; 47 pages"
     },
     "repaginate50": {
@@ -30,40 +30,40 @@
       "wait": "Save to disk after the debounce",
       "budgetMs": 300,
       "samples": 10,
-      "medianMs": 6.6,
-      "p95Ms": 7.7,
+      "medianMs": 5.3,
+      "p95Ms": 7.6,
       "note": "Serialising and writing a 50-page document"
     },
     "open100": {
       "wait": "Open a 100-page document from the library",
       "budgetMs": 500,
       "samples": 5,
-      "medianMs": 56.5,
-      "p95Ms": 62.3,
+      "medianMs": 53.3,
+      "p95Ms": 62,
       "note": "Read, parse, draw and lay out all 94 pages"
     },
     "pdf50": {
       "wait": "Export PDF, 50 pages",
       "budgetMs": 3000,
       "samples": 3,
-      "medianMs": 258.5,
-      "p95Ms": 258.6,
+      "medianMs": 252.8,
+      "p95Ms": 260.4,
       "note": "Print layout in a hidden window and the PDF written"
     },
     "versionCommit50": {
       "wait": "Version commit",
       "budgetMs": 1000,
       "samples": 10,
-      "medianMs": 394.9,
-      "p95Ms": 422.2,
+      "medianMs": 400.5,
+      "p95Ms": 514.8,
       "note": "git add and commit of a changed 50-page document, from the renderer's request to its answer"
     },
     "history500": {
       "wait": "Version history list",
       "budgetMs": 300,
       "samples": 5,
-      "medianMs": 71.9,
-      "p95Ms": 188.8,
+      "medianMs": 67.2,
+      "p95Ms": 179.6,
       "note": "From a click on the save state to all 500+ rows drawn: Git log, tags, grouping and rendering"
     },
     "review50": {
@@ -73,6 +73,14 @@
       "medianMs": 0.1,
       "p95Ms": 0.2,
       "note": "Finding every suggestion and comment in a 50-page document with 100 changes"
+    },
+    "keystrokeSync50": {
+      "wait": "Sync (typing while it runs)",
+      "budgetMs": 16,
+      "samples": 967,
+      "medianMs": 0.6,
+      "p95Ms": 0.8,
+      "note": "Keystroke to glyph in a 50-page document during 4 syncs to a local fake GitHub (1398 ms each), each pushing a new version"
     }
   },
   "pending": [

@@ -5,6 +5,7 @@ import { getEditor, renameDoc, focusEditor } from "../session.ts";
 import { app } from "../state.ts";
 import { toggleHistory } from "../versions.ts";
 import { MODE_NAMES, openCounts, toggleReview } from "../review.ts";
+import { unsynced } from "../sync.ts";
 
 const SAVE_TEXT = { saved: "Saved to this computer", saving: "Saving…", error: "Couldn't save. Retrying…" } as const;
 
@@ -13,6 +14,7 @@ export function TitleBar() {
   const title = app.use((s) => s.doc?.title ?? "");
   const save = app.use((s) => s.save);
   const mode = app.use((s) => s.mode);
+  const synced = app.use((s) => !!s.current && s.sync?.state.kind === "synced" && !unsynced(s.sync, s.current));
   const [draft, setDraft] = useState<string | null>(null);
   useEffect(() => setDraft(null), [current?.path, current?.space]);
 
@@ -60,7 +62,7 @@ export function TitleBar() {
           </span>
           <button type="button" className="save-button" title="See version history (Ctrl+Alt+Shift+H)" aria-label="See version history" aria-describedby="save-state" onClick={toggleHistory}>
             <span id="save-state" className={`save-state ${save}`} role="status" aria-live="polite" data-testid="save-state">
-              {SAVE_TEXT[save]}
+              {save === "saved" && synced ? "Saved · synced" : SAVE_TEXT[save]}
             </span>
           </button>
           {mode !== "editing" ? (

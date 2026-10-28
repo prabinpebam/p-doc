@@ -1,6 +1,6 @@
 /** The app's state outside the editor: settings, the library, the open document, panels and dialogs. */
 import type { PDocFile } from "@p-doc/core";
-import type { DocRef, DocSummary, LibraryInfo, Settings, Space } from "../shared/api.ts";
+import type { DocRef, DocSummary, LibraryInfo, Settings, Space, SyncStatus } from "../shared/api.ts";
 import { createStore } from "./lib/store.ts";
 
 export type SaveState = "saved" | "saving" | "error";
@@ -17,7 +17,9 @@ export type Dialog =
   | { kind: "rename"; ref: DocRef; title: string }
   | { kind: "move"; ref: DocRef; title: string; to: Space }
   | { kind: "restoreVersion"; sha: string; time: string }
-  | { kind: "deleteComment"; thread: string; reply: string | null };
+  | { kind: "deleteComment"; thread: string; reply: string | null }
+  | { kind: "connect" }
+  | { kind: "syncProblem" };
 
 /** Editing, Suggesting or Viewing (U21, U27). */
 export type Mode = "editing" | "suggesting" | "viewing";
@@ -61,6 +63,8 @@ export interface AppState {
   markup: Markup;
   /** Bumped on each editor transaction, for views that follow the content (outline, counts). */
   tick: number;
+  /** Where GitHub sync stands (spec §4.7); null until known. */
+  sync: SyncStatus | null;
   e2e: boolean;
 }
 
@@ -86,6 +90,7 @@ export const app = createStore<AppState>({
   mode: "editing",
   markup: "all",
   tick: 0,
+  sync: null,
   e2e: false,
 });
 

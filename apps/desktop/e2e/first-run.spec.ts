@@ -5,8 +5,16 @@ test("first run: Use offline makes the library and opens a new document ready fo
   const { page } = l;
   await expect(page.getByRole("heading", { name: "Welcome to P-Doc" })).toBeVisible();
   await expect(page.getByText("Write documents you own. Every version kept, online or not.")).toBeVisible();
+  await expect(page.getByRole("list", { name: "Setup steps" }).locator("li[aria-current=step]")).toHaveText("Welcome");
+  await expect(page.getByRole("button", { name: "Connect GitHub" })).toBeFocused();
+  // Connect GitHub leads into the steps; Back returns to Welcome without setting anything up.
   await page.getByRole("button", { name: "Connect GitHub" }).click();
-  await expect(page.getByText(/isn't in this build yet/)).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Sign in to GitHub" })).toBeVisible();
+  await page.getByRole("button", { name: "Back" }).click();
+  await expect(page.getByRole("heading", { name: "Git" })).toBeVisible();
+  await expect(page.getByText(/^Git .+ is ready to keep versions\.$/)).toBeVisible();
+  await page.getByRole("button", { name: "Back" }).click();
+  await expect(page.getByRole("heading", { name: "Welcome to P-Doc" })).toBeVisible();
   await page.getByRole("button", { name: "Use offline" }).click();
   await expect(editor(page)).toBeFocused();
   await expect(page.locator("#doc-title")).toHaveValue("Untitled document");

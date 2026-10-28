@@ -1575,6 +1575,145 @@ kbd {
   font-size: var(--text-sm);
 }
 
+.visually-hidden {
+  position: absolute;
+  width: var(--border-hairline);
+  height: var(--border-hairline);
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Connect GitHub (§4.1 steps 3–7, V9) */
+
+.step-dots {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-2);
+  padding: 0;
+  list-style: none;
+}
+
+.step-dots li {
+  width: var(--space-2);
+  height: var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--color-rule);
+}
+
+.step-dots li.past {
+  background: var(--color-text-muted);
+}
+
+.step-dots li.now {
+  width: var(--space-6);
+  background: var(--color-accent);
+}
+
+.github-setup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 100%;
+  text-align: left;
+}
+
+.github-setup p {
+  margin: 0;
+}
+
+.step-title {
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+}
+
+.step-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.step-actions.start {
+  justify-content: flex-start;
+  margin-top: 0;
+}
+
+.step-form,
+.token-form {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.link-btn {
+  align-self: flex-start;
+  color: var(--color-accent);
+}
+
+.sign-in-wait {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.device-code {
+  font-family: var(--font-body);
+  font-size: var(--text-lg);
+}
+
+.repo-rows,
+.repo-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.repo-list {
+  gap: var(--space-1);
+  margin-bottom: var(--space-3);
+}
+
+.repo-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.repo-line .field {
+  flex: 1;
+}
+
+.repo-state {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: var(--size-select);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.repo-problem {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.connect-dialog .github-setup .step-title {
+  font-size: var(--text-lg);
+}
+
+.sync-state.problem {
+  color: var(--color-negative);
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     transition: none !important;

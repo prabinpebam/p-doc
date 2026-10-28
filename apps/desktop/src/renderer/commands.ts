@@ -11,6 +11,7 @@ import { downloadPdf, printDoc } from "./output.ts";
 import { flush, getEditor, newDoc, syncSelection, updateDoc } from "./session.ts";
 import { app, openDialog, showPanel, shownPanel, toast, togglePanel, updateSettings } from "./state.ts";
 import { nameCurrent, toggleHistory } from "./versions.ts";
+import { syncNow } from "./sync.ts";
 import { canDecide, decideAll, MARKUP_NAMES, MODE_NAMES, setMarkup, setMode, startComment, step, toggleReview } from "./review.ts";
 import type { Markup, Mode } from "./state.ts";
 
@@ -164,6 +165,15 @@ const commands: Command[] = [
     global: true,
     run: () => void nameCurrent(),
     enabled: () => hasDoc() && !!app.get().info?.git,
+  },
+  {
+    id: "file.sync",
+    label: "Sync now",
+    keys: ["Ctrl+Alt+S"],
+    keywords: "github push pull upload",
+    global: true,
+    run: () => void syncNow(),
+    enabled: () => !!app.get().settings?.github?.connected && app.get().sync?.state.kind !== "syncing",
   },
   { id: "file.pageSetup", label: "Page setup…", keywords: "paper margins orientation landscape portrait page colour size", global: true, run: () => openDialog({ kind: "pageSetup" }), enabled: hasDoc },
   { id: "file.pdf", label: "PDF document (.pdf)", keywords: "download export pdf save as", global: true, run: () => void downloadPdf(), enabled: hasEditor },
@@ -451,6 +461,7 @@ export const MENUS: Menu[] = [
       "file.delete",
       "-",
       { label: "Version history", items: ["file.history", "file.nameVersion"] },
+      "file.sync",
       "-",
       { label: "Download", items: ["file.pdf"] },
       "file.pageSetup",
