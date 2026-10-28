@@ -52,7 +52,7 @@ This project uses the [agentic-craft](https://github.com/prabinpebam/agentic-cra
 <!-- agent-orchestration:start -->
 ## Orchestration (agent-orchestration harness)
 
-This project uses the [agent-orchestration](https://github.com/prabinpebam/agent-orchestration) skills to carry out work. Start with the `orchestrate` skill: it picks the mode (show me the UX sooner, prove the risky assumption, make this production-ready; work with me or keep going unattended) and routes to `execution-modes`, `stage-validation`, `progress-review` and `coordinate`. Agent: `throughput-reviewer` (about every 30 minutes of running work). These skills decide how work is run, not what to build; product intent comes from the files named below when there are any.
+This project uses the [agent-orchestration](https://github.com/prabinpebam/agent-orchestration) skills to carry out work. Start with the `orchestrate` skill: it picks the mode (show me the UX sooner, prove the risky assumption, make this production-ready; work with me or keep going unattended) and routes to `execution-modes`, `stage-validation`, `progress-review` and `coordinate`. Agent: `throughput-reviewer` (about every 30 minutes of running work). The session clock (Copilot hooks in `.github/hooks/orchestration-clock.json`) says when a review is due and when to roll over to a new session. These skills decide how work is run, not what to build; product intent comes from the files named below when there are any.
 
 ### Project facts (fill in; the skills read these)
 
@@ -61,5 +61,5 @@ This project uses the [agent-orchestration](https://github.com/prabinpebam/agent
 - **Commands by validation tier:** unit, related files `pnpm vitest run <files>` · types `pnpm typecheck` · one end-to-end test `pnpm e2e -g "<title>"` · full suites `pnpm test && pnpm e2e` · production build with budgets `pnpm build && pnpm perf` · installers `pnpm package`
 - **Progress log:** `.agent-orchestration/progress.log` (ignored)
 - **Branches and merges:** work on `main` in this local repository · commit locally with the Copilot co-author trailer · the agent may: commit; never push, create remote repositories or publish releases (the owner does) · must never break: documents in the owner's library
-- **Reviews and escalation:** review every 30 minutes of running work · always escalate: anything that signs in to, writes to or creates repositories on the owner's real GitHub; licence questions; deleting the owner's files
+- **Reviews and escalation:** review every 30 minutes of running work · roll over to a new session after 90 minutes, 300 tool calls or 2 compactions (the session clock, `.github/hooks/orchestration-clock.json`; `node .github/hooks/orchestration-clock.mjs status`) · always escalate: anything that signs in to, writes to or creates repositories on the owner's real GitHub; licence questions; deleting the owner's files
 <!-- agent-orchestration:end -->
