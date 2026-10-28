@@ -44,6 +44,17 @@ describe("format", () => {
     expect(() => parseDocument('{"format":"p-doc","version":99,"id":"a","content":{"type":"doc"}}')).toThrow(/newer/);
   });
 
+  it("13.2 keeps Always suggest per document and defaults older files to off", () => {
+    const doc = createDocument({ alwaysSuggest: true });
+    expect(parseDocument(serializeDocument(doc)).alwaysSuggest).toBe(true);
+    const raw = JSON.parse(serializeDocument(doc));
+    delete raw.alwaysSuggest;
+    expect(parseDocument(JSON.stringify(raw)).alwaysSuggest).toBe(false);
+    raw.alwaysSuggest = "true";
+    expect(parseDocument(JSON.stringify(raw)).alwaysSuggest).toBe(false);
+    expect(createDocument().alwaysSuggest).toBe(false);
+  });
+
   it("names files by slug and id", () => {
     expect(slug("Ünïcode & Things: A Plan!")).toBe("unicode-things-a-plan");
     expect(slug("")).toBe("untitled");

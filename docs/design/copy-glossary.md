@@ -17,10 +17,11 @@ Words P-Doc uses, and the words it doesn't. Sentence case everywhere; no exclama
 | Saved · synced | Written and pushed | Up to date |
 | sync | Exchange versions with GitHub | push, pull, upload |
 | Offline | No network; everything still works | disconnected, error |
-| suggestion | A proposed insertion or deletion in Suggesting | tracked change, revision, redline |
+| suggestion | A proposed insertion, deletion or formatting change in Suggesting | tracked change, revision, redline |
 | comment | A note on a piece of text; has replies | annotation, note |
 | resolve | Close a comment, keeping it | archive, done |
-| Editing / Suggesting / Viewing | The three modes | Edit mode, Review mode, Read-only |
+| Editing / Suggesting / Commenting / Viewing | The four modes; Commenting allows comments without changing text | Edit mode, Review mode, Read-only |
+| Always suggest | A document preference that opens it in Suggesting and asks before direct editing | lock tracking, protect document |
 | markup | How suggestions show: Simple, All, No markup, Original | display for review |
 | Pages / Pageless | The two layouts | print layout, web layout |
 | page setup | Paper, orientation, margins, page colour | page settings, layout options |

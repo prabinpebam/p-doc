@@ -516,7 +516,7 @@ export function Toolbar() {
     </>,
   ];
   count.current = groups.length;
-  const ModeIcon = mode === "suggesting" ? CommentEdit20Regular : mode === "viewing" ? Eye20Regular : Edit20Regular;
+  const ModeIcon = mode === "suggesting" ? CommentEdit20Regular : mode === "commenting" ? CommentAdd20Regular : mode === "viewing" ? Eye20Regular : Edit20Regular;
 
   return (
     <div ref={ref} role="toolbar" aria-label="Formatting" className="toolbar" data-region onKeyDown={onKeyDown} onFocus={onFocus}>
@@ -547,7 +547,7 @@ export function Toolbar() {
               <span className="tb-mode-name">{MODE_NAMES[mode]}</span>
             </>
           }
-          items={["mode.editing", "mode.suggesting", "mode.viewing"]}
+          items={["mode.editing", "mode.suggesting", "mode.commenting", "mode.viewing"]}
         />
       </div>
     </div>

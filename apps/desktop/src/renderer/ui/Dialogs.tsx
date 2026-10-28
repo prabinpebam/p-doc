@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { COMMANDS, MENU_PATH, MENUS, labelOf, shownChord } from "../commands.ts";
 import { moveDoc } from "../ops.ts";
 import { restoreVersion } from "../versions.ts";
-import { deleteComment } from "../review.ts";
+import { deleteComment, turnOffSuggest } from "../review.ts";
 import { getEditor, renameDoc } from "../session.ts";
 import { sameRef } from "../../shared/api.ts";
 import { anchorsOf, eachImage } from "@p-doc/core";
@@ -68,6 +68,8 @@ export function Dialogs() {
       return <SortDialog />;
     case "compare":
       return <CompareDialog />;
+    case "turnOffSuggest":
+      return <TurnOffSuggest />;
     case "notes":
       return <NotesDialog />;
     case "table":
@@ -608,6 +610,25 @@ function RestoreVersion({ d }: { d: Extract<DialogState, { kind: "restoreVersion
       }
     >
       <p>The current version stays in history.</p>
+    </Dialog>
+  );
+}
+
+/** @tier compound @a11y Cancel keeps the document's preference; Enter confirms direct editing. */
+function TurnOffSuggest() {
+  return (
+    <Dialog
+      title="Turn off Always suggest?"
+      onClose={closeDialog}
+      onSubmit={turnOffSuggest}
+      actions={
+        <>
+          <Cancel />
+          <button type="submit" className="btn primary" data-autofocus>Turn off</button>
+        </>
+      }
+    >
+      <p>Changes in this document will be made directly. Existing suggestions stay for review.</p>
     </Dialog>
   );
 }

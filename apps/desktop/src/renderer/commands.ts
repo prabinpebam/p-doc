@@ -17,7 +17,7 @@ import { flush, getEditor, newDoc, syncSelection, updateDoc } from "./session.ts
 import { app, openDialog, showPanel, shownPanel, toast, togglePanel, updateSettings } from "./state.ts";
 import { nameCurrent, toggleHistory } from "./versions.ts";
 import { syncNow } from "./sync.ts";
-import { canDecide, decideAll, MARKUP_NAMES, MODE_NAMES, setMarkup, setMode, startComment, step, toggleReview } from "./review.ts";
+import { canDecide, decideAll, MARKUP_NAMES, MODE_NAMES, setAlwaysSuggest, setMarkup, setMode, startComment, step, toggleReview } from "./review.ts";
 import type { Markup, Mode } from "./state.ts";
 
 export interface Command {
@@ -498,6 +498,7 @@ const commands: Command[] = [
     [
       ["editing", "Ctrl+Alt+Shift+Z", "edit directly"],
       ["suggesting", "Ctrl+Alt+Shift+X", "track changes suggest"],
+      ["commenting", "", "comments only annotate"],
       ["viewing", "Ctrl+Alt+Shift+C", "read only"],
     ] as [Mode, string, string][]
   ).map(
@@ -505,7 +506,7 @@ const commands: Command[] = [
       id: `mode.${m}`,
       label: MODE_NAMES[m],
       keywords: `mode ${words}`,
-      keys: [key],
+      keys: key ? [key] : [],
       global: true,
       checked: () => app.get().mode === m,
       run: () => setMode(m),
@@ -524,6 +525,7 @@ const commands: Command[] = [
     }),
   ),
   { id: "tools.review", label: "Review changes", keywords: "suggestions comments track changes accept reject panel", global: true, checked: () => app.get().review, run: toggleReview, enabled: hasDoc },
+  { id: "review.alwaysSuggest", label: "Always suggest in this document", keywords: "review track changes persistent", global: true, checked: () => !!app.get().doc?.alwaysSuggest, run: () => setAlwaysSuggest(!app.get().doc?.alwaysSuggest), enabled: () => hasDoc() && !app.get().locked && !app.get().history },
   { id: "review.next", label: "Next change or comment", keywords: "review", global: true, run: () => step(1), enabled: hasEditor },
   { id: "review.prev", label: "Previous change or comment", keywords: "review", global: true, run: () => step(-1), enabled: hasEditor },
   { id: "review.acceptAll", label: "Accept all changes", keywords: "review suggestions", global: true, run: () => decideAll("accept"), enabled: canDecide },
@@ -604,7 +606,7 @@ export const MENUS: Menu[] = [
       "view.outline",
       "view.library",
       "view.history",
-      { label: "Mode", items: ["mode.editing", "mode.suggesting", "mode.viewing"] },
+      { label: "Mode", items: ["mode.editing", "mode.suggesting", "mode.commenting", "mode.viewing"] },
       { label: "Markup", items: ["view.markup.simple", "view.markup.all", "view.markup.none", "view.markup.original"] },
       "-",
       "view.pages",
@@ -676,7 +678,7 @@ export const MENUS: Menu[] = [
     id: "tools",
     label: "Tools",
     key: "T",
-    items: ["tools.wordCount", "tools.spelling", "-", "tools.review", { label: "Changes", items: ["review.next", "review.prev", "-", "review.acceptAll", "review.rejectAll"] }, "tools.compare", "-", "tools.search"],
+    items: ["tools.wordCount", "tools.spelling", "-", "tools.review", { label: "Review", items: ["review.alwaysSuggest"] }, { label: "Changes", items: ["review.next", "review.prev", "-", "review.acceptAll", "review.rejectAll"] }, "tools.compare", "-", "tools.search"],
   },
   { id: "help", label: "Help", key: "H", items: ["help.shortcuts", "help.about", "help.logs"] },
 ];

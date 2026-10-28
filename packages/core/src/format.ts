@@ -168,6 +168,8 @@ export interface PDocFile {
   styles: Styles;
   content: JSONContent;
   comments: CommentThread[];
+  /** Open in Suggesting; entering Editing asks to turn this off (U64). */
+  alwaysSuggest: boolean;
 }
 
 export const SANS = "Aptos, Calibri, 'Segoe UI', system-ui, sans-serif";
@@ -229,6 +231,7 @@ export interface CreateOptions {
   styles?: Styles;
   content?: JSONContent;
   comments?: CommentThread[];
+  alwaysSuggest?: boolean;
   id?: string;
   now?: Date;
 }
@@ -244,6 +247,7 @@ export function createDocument(o: CreateOptions = {}): PDocFile {
     styles: structuredClone(o.styles ?? defaultStyles()),
     content: o.content ?? emptyContent(),
     comments: structuredClone(o.comments ?? []),
+    alwaysSuggest: o.alwaysSuggest === true,
   };
 }
 
@@ -328,6 +332,7 @@ export function parseDocument(text: string, o: { allowNewer?: boolean } = {}): P
     styles,
     content: d.content as JSONContent,
     comments: Array.isArray(d.comments) ? d.comments : [],
+    alwaysSuggest: d.alwaysSuggest === true,
   };
 }
 

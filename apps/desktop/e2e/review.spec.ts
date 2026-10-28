@@ -78,6 +78,64 @@ test("4.1 Editing, Suggesting and Viewing switch from the toolbar and shortcuts;
   await quit(l);
 });
 
+test("13.2 Commenting blocks typing and formatting but keeps comments; Always suggest survives reopening", async () => {
+  const l = await launch();
+  const { page } = l;
+  const ed = editor(page);
+  await page.keyboard.type("Words stay unchanged.");
+  await page.getByRole("button", { name: "Mode: Editing" }).click();
+  await page.getByRole("menuitemcheckbox", { name: "Commenting", exact: true }).click();
+  await expect(page.getByTestId("mode-badge")).toHaveText("Commenting");
+  await expect(ed).toHaveAttribute("contenteditable", "false");
+  await expect(page.getByRole("button", { name: /^Bold/ })).toBeDisabled();
+  await ed.click();
+  await page.keyboard.type("XYZ");
+  await page.keyboard.press("Backspace");
+  await page.keyboard.press("Enter");
+  await page.keyboard.press("Control+B");
+  await page.keyboard.press("Control+Z");
+  expect(await text(page)).toBe("Words stay unchanged.");
+  await expect(ed.locator("strong")).toHaveCount(0);
+  await selectWord(page, "Words");
+  await page.keyboard.press("Control+Alt+M");
+  await expect(page.locator("#comment-draft")).toBeFocused();
+  await page.keyboard.type("A comment without editing.");
+  await page.keyboard.press("Control+Enter");
+  await expect(items(page)).toContainText("A comment without editing.");
+  await expect(ed.locator(".pd-comment")).toHaveText("Words");
+  expect(await text(page)).toBe("Words stay unchanged.");
+  await page.screenshot({ path: test.info().outputPath("commenting.png") });
+
+  await page.getByRole("menuitem", { name: "Tools", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Review", exact: true }).click();
+  await page.getByRole("menuitemcheckbox", { name: "Always suggest in this document" }).click();
+  await expect(page.getByTestId("mode-badge")).toHaveText("Suggesting");
+  await expect(ed).toHaveAttribute("contenteditable", "true");
+  await ed.press("Control+End");
+  await page.keyboard.type(" A suggestion.");
+  await expect(ed.locator("ins")).toHaveText(" A suggestion.");
+  await quit(l);
+
+  const reopened = await launch({ dirs: l.dirs });
+  const p = reopened.page;
+  await expect(p.getByTestId("mode-badge")).toHaveText("Suggesting");
+  await expect(editor(p).locator("ins")).toHaveText(" A suggestion.");
+  await p.keyboard.press("Control+Alt+Shift+Z");
+  const dialog = p.getByRole("dialog", { name: "Turn off Always suggest?" });
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  await expect(p.getByTestId("mode-badge")).toHaveText("Suggesting");
+  await p.keyboard.press("Control+Alt+Shift+Z");
+  await p.screenshot({ path: test.info().outputPath("always-suggest-confirmation.png") });
+  await dialog.getByRole("button", { name: "Turn off", exact: true }).click();
+  await expect(p.getByTestId("mode-badge")).toHaveCount(0);
+  await expect(editor(p).locator("ins")).toHaveText(" A suggestion.");
+  await quit(reopened);
+  const off = await launch({ dirs: l.dirs });
+  await expect(off.page.getByTestId("mode-badge")).toHaveCount(0);
+  await quit(off);
+});
+
 test("4.2–4.6 suggest, see markup views, review in order, accept and reject", async () => {
   const l = await launch();
   const { page } = l;

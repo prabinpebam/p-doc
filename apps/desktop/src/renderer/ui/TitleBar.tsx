@@ -1,6 +1,6 @@
 /** The title bar (V1): app mark, the document's title, its place (Private or Public) and the save state. */
 import { useEffect, useState } from "react";
-import { CommentEdit16Regular, CommentMultiple20Regular, DocumentText20Regular, Eye16Regular, Globe16Regular, LockClosed16Regular } from "@fluentui/react-icons";
+import { CommentAdd16Regular, CommentEdit16Regular, CommentMultiple20Regular, DocumentText20Regular, Eye16Regular, Globe16Regular, LockClosed16Regular } from "@fluentui/react-icons";
 import { getEditor, renameDoc, focusEditor } from "../session.ts";
 import { app } from "../state.ts";
 import { toggleHistory } from "../versions.ts";
@@ -66,8 +66,8 @@ export function TitleBar() {
             </span>
           </button>
           {mode !== "editing" ? (
-            <span className={`mode-badge ${mode}`} data-testid="mode-badge" title={mode === "suggesting" ? "Your edits become suggestions (Ctrl+Alt+Shift+Z for Editing)" : "Read only (Ctrl+Alt+Shift+Z for Editing)"}>
-              {mode === "suggesting" ? <CommentEdit16Regular aria-hidden /> : <Eye16Regular aria-hidden />}
+            <span className={`mode-badge ${mode}`} data-testid="mode-badge" title={mode === "suggesting" ? "Your edits become suggestions (Ctrl+Alt+Shift+Z for Editing)" : mode === "commenting" ? "Comments only; the text cannot be changed" : "Read only (Ctrl+Alt+Shift+Z for Editing)"}>
+              {mode === "suggesting" ? <CommentEdit16Regular aria-hidden /> : mode === "commenting" ? <CommentAdd16Regular aria-hidden /> : <Eye16Regular aria-hidden />}
               {MODE_NAMES[mode]}
             </span>
           ) : null}

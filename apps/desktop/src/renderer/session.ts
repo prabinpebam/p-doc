@@ -138,7 +138,7 @@ function show(o: Opened): void {
   rev = 0;
   savedRev = 0;
   const locked = o.summary.newer ? NEWER_MESSAGE : null;
-  app.set((s) => ({ current: o.summary, doc: o.doc, locked, session: s.session + 1, save: "saved", find: null }));
+  app.set((s) => ({ current: o.summary, doc: o.doc, locked, session: s.session + 1, save: "saved", find: null, mode: o.doc.alwaysSuggest ? "suggesting" : s.mode }));
   void updateSettings({ last: { space: o.summary.space, path: o.summary.path } });
   void storeOldImages(o);
 }

@@ -83,14 +83,31 @@ export function applyMode(e: Editor): void {
   e.setEditable(!history.get().viewing && pageEditable(s), false);
 }
 
-export const MODE_NAMES: Record<Mode, string> = { editing: "Editing", suggesting: "Suggesting", viewing: "Viewing" };
+export const MODE_NAMES: Record<Mode, string> = { editing: "Editing", suggesting: "Suggesting", commenting: "Commenting", viewing: "Viewing" };
 export const MARKUP_NAMES: Record<Markup, string> = { simple: "Simple markup", all: "All markup", none: "No markup", original: "Original" };
 
 export function setMode(mode: Mode): void {
+  if (mode === "editing" && app.get().doc?.alwaysSuggest) {
+    openDialog({ kind: "turnOffSuggest" });
+    return;
+  }
   app.set({ mode });
   getEditor()?.commands.setSuggesting(mode === "suggesting");
   syncEditable();
   focusEditor();
+}
+
+/** A document preference, not a permission: turning it off is an explicit choice. */
+export function setAlwaysSuggest(on: boolean): void {
+  if (!app.get().doc || app.get().locked || history.get().viewing) return;
+  updateDoc({ alwaysSuggest: on });
+  if (on) setMode("suggesting");
+}
+
+export function turnOffSuggest(): void {
+  setAlwaysSuggest(false);
+  closeDialog();
+  setMode("editing");
 }
 
 export function setMarkup(markup: Markup): void {
@@ -101,7 +118,7 @@ export function setMarkup(markup: Markup): void {
 }
 
 /** Accepting and rejecting change the text, so not in Viewing or over a version. */
-export const canDecide = () => !!getEditor() && app.get().mode !== "viewing" && !history.get().viewing;
+export const canDecide = () => !!getEditor() && !app.get().locked && (app.get().mode === "editing" || app.get().mode === "suggesting") && !history.get().viewing;
 
 // ------------------------------------------------------------------------------ The panel
 

@@ -30,13 +30,14 @@ export type Dialog =
   | { kind: "contents" }
   | { kind: "equation" }
   | { kind: "table" }
-  | { kind: "compare" };
+  | { kind: "compare" }
+  | { kind: "turnOffSuggest" };
 
 /** The Paragraph dialog's tabs (spec §4.11). */
 export type ParagraphTab = "indents" | "breaks" | "borders" | "tabs";
 
-/** Editing, Suggesting or Viewing (U21, U27). */
-export type Mode = "editing" | "suggesting" | "viewing";
+/** Editing, Suggesting, Commenting or Viewing (U21, U27, U64). */
+export type Mode = "editing" | "suggesting" | "commenting" | "viewing";
 /** How suggestions show (U23): Simple (applied, with a margin bar), All (inline), No markup (accepted), Original (rejected). */
 export type Markup = "simple" | "all" | "none" | "original";
 
@@ -129,7 +130,7 @@ export async function updateSettings(patch: Partial<Omit<Settings, "version">>):
 }
 
 /** The page takes typing: Editing or Suggesting, with a markup view the text can be changed in, and not locked. */
-export const pageEditable = (s: AppState) => !s.locked && s.mode !== "viewing" && (s.markup === "all" || s.markup === "simple");
+export const pageEditable = (s: AppState) => !s.locked && (s.mode === "editing" || s.mode === "suggesting") && (s.markup === "all" || s.markup === "simple");
 
 export const openDialog = (dialog: Dialog) => app.set({ dialog, palette: false });
 export const closeDialog = () => app.set({ dialog: null });
