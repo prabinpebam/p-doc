@@ -229,7 +229,7 @@ A person can make demanding layouts: sections with their own page setup, columns
 | 11.4 | Text and picture watermarks show behind every page and print (U58) | e2e `sections` | |
 | 11.5 | Line numbers, offline hyphenation and drop caps show and print (U59, A14) | e2e `sections` with the network off | |
 | 11.6 | Pageless keeps every section setting and shows one flow (U13) | e2e `sections` | **Pass** 2026-10-28: e2e `sections` (Pageless: no sheets, the three breaks still marked, one width; back to Pages the landscape section and Page 4 of 4 return) |
-| 11.7 | Repagination with sections and columns stays ≤ 16 ms on 50 pages (§7) | `pnpm perf` | |
+| 11.7 | Repagination with sections and columns stays ≤ 16 ms on 50 pages (§7) | `pnpm perf` | **Pass** for sections 2026-10-29: `pnpm perf` "Repagination with sections" p95 9.1 ms, median 7.2 ms (budget 16) over 13 sections of every kind with landscape pages, own headers and numbers, 57 pages (baseline `repaginate50Sections`). Columns are measured again when I11b lays them out |
 
 ### Stage 12: Tables, code and equations
 

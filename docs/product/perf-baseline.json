@@ -113,6 +113,14 @@
       "medianMs": 7.6,
       "p95Ms": 10.3,
       "note": "Measuring every block and placing 40 footnotes (every fifth one long) at the foot of their pages, 50 pages"
+    },
+    "repaginate50Sections": {
+      "wait": "Repagination with sections",
+      "budgetMs": 16,
+      "samples": 40,
+      "medianMs": 7.2,
+      "p95Ms": 9.1,
+      "note": "Measuring every block across 13 sections (each kind of break, landscape pages, own headers and numbers), 57 pages"
     }
   }
 }

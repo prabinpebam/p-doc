@@ -193,6 +193,50 @@ test("repagination with 40 footnotes in a 50-page document", async () => {
   await quit(l);
 });
 
+test("repagination with sections in a 50-page document", async () => {
+  const l = await launch();
+  const { page } = l;
+  // Every 40 paragraphs a section break of each kind in turn; every other section landscape, with its own headers and i, ii numbers.
+  const base = bigDocument(50) as { type: string; content: unknown[] };
+  const kinds = ["next", "continuous", "odd", "even"];
+  const content: unknown[] = [];
+  base.content.forEach((n, i) => {
+    if (i > 0 && i % 40 === 0) {
+      const k = i / 40;
+      const land = k % 2 === 1;
+      content.push({
+        type: "sectionBreak",
+        attrs: {
+          kind: kinds[k % 4],
+          ...(land ? { page: { size: "letter", orientation: "landscape", margins: { top: 0.75, bottom: 0.75, left: 0.75, right: 0.75 } }, numbering: { format: "i", start: 1 } } : {}),
+          ...(land ? { hf: { header: `Section ${k}`, footer: "{page}", firstHeader: "", firstFooter: "", evenHeader: "", evenFooter: "" } } : {}),
+        },
+      });
+    }
+    content.push(n);
+  });
+  await load(page, { type: "doc", content });
+  const pages = await settled(page);
+  expect(pages).toBeGreaterThanOrEqual(40);
+  await caretMid(page);
+  const relayout = await page.evaluate(async () => {
+    const w = window as unknown as { __pdoc: { getEditor(): { view: any }; perf: Perf } };
+    const view = w.__pdoc.getEditor().view;
+    const out: number[] = [];
+    for (let i = 0; i < 40; i++) {
+      view.dispatch(i % 2 ? view.state.tr.insertText("y") : view.state.tr.split(view.state.selection.from));
+      const t = performance.now();
+      w.__pdoc.perf.layoutNow();
+      out.push(performance.now() - t);
+      await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
+    }
+    return out;
+  });
+  const sections = await page.locator(".pd-content .pd-section-break").count();
+  record("repaginate50Sections", "Repagination with sections", 16, relayout, `Measuring every block across ${sections + 1} sections (each kind of break, landscape pages, own headers and numbers), ${pages} pages`);
+  await quit(l);
+});
+
 test("opening a 100-page document from the library", async () => {
   const l = await launch();
   const { page } = l;
