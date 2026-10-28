@@ -7,7 +7,7 @@ import { Extension } from "@tiptap/core";
 import { Plugin, PluginKey, type EditorState, type Transaction } from "@tiptap/pm/state";
 import { Decoration, DecorationSet, type EditorView, type NodeView } from "@tiptap/pm/view";
 import { DOMSerializer, type Node as PMNode } from "@tiptap/pm/model";
-import { CSS_PX_PER_INCH, notesOf, pageFaces, pageInches, paginate, sectionIndexAt, sectionsOf, sheetsOf, type BlockBox, type HfAlign, type NoteBox, type PageFace, type PageSetup, type Sheet, type TocEntry, digitsFor } from "@p-doc/core";
+import { CSS_PX_PER_INCH, notesOf, pageFaces, pageInches, paginate, sectionIndexAt, sectionsOf, sheetsOf, type BlockBox, type HfAlign, type NoteBox, type PageFace, type PageSetup, type Sheet, type TocEntry, type Watermark, digitsFor } from "@p-doc/core";
 import { createStore } from "../lib/store.ts";
 
 /** A page's geometry in CSS pixels, rounded as the page is drawn. */
@@ -58,6 +58,17 @@ export interface Layout {
   shifts: ({ dx: number; dw: number } | null)[];
   /** Each page's number, header and footer (U57), blank pages included; page n is faces[n - 1]. */
   faces: PageFace[];
+}
+
+/**
+ * A watermark on a sheet `width` × `height` px (U58): diagonal runs corner to corner, flat across; the words
+ * take about 70% of the line they run along, and no more than a fifth of the sheet's width in height.
+ */
+export function watermarkStyle(w: Watermark, width: number, height: number): Record<string, string> {
+  const along = w.layout === "diagonal" ? Math.hypot(width, height) : width;
+  const size = Math.min(width / 5, (along * 0.7) / (Math.max(1, [...w.text].length) * 0.6));
+  const angle = w.layout === "diagonal" ? -Math.atan2(height, width) * (180 / Math.PI) : 0;
+  return { "--wm-color": w.color, "--wm-size": `${size.toFixed(1)}px`, "--wm-angle": `${angle.toFixed(2)}deg` };
 }
 
 /** A sheet of paper behind the text: `top` and `left` in the page area, `span` pages tall. */

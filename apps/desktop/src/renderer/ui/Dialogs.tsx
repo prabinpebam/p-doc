@@ -12,7 +12,7 @@ import { app, closeDialog, updateSettings, type Dialog as DialogState } from "..
 import type { Theme } from "../../shared/api.ts";
 import { Dialog } from "./Dialog.tsx";
 import { countWords } from "./StatusBar.tsx";
-import { HeaderFooterDialog, PageSetupDialog } from "./PageDialogs.tsx";
+import { HeaderFooterDialog, PageSetupDialog, WatermarkDialog } from "./PageDialogs.tsx";
 import { ConnectDialog, GitHubSection, SyncProblemDialog } from "./GitHubSettings.tsx";
 import { ImageAltDialog, ImageOptionsDialog } from "./ImageDialogs.tsx";
 import { ParagraphDialog } from "./ParagraphDialog.tsx";
@@ -49,6 +49,8 @@ export function Dialogs() {
       return <PageSetupDialog />;
     case "headerFooter":
       return <HeaderFooterDialog />;
+    case "watermark":
+      return <WatermarkDialog />;
     case "connect":
       return <ConnectDialog />;
     case "syncProblem":

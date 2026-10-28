@@ -56,7 +56,31 @@ export interface PageSetup {
   numStart: number;
   /** The first section's text columns (U56). */
   columns: Columns;
+  /** Text behind every page (U58); none when null. */
+  watermark: Watermark | null;
 }
+
+/** A text watermark: its words, colour (#rrggbb) and whether it runs corner to corner or across. */
+export interface Watermark {
+  text: string;
+  color: string;
+  layout: "diagonal" | "flat";
+}
+/** The colours offered for a watermark: light enough to read text over. */
+export const WATERMARK_COLORS = [
+  ["#c8c8c8", "Grey"],
+  ["#f2b8b5", "Red"],
+  ["#b9cdf2", "Blue"],
+  ["#bfe0c0", "Green"],
+] as const;
+export const cleanWatermark = (raw: unknown): Watermark | null => {
+  if (!raw || typeof raw !== "object") return null;
+  const w = raw as Record<string, unknown>;
+  const text = typeof w.text === "string" ? w.text.trim().slice(0, 100) : "";
+  if (!text) return null;
+  const color = typeof w.color === "string" && /^#[0-9a-f]{6}$/i.test(w.color) ? w.color.toLowerCase() : WATERMARK_COLORS[0][0];
+  return { text, color, layout: w.layout === "flat" ? "flat" : "diagonal" };
+};
 
 /** Text columns: how many (1–3) and the space between them (inches). */
 export interface Columns {
@@ -187,6 +211,7 @@ export function defaultPage(locale?: string): PageSetup {
     numFormat: "1",
     numStart: 1,
     columns: { count: 1, gap: 0.5 },
+    watermark: null,
   };
 }
 
@@ -269,6 +294,7 @@ export function cleanPage(raw: unknown): PageSetup {
     numFormat: cleanNumFormat(p.numFormat, d.numFormat),
     numStart: typeof p.numStart === "number" && Number.isInteger(p.numStart) && p.numStart >= 0 && p.numStart <= 9999 ? p.numStart : d.numStart,
     columns: cleanColumns(p.columns) ?? d.columns,
+    watermark: cleanWatermark(p.watermark),
   };
 }
 

@@ -8,7 +8,7 @@ import { CSS_PX_PER_INCH, styleCss, type PDocFile } from "@p-doc/core";
 import type { PrintRequest } from "../../shared/api.ts";
 import tokensCss from "@p-doc/tokens/tokens.css?inline";
 import pageCss from "../styles/page.css?inline";
-import { geometry, layoutNow, noteRest, type Geometry, type Layout } from "./pages.ts";
+import { geometry, layoutNow, noteRest, watermarkStyle, type Geometry, type Layout } from "./pages.ts";
 
 // The editor's own state: selection, find highlights, the empty-document placeholder.
 const EDITOR_ONLY = ["ProseMirror-selectednode", "selectedCell", "pd-match", "pd-match-current", "has-focus", "is-empty", "is-editor-empty", "is-cropping", "is-resizing", "pd-np-space"];
@@ -153,8 +153,13 @@ export function printDocument(doc: PDocFile, view: EditorView): PrintDoc {
       if (!names.has(key)) names.set(key, `p${names.size}`);
       return names.get(key)!;
     };
+    const wm = (x: Geometry, span: number) => {
+      if (!p.watermark) return "";
+      const style = Object.entries(watermarkStyle(p.watermark, x.width, span * x.height)).map(([k, v]) => `${k}: ${esc(v)}`).join("; ");
+      return `<div class="pd-watermark" style="${style}"><span>${esc(p.watermark.text)}</span></div>`;
+    };
     const sheet = (x: Geometry, span: number, first: number, content: string) =>
-      `<section class="print-sheet" style="--sheet-height: ${span * x.height}px; --page-width: ${x.width}px; --page-pad-top: ${x.top}px; --page-pad-bottom: ${x.bottom}px; --page-pad-left: ${x.left}px; --page-pad-right: ${x.right}px; page: ${nameOf(x)}">${hf("print-head", "header", layout.faces[first - 1]?.header ?? "", p.headerAlign)}<div class="pd-content">${content}</div>${hf("print-foot", "footer", layout.faces[first + span - 2]?.footer ?? "", p.footerAlign)}</section>`;
+      `<section class="print-sheet" style="--sheet-height: ${span * x.height}px; --page-width: ${x.width}px; --page-pad-top: ${x.top}px; --page-pad-bottom: ${x.bottom}px; --page-pad-left: ${x.left}px; --page-pad-right: ${x.right}px; page: ${nameOf(x)}">${wm(x, span)}${hf("print-head", "header", layout.faces[first - 1]?.header ?? "", p.headerAlign)}<div class="pd-content">${content}</div>${hf("print-foot", "footer", layout.faces[first + span - 2]?.footer ?? "", p.footerAlign)}</section>`;
     body = layout.sheets
       .map((sh, k) => {
         // A blank page before an odd or even section has the paper of the page before it.

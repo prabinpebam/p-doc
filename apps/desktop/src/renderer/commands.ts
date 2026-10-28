@@ -291,6 +291,8 @@ const commands: Command[] = [
   { id: "insert.columnBreak", label: "Column break", keys: ["Ctrl+Shift+Enter"], keywords: "columns newspaper", run: withEditor((e) => insertAtomBlock(e, "columnBreak")), enabled: canEdit },
   ...(Object.entries(SECTION_LABEL) as [SectionStart, string][]).map(([kind, label]): Command => ({ id: `insert.section.${kind}`, label, keywords: "section break landscape orientation paper columns odd even page", run: withEditor((e) => insertAtomBlock(e, "sectionBreak", { kind })), enabled: canEdit })),
   { id: "insert.toc", label: "Table of contents", keywords: "toc contents", run: withEditor((e) => insertAtomBlock(e, "tableOfContents")), enabled: canEdit },
+  { id: "insert.watermark", label: "Watermark…", keywords: "draft confidential background behind text", global: true, run: () => openDialog({ kind: "watermark" }), enabled: hasDoc },
+  { id: "insert.removeWatermark", label: "Remove watermark", keywords: "draft confidential", global: true, run: () => { const d = app.get().doc; if (d?.page.watermark) updateDoc({ page: { ...d.page, watermark: null } }); }, enabled: () => hasDoc() && !!app.get().doc?.page.watermark },
   { id: "insert.headerFooter", label: "Header and footer", keywords: "page number count footer header", global: true, run: () => openDialog({ kind: "headerFooter" }), enabled: hasDoc },
   { id: "insert.special", label: "Special characters…", keywords: "symbol emoji character", run: () => openDialog({ kind: "specialChars" }), enabled: canEdit },
   { id: "toc.options", label: "Contents options…", keywords: "table of contents toc levels page numbers links leaders", run: () => openDialog({ kind: "contents" }), enabled: () => canEdit() && !!contentsAt(ed()!.state) },
@@ -589,7 +591,7 @@ export const MENUS: Menu[] = [
     id: "insert",
     label: "Insert",
     key: "I",
-    items: ["insert.image", { label: "Table", items: ["insert.table2", "insert.table3", "insert.table4", "insert.table5"] }, "insert.link", "insert.hr", { label: "Break", items: ["insert.pageBreak", "insert.columnBreak", "-", "insert.section.next", "insert.section.continuous", "insert.section.odd", "insert.section.even"] }, "insert.toc", "toc.options", "insert.headerFooter", "insert.special", "-", "insert.footnote", "insert.endnote", "insert.bookmark", "-", "insert.comment"],
+    items: ["insert.image", { label: "Table", items: ["insert.table2", "insert.table3", "insert.table4", "insert.table5"] }, "insert.link", "insert.hr", { label: "Break", items: ["insert.pageBreak", "insert.columnBreak", "-", "insert.section.next", "insert.section.continuous", "insert.section.odd", "insert.section.even"] }, "insert.toc", "toc.options", "insert.headerFooter", "insert.watermark", "insert.removeWatermark", "insert.special", "-", "insert.footnote", "insert.endnote", "insert.bookmark", "-", "insert.comment"],
   },
   {
     id: "format",

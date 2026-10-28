@@ -66,6 +66,29 @@
   pointer-events: none;
 }
 
+/* A watermark (U58): behind the text of every page, centred, sized and turned by watermarkStyle. */
+.pd-watermark {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  color: var(--wm-color);
+  font-family: var(--doc-font, var(--font-ui));
+  font-size: var(--wm-size);
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+}
+
+.pd-watermark > span {
+  rotate: var(--wm-angle);
+}
+
 .page.paged .pd-content > .pd-sec-shift {
   translate: var(--sec-dx) 0;
   margin-right: var(--sec-mr) !important;
@@ -866,6 +889,8 @@
 }
 
 .print-sheet {
+  position: relative;
+  isolation: isolate;
   display: flex;
   flex-direction: column;
   width: var(--page-width);

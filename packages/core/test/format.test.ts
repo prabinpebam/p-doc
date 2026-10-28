@@ -20,6 +20,15 @@ describe("format", () => {
     expect(cleanPage("nonsense")).toEqual(d);
   });
 
+  it("keeps a watermark (11.4) and columns (11.2) only when they make sense", () => {
+    expect(cleanPage({ watermark: { text: "  Draft  ", color: "#F2B8B5", layout: "flat" } }).watermark).toEqual({ text: "Draft", color: "#f2b8b5", layout: "flat" });
+    expect(cleanPage({ watermark: { text: "Draft", color: "red", layout: "sideways" } }).watermark).toEqual({ text: "Draft", color: "#c8c8c8", layout: "diagonal" });
+    expect(cleanPage({ watermark: { text: "   " } }).watermark).toBeNull();
+    expect(cleanPage({ watermark: { text: "x".repeat(300) } }).watermark?.text).toHaveLength(100);
+    expect(cleanPage({ columns: { count: 3, gap: 0.25 } }).columns).toEqual({ count: 3, gap: 0.25 });
+    expect(cleanPage({ columns: { count: 7, gap: -1 } }).columns).toEqual({ count: 1, gap: 0.5 });
+  });
+
   it("fills settings an older writer left out", () => {
     const d = parseDocument(JSON.stringify({ format: "p-doc", version: 1, id: "x", content: { type: "doc", content: [] }, page: { size: "a4" } }));
     expect(d.title).toBe("Untitled document");

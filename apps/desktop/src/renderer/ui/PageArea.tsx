@@ -9,7 +9,7 @@ import { jumpToBlock } from "../editor/blocks.ts";
 import { showMarks } from "../editor/marks.ts";
 import { textEnd } from "../editor/notes.ts";
 import { followAnchor } from "../editor/refs.ts";
-import { geometry, pageLayout, setPageSetup, type Layout } from "../editor/pages.ts";
+import { geometry, pageLayout, setPageSetup, watermarkStyle, type Layout } from "../editor/pages.ts";
 import { attachEditor, changed, detachEditor, getEditor } from "../session.ts";
 import { app, openDialog, toast } from "../state.ts";
 import { history } from "../versions.ts";
@@ -219,14 +219,18 @@ export function PageArea() {
               }
             }}
           >
-            {shown?.papers.map((x, k) => (
-              <div
-                key={k}
-                className={`pd-sheet-bg${x.blank ? " pd-sheet-blank" : ""}`}
-                aria-hidden="true"
-                style={{ top: x.top, left: x.left, width: x.g.width, height: x.span * x.g.content + x.g.top + x.g.bottom }}
-              />
-            ))}
+            {shown?.papers.map((x, k) => {
+              const height = x.span * x.g.content + x.g.top + x.g.bottom;
+              return (
+                <div key={k} className={`pd-sheet-bg${x.blank ? " pd-sheet-blank" : ""}`} aria-hidden="true" style={{ top: x.top, left: x.left, width: x.g.width, height }}>
+                  {p.watermark ? (
+                    <div className="pd-watermark" data-testid="watermark" style={watermarkStyle(p.watermark, x.g.width, height) as CSSProperties}>
+                      <span>{p.watermark.text}</span>
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
             {shown && <HfOverlay cls="page-head" which="header" page={1} layout={shown} />}
             <DocEditor key={session} doc={doc} />
             {shown && <HfOverlay cls="page-foot" which="footer" page={shown.pages} layout={shown} />}

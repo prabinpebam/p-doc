@@ -230,3 +230,64 @@ test("11.2 a column break (Ctrl+Shift+Enter) on one column starts the next page;
   await expect.poll(label).toBe("none");
   await quit(l);
 });
+test("11.4 a text watermark shows behind every page, blank ones too, prints, and comes off with Remove watermark", async () => {
+  const saveDir = mkdtempSync(join(tmpdir(), "pdoc-sections-wm-"));
+  const l = await launch({ env: { PDOC_SAVE_DIR: saveDir } });
+  const { page } = l;
+  await page.locator("#doc-title").fill("Marked");
+  await page.keyboard.press("Enter");
+  await load(page, { type: "doc", content: [para("One"), { type: "pageBreak" }, para("Two"), { type: "sectionBreak", attrs: { kind: "even" } }, para("Four")] });
+  expect(await settled(page)).toBe(4);
+  const marks = page.getByTestId("watermark");
+  await expect(marks).toHaveCount(0);
+
+  await menu(page, "Insert", /^Watermark/);
+  const d = page.getByRole("dialog", { name: "Watermark" });
+  await expect(d.getByLabel("Text")).toHaveValue("DRAFT");
+  await d.getByLabel("Text").fill("");
+  await expect(d.getByRole("alert")).toHaveText("Enter the words to show behind the text.");
+  await expect(d.getByRole("button", { name: "Apply" })).toBeDisabled();
+  await d.getByLabel("Text").fill("CONFIDENTIAL");
+  await d.getByLabel("Colour").selectOption({ label: "Red" });
+  await d.getByRole("button", { name: "Apply" }).click();
+  // One on each of the four pages, the blank page 3 included, turned corner to corner, behind the text.
+  await expect(marks).toHaveCount(4);
+  await expect(marks.first()).toHaveText("CONFIDENTIAL");
+  const look = await marks.first().evaluate((e) => {
+    const s = getComputedStyle(e.firstElementChild!);
+    return { color: getComputedStyle(e).color, rotate: s.rotate, behind: getComputedStyle(e.parentElement!).zIndex };
+  });
+  expect(look.color).toBe("rgb(242, 184, 181)");
+  expect(parseFloat(look.rotate)).toBeLessThan(-45);
+  expect(look.behind).toBe("-1");
+  await expect.poll(() => diskText(l.dirs), PROMPTLY).toContain("CONFIDENTIAL");
+
+  // The PDF carries it on every page, turned.
+  await menu(page, "File", /^Download/, /^PDF document/);
+  await expect(page.getByText(/^Saved Marked\.pdf/)).toBeVisible({ timeout: 20_000 });
+  const task = getDocument({ data: new Uint8Array(readFileSync(join(saveDir, "Marked.pdf"))), useSystemFonts: false });
+  const pdf = await task.promise;
+  expect(pdf.numPages).toBe(4);
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const items = (await (await pdf.getPage(i)).getTextContent()).items as { str?: string; transform?: number[] }[];
+    const mark = items.find((it) => it.str?.includes("CONFIDENTIAL"));
+    expect(mark, `page ${i}`).toBeTruthy();
+    expect(Math.abs(mark!.transform![1]!)).toBeGreaterThan(1);
+  }
+  await task.destroy();
+
+  // Pageless shows none and keeps it; Remove watermark takes it off.
+  const ps = page.getByRole("dialog", { name: "Page setup" });
+  await menu(page, "File", /^Page setup/);
+  await ps.getByRole("radio", { name: "Pageless" }).check();
+  await ps.getByRole("button", { name: "Apply" }).click();
+  await expect(marks).toHaveCount(0);
+  await menu(page, "File", /^Page setup/);
+  await ps.getByRole("radio", { name: "Pages" }).check();
+  await ps.getByRole("button", { name: "Apply" }).click();
+  await expect(marks).toHaveCount(4);
+  await menu(page, "Insert", /^Remove watermark/);
+  await expect(marks).toHaveCount(0);
+  await expect.poll(() => diskText(l.dirs), PROMPTLY).not.toContain("CONFIDENTIAL");
+  await quit(l);
+});

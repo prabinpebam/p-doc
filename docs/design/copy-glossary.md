@@ -24,6 +24,7 @@ Words P-Doc uses, and the words it doesn't. Sentence case everywhere; no exclama
 | markup | How suggestions show: Simple, All, No markup, Original | display for review |
 | Pages / Pageless | The two layouts | print layout, web layout |
 | page setup | Paper, orientation, margins, page colour | page settings, layout options |
+| watermark | Words behind the text of every page; Diagonal or Horizontal | background text, stamp |
 | header / footer | Repeating text at the top/bottom of pages | running head |
 | outline | The headings list in the left panel | navigation pane, TOC |
 | table of contents | The block inside the document listing headings | TOC (in UI) |

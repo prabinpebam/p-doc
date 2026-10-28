@@ -1,6 +1,6 @@
 /** File > Page setup and Insert > Header and footer (U13–U15, spec §4.4). */
 import { useRef, useState } from "react";
-import { defaultPage, HF_FIELDS, hfTextsOf, NUM_FORMAT_LABEL, NUM_FORMATS, PAPER, sectionPageOf, type HfAlign, type HfTexts, type NumFormat, type PageSetup, type PaperSize, type SectionNumbering } from "@p-doc/core";
+import { cleanWatermark, defaultPage, WATERMARK_COLORS, HF_FIELDS, hfTextsOf, NUM_FORMAT_LABEL, NUM_FORMATS, PAPER, sectionPageOf, type HfAlign, type HfTexts, type NumFormat, type PageSetup, type PaperSize, type SectionNumbering } from "@p-doc/core";
 import { getEditor, syncSelection, updateDoc } from "../session.ts";
 import { clearSectionPages, sectionAtCursor, setSectionHf, setSectionPage } from "../editor/sections.ts";
 import { app, closeDialog, toast, updateSettings } from "../state.ts";
@@ -27,7 +27,7 @@ function Cancel() {
 }
 
 /** The page settings a new document starts with: everything but header and footer text. */
-export const asDefault = (p: PageSetup): PageSetup => ({ ...p, header: "", footer: "", firstHeader: "", firstFooter: "", differentFirstPage: false, evenHeader: "", evenFooter: "", differentOddEven: false, numStart: 1 });
+export const asDefault = (p: PageSetup): PageSetup => ({ ...p, header: "", footer: "", firstHeader: "", firstFooter: "", differentFirstPage: false, evenHeader: "", evenFooter: "", differentOddEven: false, numStart: 1, watermark: null });
 
 export function PageSetupDialog() {
   const doc = app.use((s) => s.doc);
@@ -366,6 +366,78 @@ export function HeaderFooterDialog() {
         ) : null}
       </div>
       <p className="muted">{doc.page.mode === "pageless" ? "Headers and footers show with pages (View > Pages)." : "{page} is the page number and {pages} the page count."}</p>
+    </Dialog>
+  );
+}
+
+/** Insert > Watermark (U58): words behind every page, in a light colour, corner to corner or across. */
+export function WatermarkDialog() {
+  const doc = app.use((s) => s.doc);
+  const now = doc?.page.watermark ?? null;
+  const [text, setText] = useState(now?.text ?? "DRAFT");
+  const [color, setColor] = useState<string>(now?.color ?? WATERMARK_COLORS[0][0]);
+  const [layout, setLayout] = useState<"diagonal" | "flat">(now?.layout ?? "diagonal");
+  if (!doc) return null;
+  const w = cleanWatermark({ text, color, layout });
+  const save = (watermark: typeof w) => {
+    if (JSON.stringify(watermark) !== JSON.stringify(doc.page.watermark)) updateDoc({ page: { ...doc.page, watermark } });
+    closeDialog();
+  };
+  return (
+    <Dialog
+      title="Watermark"
+      onClose={closeDialog}
+      onSubmit={() => w && save(w)}
+      actions={
+        <>
+          {now ? (
+            <button type="button" className="btn" onClick={() => save(null)}>
+              Remove watermark
+            </button>
+          ) : null}
+          <span className="fill" />
+          <Cancel />
+          <button type="submit" className="btn primary" disabled={!w}>
+            Apply
+          </button>
+        </>
+      }
+    >
+      <label className="form-row">
+        <span>Text</span>
+        <input className="field" data-autofocus value={text} maxLength={100} onChange={(e) => setText(e.target.value)} aria-invalid={!w || undefined} />
+      </label>
+      {!w ? (
+        <p className="form-error" role="alert">
+          Enter the words to show behind the text.
+        </p>
+      ) : null}
+      <label className="form-row">
+        <span>Colour</span>
+        <select className="field" value={color} onChange={(e) => setColor(e.target.value)}>
+          {WATERMARK_COLORS.map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <div role="radiogroup" aria-labelledby="wm-layout" className="settings-section">
+        <h3 id="wm-layout" className="group-title">
+          Layout
+        </h3>
+        <div className="radio-row">
+          <label className="radio">
+            <input type="radio" name="wm-layout" checked={layout === "diagonal"} onChange={() => setLayout("diagonal")} />
+            Diagonal
+          </label>
+          <label className="radio">
+            <input type="radio" name="wm-layout" checked={layout === "flat"} onChange={() => setLayout("flat")} />
+            Horizontal
+          </label>
+        </div>
+      </div>
+      {doc.page.mode === "pageless" ? <p className="muted">Watermarks show with pages and when you print.</p> : null}
     </Dialog>
   );
 }
