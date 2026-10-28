@@ -223,3 +223,48 @@ test("PD5 accept all gives the suggested text; reject all the original, exactly"
   expect(await ed.innerHTML()).toBe(original);
   await quit(l);
 });
+
+test("13.1 formatting changes in Suggesting are suggestions; accept all and reject all are exact", async () => {
+  const l = await launch();
+  const { page } = l;
+  const ed = editor(page);
+  await page.keyboard.type("Make this bold.");
+  await page.keyboard.press("Enter");
+  await page.keyboard.type("A heading line.");
+  const original = await ed.innerHTML();
+
+  await page.keyboard.press("Control+Alt+Shift+X");
+  await selectWord(page, "bold");
+  await page.keyboard.press("Control+B");
+  await selectWord(page, "heading");
+  await page.keyboard.press("Control+Alt+1");
+  await expect(ed.locator("strong")).toHaveText("bold");
+  await expect(ed.locator(".pd-format")).toHaveText("bold");
+  await expect(ed.locator("h1.pd-format-block")).toHaveText("A heading line.");
+
+  await page.getByTestId("review-button").click();
+  await expect(items(page)).toHaveCount(2);
+  await expect(items(page).nth(0)).toContainText("Formatted: Bold");
+  await expect(items(page).nth(1)).toContainText("Formatted: Heading 1");
+  await page.screenshot({ path: test.info().outputPath("format-suggestions.png") });
+
+  // Reject one: the heading goes back to a paragraph; the bold stays suggested.
+  await items(page).nth(1).getByRole("button", { name: "Reject" }).click();
+  await expect(ed.locator("h1")).toHaveCount(0);
+  await expect(items(page)).toHaveCount(1);
+  await ed.focus();
+  await page.keyboard.press("Control+Z");
+  await expect(ed.locator("h1")).toHaveCount(1);
+
+  await panel(page).getByRole("button", { name: "Accept all" }).click();
+  await expect(ed.locator(".pd-format, .pd-format-block")).toHaveCount(0);
+  await expect(ed.locator("strong")).toHaveText("bold");
+  await expect(ed.locator("h1")).toHaveText("A heading line.");
+
+  await page.keyboard.press("Control+Z");
+  await expect(ed.locator(".pd-format")).toHaveCount(1);
+  await panel(page).getByRole("button", { name: "Reject all" }).click();
+  await expect(ed.locator(".pd-format, .pd-format-block")).toHaveCount(0);
+  expect(await ed.innerHTML()).toBe(original);
+  await quit(l);
+});

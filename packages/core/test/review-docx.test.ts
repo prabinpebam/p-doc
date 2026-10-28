@@ -4,7 +4,7 @@ import JSZip from "jszip";
 import { fromDocx, toDocx } from "../src/docx.ts";
 import { createDocument } from "../src/format.ts";
 import { nodeText } from "../src/outline.ts";
-import { acceptAll, rejectAll } from "../src/suggestions.ts";
+import { acceptAll, listChanges, rejectAll } from "../src/suggestions.ts";
 
 const W = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml"';
 const D = 'w:date="2026-10-01T09:00:00Z"';
@@ -17,7 +17,8 @@ const BODY = [
   `<w:p>${r("second half")}</w:p>`,
   `<w:p><w:pPr><w:rPr><w:moveFrom w:id="4" w:author="Cy" ${D}/></w:rPr></w:pPr><w:moveFromRangeStart w:id="5" w:author="Cy" ${D} w:name="move1"/><w:moveFrom w:id="6" w:author="Cy" ${D}>${r("Moved text")}</w:moveFrom><w:moveFromRangeEnd w:id="5"/></w:p>`,
   `<w:p>${r("Kept ")}<w:moveToRangeStart w:id="7" w:author="Cy" ${D} w:name="move1"/><w:moveTo w:id="8" w:author="Cy" ${D}>${r("Moved text")}</w:moveTo><w:moveToRangeEnd w:id="7"/></w:p>`,
-  `<w:p>${r("Bold now", `<w:rPr><w:b/><w:rPrChange w:id="9" w:author="Dee" ${D}><w:rPr/></w:rPrChange></w:rPr>`)}</w:p>`,
+  `<w:p>${r("Bold now", `<w:rPr><w:b/><w:rPrChange w:id="9" w:author="Dee" ${D}><w:rPr/></w:rPrChange></w:rPr>`)}${r(" plain again", `<w:rPr><w:rPrChange w:id="12" w:author="Dee" ${D}><w:rPr><w:i/></w:rPr></w:rPrChange></w:rPr>`)}</w:p>`,
+  `<w:p><w:pPr><w:pStyle w:val="Heading1"/><w:pPrChange w:id="13" w:author="Eve" ${D}><w:pPr/></w:pPrChange></w:pPr>${r("Now a heading")}</w:p>`,
   `<w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/></w:tblPr><w:tblGrid><w:gridCol w:w="4000"/></w:tblGrid>`,
   `<w:tr><w:tc><w:p>${r("Row one")}</w:p></w:tc></w:tr>`,
   `<w:tr><w:trPr><w:ins w:id="10" w:author="Ana" ${D}/></w:trPr><w:tc><w:p><w:ins w:id="11" w:author="Ana" ${D}>${r("Row two")}</w:ins></w:p></w:tc></w:tr></w:tbl>`,
@@ -45,7 +46,7 @@ const allText = (c: JSONContent) => JSON.stringify(c);
 describe("import-docx review (13.5)", () => {
   it("brings Word's tracked changes in as suggestions, with their authors and times", async () => {
     const { content } = await fromDocx(await wordFile());
-    expect(allText(content)).not.toMatch(/[\uE000-\uE005]/);
+    expect(allText(content)).not.toMatch(/[\uE000-\uE008]/);
     const first = content.content![0]!;
     const marked = (kind: string) => first.content!.filter((n) => n.marks?.some((m) => m.type === kind)).map((n) => [n.text, n.marks!.find((m) => m.type === kind)!.attrs!.author]);
     expect(marked("insertion")).toEqual([["brave ", "Ana"]]);
@@ -66,19 +67,33 @@ describe("import-docx review (13.5)", () => {
     expect(world.marks).toEqual([{ type: "comment", attrs: { id: "c-w0" } }]);
   });
 
-  it("keeps moves, formatting and table changes as comments, applied as Word shows them", async () => {
+  it("keeps moves and table changes as comments, applied as Word shows them", async () => {
     const { content, comments, kept } = await fromDocx(await wordFile());
-    expect(kept).toBe(3);
+    expect(kept).toBe(2);
     expect(allText(content).match(/Moved text/g)).toHaveLength(1);
     const keptBodies = comments.filter((c) => c.id.startsWith("c-k")).map((c) => [c.body, c.quote]);
     expect(keptBodies).toEqual([
       ["Row inserted by Ana.", "Row two"],
       ["Moved by Cy.", "Moved text"],
-      ["Formatting changed by Dee.", "Bold now"],
     ]);
-    const bold = content.content!.find((b) => nodeText(b) === "Bold now")!;
-    expect(bold.content![0]!.marks?.map((m) => m.type)).toEqual(["bold", "comment"]);
     expect(texts(content)).not.toContain("Moved text");
+  });
+
+  it("brings Word's formatting changes in as formatting suggestions that accept and reject exactly", async () => {
+    const { content } = await fromDocx(await wordFile());
+    const changes = listChanges(content).filter((c) => c.kind === "format");
+    expect(changes.map((c) => [c.text, c.format, c.author])).toEqual([
+      ["Bold now", "Bold", "Dee"],
+      [" plain again", "Not italic", "Dee"],
+      ["Now a heading", "Heading 1", "Eve"],
+    ]);
+    const accepted = acceptAll(content);
+    const rejected = rejectAll(content);
+    const para = (c: JSONContent, t: string) => c.content!.find((b) => nodeText(b) === t || nodeText(b).startsWith(t))!;
+    expect(para(accepted, "Bold now").content!.map((n) => (n.marks ?? []).map((m) => m.type))).toEqual([["bold"], []]);
+    expect(para(rejected, "Bold now").content!.map((n) => (n.marks ?? []).map((m) => m.type))).toEqual([[], ["italic"]]);
+    expect(para(accepted, "Now a heading").type).toBe("heading");
+    expect(para(rejected, "Now a heading").type).toBe("paragraph");
   });
 
   it("export-docx: writes comments and suggestions Word reads, and they come back the same", async () => {
@@ -97,6 +112,8 @@ describe("import-docx review (13.5)", () => {
             ],
           },
           { type: "paragraph", content: [{ type: "text", text: "Second", marks: [{ type: "comment", attrs: { id: "t2" } }] }] },
+          { type: "paragraph", content: [{ type: "text", text: "Now bold", marks: [{ type: "bold" }, { type: "formatChange", attrs: { id: "s3", author: "Cy", time: T, old: [] } }] }] },
+          { type: "heading", attrs: { level: 2, formatChange: { id: "s4", author: "Cy", time: T, old: { type: "paragraph", attrs: {} } } }, content: [{ type: "text", text: "Was a paragraph" }] },
         ],
       },
       comments: [
@@ -115,8 +132,20 @@ describe("import-docx review (13.5)", () => {
       { author: "Ana Lee", body: "Is this right?\nSecond line", resolved: false, quote: "this and", created: T, replies: [["Ben", "Yes."]] },
       { author: "Cy", body: "Done", resolved: true, quote: "Second", created: T, replies: [] },
     ]);
-    expect(texts(acceptAll(back.content))).toEqual(["Keep this and", "Second"]);
-    expect(texts(rejectAll(back.content))).toEqual(["Keep this that", "Second"]);
+    expect(texts(acceptAll(back.content))).toEqual(["Keep this and", "Second", "Now bold", "Was a paragraph"]);
+    expect(texts(rejectAll(back.content))).toEqual(["Keep this that", "Second", "Now bold", "Was a paragraph"]);
+    expect(listChanges(back.content).filter((c) => c.kind === "format").map((c) => [c.text, c.format, c.author, c.time])).toEqual([
+      ["Now bold", "Bold", "Cy", T],
+      ["Was a paragraph", "Heading 2", "Cy", T],
+    ]);
+    expect(rejectAll(back.content).content!.slice(2).map((b) => [b.type, (b.content![0]!.marks ?? []).map((m) => m.type)])).toEqual([
+      ["paragraph", []],
+      ["paragraph", []],
+    ]);
+    expect(acceptAll(back.content).content!.slice(2).map((b) => [b.type, (b.content![0]!.marks ?? []).map((m) => m.type)])).toEqual([
+      ["paragraph", ["bold"]],
+      ["heading", []],
+    ]);
     const ins = back.content.content![0]!.content!.find((n) => n.marks?.some((m) => m.type === "insertion"))!;
     expect(ins.marks!.find((m) => m.type === "insertion")!.attrs).toMatchObject({ author: "Ana" });
   });

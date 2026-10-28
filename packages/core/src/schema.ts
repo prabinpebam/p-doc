@@ -136,6 +136,12 @@ export const BlockFormat = Extension.create({
             parseHTML: (el) => jsonAttr(el.getAttribute("data-join")),
             renderHTML: (a) => (a.join ? { "data-join": JSON.stringify(a.join), class: "pd-join" } : {}),
           },
+          /** Suggestion {id, author, time, old: {type, attrs}}: this block's style or paragraph formatting was changed (rejecting puts `old` back, U63). */
+          formatChange: {
+            default: null,
+            parseHTML: (el) => jsonAttr(el.getAttribute("data-format-change")),
+            renderHTML: (a) => (a.formatChange ? { "data-format-change": JSON.stringify(a.formatChange), class: "pd-format-block" } : {}),
+          },
         },
       },
       {
@@ -191,6 +197,22 @@ export const Deletion = Mark.create({
   addAttributes: () => suggestionAttrs("deletion"),
   parseHTML: () => [{ tag: "del" }],
   renderHTML: ({ HTMLAttributes }) => ["del", HTMLAttributes, 0],
+});
+
+/** Suggested formatting (U63): the text has its new formatting; `old` holds the formatting marks it had, which rejecting puts back. */
+export const FormatChange = Mark.create({
+  name: "formatChange",
+  inclusive: false,
+  addAttributes: () => ({
+    ...suggestionAttrs("format"),
+    old: {
+      default: [],
+      parseHTML: (el: HTMLElement) => (jsonAttr(el.getAttribute("data-old")) as unknown[] | null) ?? [],
+      renderHTML: (a: Record<string, unknown>) => ({ "data-old": JSON.stringify(a.old ?? []) }),
+    },
+  }),
+  parseHTML: () => [{ tag: "span[data-format-change]" }],
+  renderHTML: ({ HTMLAttributes }) => ["span", mergeAttributes(HTMLAttributes, { "data-format-change": "" }), 0],
 });
 
 /** The anchor of a comment thread; several threads may overlap. */
@@ -298,6 +320,7 @@ export function extensions(options: SchemaOptions = {}): AnyExtension[] {
     BlockFormat,
     Insertion,
     Deletion,
+    FormatChange,
     CommentMark,
     PageBreak,
     SectionBreak,

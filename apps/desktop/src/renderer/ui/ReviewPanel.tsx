@@ -134,6 +134,18 @@ function ChangeCard({ it, active, can }: { it: ChangeItem; active: boolean; can:
   const added = c.kind === "insertion";
   const text = c.text === "¶" ? "paragraph break" : excerpt(c.text);
   const Mark = added ? "ins" : "del";
+  const body =
+    c.kind === "format" ? (
+      <>
+        <span className="muted">Formatted: </span>
+        {c.format} <span className="muted">on “{text}”</span>
+      </>
+    ) : (
+      <>
+        <span className="muted">{added ? "Add" : "Delete"}: </span>
+        <Mark className={added ? "pd-insertion" : "pd-deletion"}>{c.text === "¶" ? <em>{text}</em> : `“${text}”`}</Mark>
+      </>
+    );
   return (
     <li className={`review-card${active ? " active" : ""}`} data-key={it.key} data-testid="review-item" data-kind={c.kind}>
       <div className="review-head">
@@ -147,10 +159,7 @@ function ChangeCard({ it, active, can }: { it: ChangeItem; active: boolean; can:
           <Dismiss20Regular />
         </button>
       </div>
-      <p className="review-body">
-        <span className="muted">{added ? "Add" : "Delete"}: </span>
-        <Mark className={added ? "pd-insertion" : "pd-deletion"}>{c.text === "¶" ? <em>{text}</em> : `“${text}”`}</Mark>
-      </p>
+      <p className="review-body">{body}</p>
     </li>
   );
 }

@@ -1,9 +1,9 @@
 /**
  * Word's review marks on import (U67). Before mammoth reads `document.xml`, tracked insertions and deletions,
  * paragraph-mark changes and comment ranges are turned into private-use marker characters, which mammoth keeps
- * as text; after it, `applyReview` turns the markers into suggestion and comment marks. Changes P-Doc can't hold
- * as suggestions (moves, formatting, table rows and table formatting) are applied as Word shows them and kept as
- * comments on the text they touch.
+ * as text; after it, `applyReview` turns the markers into suggestion and comment marks. Formatting changes to text
+ * (emphasis) and paragraphs (style) become formatting suggestions. Changes P-Doc can't hold as suggestions (moves,
+ * table rows and table formatting) are applied as Word shows them and kept as comments on the text they touch.
  */
 import type { JSONContent } from "@tiptap/core";
 import type { CommentReply, CommentThread } from "./format.ts";
@@ -14,7 +14,31 @@ const C_START = "\uE003";
 const C_END = "\uE004";
 const PARA = "\uE005";
 const SEP = "\uE001";
-const MARKERS = /\uE000([^\uE001]*)\uE001|\uE002|\uE003([^\uE001]*)\uE001|\uE004([^\uE001]*)\uE001|\uE005([^\uE001]*)\uE001/g;
+const FMT = "\uE006";
+const FMT_END = "\uE007";
+const P_FMT = "\uE008";
+const MARKERS = /\uE000([^\uE001]*)\uE001|\uE002|\uE003([^\uE001]*)\uE001|\uE004([^\uE001]*)\uE001|\uE005([^\uE001]*)\uE001|\uE006([^\uE001]*)\uE001|\uE007|\uE008([^\uE001]*)\uE001/g;
+
+type MarkJSON = { type: string; attrs?: Record<string, unknown> };
+
+/** A tracked formatting change to a run: the marks it had, of those P-Doc reads from Word. */
+interface FormatRevision {
+  id: string;
+  author: string;
+  time: string;
+  old: MarkJSON[];
+}
+
+/** A tracked change to a paragraph's properties: the style and alignment it had. */
+interface BlockRevision {
+  id: string;
+  author: string;
+  time: string;
+  type: "paragraph" | "heading";
+  level: number | null;
+  textStyle: "title" | "subtitle" | null;
+  textAlign: string | null;
+}
 
 interface Revision {
   kind: "insertion" | "deletion";
@@ -33,7 +57,41 @@ interface Kept {
 export interface ReviewPrep {
   xml: string;
   revisions: Revision[];
+  formats: FormatRevision[];
+  blocks: BlockRevision[];
   kept: Kept[];
+}
+
+const on = (rPr: string, tag: string) => {
+  const m = new RegExp(`<w:${tag}\\b([^>]*)/?>`).exec(rPr);
+  return !!m && !/w:val="(?:0|false|none)"/.test(m[1]!);
+};
+
+/** The marks of an old `w:rPr` that P-Doc reads from Word on import (fonts, sizes and colours it doesn't). */
+function oldMarks(rPr: string): MarkJSON[] {
+  const out: MarkJSON[] = [];
+  if (on(rPr, "b")) out.push({ type: "bold" });
+  if (on(rPr, "i")) out.push({ type: "italic" });
+  if (on(rPr, "strike")) out.push({ type: "strike" });
+  const va = /<w:vertAlign\b[^>]*w:val="(\w+)"/.exec(rPr)?.[1];
+  if (va === "superscript") out.push({ type: "superscript" });
+  if (va === "subscript") out.push({ type: "subscript" });
+  return out;
+}
+
+const JC: Record<string, string> = { center: "center", right: "right", end: "right", both: "justify", distribute: "justify", left: "left", start: "left" };
+
+/** The style and alignment of an old `w:pPr`. */
+function oldBlock(pPr: string): Pick<BlockRevision, "type" | "level" | "textStyle" | "textAlign"> {
+  const style = /<w:pStyle\b[^>]*w:val="([^"]*)"/.exec(pPr)?.[1] ?? "";
+  const h = /^heading\s?([1-6])$/i.exec(style);
+  const jc = /<w:jc\b[^>]*w:val="(\w+)"/.exec(pPr)?.[1];
+  return {
+    type: h ? "heading" : "paragraph",
+    level: h ? Number(h[1]) : null,
+    textStyle: /^title$/i.test(style) ? "title" : /^subtitle$/i.test(style) ? "subtitle" : null,
+    textAlign: jc ? (JC[jc] ?? null) : null,
+  };
 }
 
 const ENTITIES: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'" };
@@ -61,6 +119,8 @@ function anchorFrom(xml: string, from: number, id: string): string {
 /** Marks the review parts of a `document.xml` for `applyReview`. */
 export function prepareReview(source: string): ReviewPrep {
   const revisions: Revision[] = [];
+  const formats: FormatRevision[] = [];
+  const blocks: BlockRevision[] = [];
   const kept: Kept[] = [];
   const keep = (tag: string, body: string) => {
     const id = `k${kept.length}`;
@@ -96,15 +156,19 @@ export function prepareReview(source: string): ReviewPrep {
       const id = keep(a, `Moved by ${who(a)}.`);
       return run(`${C_START}${id}${SEP}`) + content + run(`${C_END}${id}${SEP}`);
     });
-    // Formatting changes: the new formatting stays, with a comment on the paragraph.
-    const fmt = /<w:(?:rPrChange|pPrChange)\b[^>]*>/.exec(body)?.[0];
+    // Formatting changes are formatting suggestions: a paragraph's old style, and each run's old emphasis.
     let start = "";
-    let finish = "";
-    if (fmt) {
-      const id = keep(fmt, `Formatting changed by ${who(fmt)}.`);
-      start = run(`${C_START}${id}${SEP}`);
-      finish = run(`${C_END}${id}${SEP}`);
+    const pChange = /<w:pPrChange\b([^>]*?)(?:\/>|>([\s\S]*?)<\/w:pPrChange>)/.exec(pPr);
+    if (pChange) {
+      blocks.push({ id: attr(pChange[1]!, "w:id"), author: who(pChange[1]!), time: attr(pChange[1]!, "w:date"), ...oldBlock(pChange[2] ?? "") });
+      start = run(`${P_FMT}${blocks.length - 1}${SEP}`);
     }
+    body = pPr + body.slice(pPr.length).replace(/<w:r\b[^>]*>[\s\S]*?<\/w:r>/g, (r) => {
+      const c = /<w:rPrChange\b([^>]*?)(?:\/>|>([\s\S]*?)<\/w:rPrChange>)/.exec(r);
+      if (!c) return r;
+      formats.push({ id: attr(c[1]!, "w:id"), author: who(c[1]!), time: attr(c[1]!, "w:date"), old: oldMarks(c[2] ?? "") });
+      return run(`${FMT}${formats.length - 1}${SEP}`) + r + run(FMT_END);
+    });
     // An inserted or deleted paragraph mark: the boundary after this paragraph.
     const mark = /<w:rPr>[\s\S]*?<\/w:rPr>/.exec(pPr)?.[0] ?? "";
     const pm = /<w:(ins|del)\b[^>]*\/>/.exec(mark);
@@ -113,7 +177,7 @@ export function prepareReview(source: string): ReviewPrep {
       revisions.push({ kind: pm[1] === "ins" ? "insertion" : "deletion", id: attr(pm[0], "w:id"), author: who(pm[0]), time: attr(pm[0], "w:date") });
       after = run(`${PARA}${revisions.length - 1}${SEP}`);
     }
-    return `<w:p${open}>${pPr}${start}${body.slice(pPr.length)}${finish}${after}</w:p>`;
+    return `<w:p${open}>${pPr}${start}${body.slice(pPr.length)}${after}</w:p>`;
   });
 
   xml = xml.replace(/<w:(ins|del)\b([^>]*?)(\/>|>([\s\S]*?)<\/w:\1>)/g, (whole, kind: string, a: string, end: string, content: string | undefined) => {
@@ -126,7 +190,7 @@ export function prepareReview(source: string): ReviewPrep {
   xml = xml
     .replace(/<w:commentRangeStart\b[^>]*?w:id="(\d+)"[^>]*\/>/g, (_, id: string) => run(`${C_START}w${id}${SEP}`))
     .replace(/<w:commentRangeEnd\b[^>]*?w:id="(\d+)"[^>]*\/>/g, (_, id: string) => run(`${C_END}w${id}${SEP}`));
-  return { xml, revisions, kept };
+  return { xml, revisions, formats, blocks, kept };
 }
 
 interface WordComment extends CommentReply {
@@ -182,7 +246,16 @@ export function applyReview(content: JSONContent, prep: ReviewPrep, word: WordCo
   let rev: Revision | null = null;
   const open = new Set<string>();
   let pending: Revision | null = null;
+  let fmt: FormatRevision | null = null;
+  let block: BlockRevision | null = null;
+  const takeBlock = (): BlockRevision | null => {
+    const b = block;
+    block = null;
+    return b;
+  };
   const revMark = (r: Revision): Mark => ({ type: r.kind, attrs: { id: `s-w${r.id}`, author: r.author, time: r.time } });
+  const READ = new Set(["bold", "italic", "strike", "superscript", "subscript"]);
+  const sig = (marks: MarkJSON[]) => marks.filter((m) => READ.has(m.type)).map((m) => m.type).sort().join(",");
 
   const inline = (nodes: JSONContent[]): JSONContent[] => {
     const out: JSONContent[] = [];
@@ -197,6 +270,8 @@ export function applyReview(content: JSONContent, prep: ReviewPrep, word: WordCo
         if (!s) return;
         const marks: Mark[] = [...(n.marks ?? [])];
         if (rev) marks.push(revMark(rev));
+        // Only what P-Doc reads from Word can be told apart: a change to anything else shows as no change.
+        else if (fmt && sig(fmt.old) !== sig(marks as MarkJSON[])) marks.push({ type: "formatChange", attrs: { id: `s-w${fmt.id}`, author: fmt.author, time: fmt.time, old: [...(n.marks ?? []).filter((m) => !READ.has(m.type) && m.type !== "link" && m.type !== "code"), ...fmt.old] } });
         for (const id of open) {
           marks.push({ type: "comment", attrs: { id } });
           quotes.set(id, (quotes.get(id) ?? "") + s);
@@ -215,6 +290,9 @@ export function applyReview(content: JSONContent, prep: ReviewPrep, word: WordCo
           const t = threadOf(m[3]);
           if (t) open.delete(t);
         } else if (m[4] != null) pending = prep.revisions[Number(m[4])] ?? null;
+        else if (m[5] != null) fmt = prep.formats[Number(m[5])] ?? null;
+        else if (m[0] === FMT_END) fmt = null;
+        else if (m[6] != null) block = prep.blocks[Number(m[6])] ?? null;
       }
       emit(text.slice(last));
     }
@@ -231,7 +309,23 @@ export function applyReview(content: JSONContent, prep: ReviewPrep, word: WordCo
         next = { ...b, attrs: { ...b.attrs, [r.kind === "insertion" ? "split" : "join"]: { id: `s-w${r.id}`, author: r.author, time: r.time } } };
       }
       if (!next.content) return next;
-      return { ...next, content: isText ? inline(next.content) : walk(next.content) };
+      if (!isText) return { ...next, content: walk(next.content) };
+      takeBlock();
+      const content = inline(next.content);
+      const b0 = takeBlock();
+      if (!b0) return { ...next, content };
+      const attrs: Record<string, unknown> = { ...next.attrs };
+      const now = { type: next.type, level: next.type === "heading" ? Number(attrs.level ?? 1) : null, textStyle: attrs.textStyle ?? null, textAlign: attrs.textAlign ?? null };
+      const was = { type: b0.type, level: b0.level, textStyle: b0.textStyle, textAlign: b0.textAlign ?? now.textAlign };
+      if (JSON.stringify(now) === JSON.stringify(was)) return { ...next, content };
+      const oldAttrs: Record<string, unknown> = { ...attrs, textStyle: was.textStyle, textAlign: was.textAlign };
+      delete oldAttrs.split;
+      delete oldAttrs.join;
+      delete oldAttrs.formatChange;
+      delete oldAttrs.id;
+      if (was.type === "heading") oldAttrs.level = was.level;
+      else delete oldAttrs.level;
+      return { ...next, content, attrs: { ...attrs, formatChange: { id: `s-w${b0.id}`, author: b0.author, time: b0.time, old: { type: was.type, attrs: oldAttrs } } } };
     });
 
   const result = { ...content, content: walk(content.content ?? []) };

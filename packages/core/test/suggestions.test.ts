@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import type { JSONContent } from "@tiptap/core";
 import { EditorState, TextSelection } from "@tiptap/pm/state";
 import { history, undo } from "@tiptap/pm/history";
-import { acceptAll, changesOf, listChanges, rejectAll, resolveJSON, schema, suggestPlugin, nodeText } from "../src/index.ts";
+import { acceptAll, changesOf, describeBlockFormat, describeFormat, listChanges, rejectAll, resolveJSON, schema, suggestKey, suggestPlugin, nodeText } from "../src/index.ts";
+
+const suggestKeyMeta = () => suggestKey;
 
 const p = (text: string): JSONContent => ({ type: "paragraph", content: text ? [{ type: "text", text }] : [] });
 const start = (...paras: string[]) => EditorState.create({ schema: schema(), doc: schema().nodeFromJSON({ type: "doc", content: paras.map(p) }), plugins: [suggestPlugin("Ann", true), history()] });
@@ -129,5 +131,89 @@ describe("suggestions", () => {
     let undone: EditorState | null = null;
     undo(s2, (tr) => (undone = s2.apply(tr)));
     expect(nodeText((undone as unknown as EditorState).doc.toJSON().content[0])).toBe("x");
+  });
+});
+
+describe("formatting suggestions (13.1, U63)", () => {
+  const sc = schema();
+  const original = (): EditorState => {
+    const s = start("Hello brave world", "A heading soon", "Centre me", "Already bold here");
+    // The fourth paragraph starts bold (outside Suggesting).
+    const off = s.apply(s.tr.addMark(at(s, 3, 0), at(s, 3, 12), sc.marks.bold!.create()).setMeta("pdoc-suggest-skip", true));
+    return off;
+  };
+  /** The same mixed edits, made in whichever mode the state is in. */
+  const edit = (s: EditorState) => {
+    s = s.apply(s.tr.addMark(at(s, 0, 0), at(s, 0, 11), sc.marks.bold!.create()));
+    s = s.apply(s.tr.addMark(at(s, 0, 6), at(s, 0, 17), sc.marks.textStyle!.create({ fontSize: "14pt" })));
+    s = s.apply(s.tr.removeMark(at(s, 3, 0), at(s, 3, 7), sc.marks.bold!));
+    s = s.apply(s.tr.setBlockType(at(s, 1, 0), at(s, 1, 0), sc.nodes.heading!, { level: 1 }));
+    s = s.apply(s.tr.setNodeMarkup(at(s, 2, 0) - 1, undefined, { ...s.doc.child(2).attrs, textAlign: "center" }));
+    s = type(s, at(s, 0, 17), "!");
+    return s;
+  };
+  const direct = (s: EditorState) => s.apply(s.tr.setMeta(suggestKeyMeta(), { on: false }));
+
+  it("records each kind of formatting change with author, time and what changed", () => {
+    const s = edit(original());
+    const changes = changesOf(s.doc).filter((c) => c.kind === "format");
+    // Text already suggested keeps its first suggestion, which now holds both changes.
+    expect(changes.map((c) => [c.text, c.format, c.author])).toEqual([
+      ["Hello brave", "Bold, Size: 14pt", "Ann"],
+      [" world", "Size: 14pt", "Ann"],
+      ["A heading soon", "Heading 1", "Ann"],
+      ["Centre me", "Align centre", "Ann"],
+      ["Already", "Not bold", "Ann"],
+    ]);
+    expect(changes[0]!.time).toMatch(/^\d{4}-/);
+    // One formatting action over text with mixed formatting is one change.
+    let s2 = original();
+    s2 = s2.apply(s2.tr.addMark(at(s2, 3, 0), at(s2, 3, 17), sc.marks.italic!.create()));
+    expect(changesOf(s2.doc).map((c) => [c.text, c.format])).toEqual([["Already bold here", "Italic"]]);
+  });
+
+  it("accept-all gives the suggested formatting and reject-all the original, exactly (A15)", () => {
+    const before = original();
+    const suggested = edit(before);
+    const made = edit(direct(before));
+    expect(acceptAll(suggested.doc.toJSON())).toEqual(made.doc.toJSON());
+    expect(rejectAll(suggested.doc.toJSON())).toEqual(before.doc.toJSON());
+    expect(listChanges(acceptAll(suggested.doc.toJSON()))).toEqual([]);
+  });
+
+  it("accepts or rejects one formatting change by id, leaving the rest", () => {
+    let s = original();
+    s = s.apply(s.tr.addMark(at(s, 0, 0), at(s, 0, 5), sc.marks.italic!.create()));
+    s = s.apply(s.tr.setNodeMarkup(at(s, 2, 0) - 1, undefined, { ...s.doc.child(2).attrs, textAlign: "right" }));
+    const [first, second] = changesOf(s.doc);
+    expect(first!.id).not.toBe(second!.id);
+    const json = resolveJSON(s.doc.toJSON(), new Set([second!.id]), "reject");
+    expect(json.content![2]!.attrs!.textAlign).toBeNull();
+    expect(listChanges(json).map((c) => c.format)).toEqual(["Italic"]);
+  });
+
+  it("formatting undone by hand is no change, and new text just takes formatting", () => {
+    let s = original();
+    s = s.apply(s.tr.addMark(at(s, 0, 0), at(s, 0, 5), sc.marks.italic!.create()));
+    s = s.apply(s.tr.removeMark(at(s, 0, 0), at(s, 0, 5), sc.marks.italic!));
+    s = s.apply(s.tr.setNodeMarkup(at(s, 2, 0) - 1, undefined, { ...s.doc.child(2).attrs, textAlign: "center" }));
+    s = s.apply(s.tr.setNodeMarkup(at(s, 2, 0) - 1, undefined, { ...s.doc.child(2).attrs, textAlign: null }));
+    expect(changesOf(s.doc)).toEqual([]);
+    s = type(s, at(s, 0, 5), " new");
+    s = s.apply(s.tr.addMark(at(s, 0, 5), at(s, 0, 9), sc.marks.bold!.create()));
+    expect(changesOf(s.doc).map((c) => c.kind)).toEqual(["insertion"]);
+  });
+
+  it("comments and links added in Suggesting are not formatting suggestions", () => {
+    let s = original();
+    s = s.apply(s.tr.addMark(at(s, 0, 0), at(s, 0, 5), sc.marks.comment!.create({ id: "c1" })));
+    s = s.apply(s.tr.addMark(at(s, 0, 6), at(s, 0, 11), sc.marks.link!.create({ href: "https://example.com" })));
+    expect(changesOf(s.doc)).toEqual([]);
+  });
+
+  it("describes changes the way the card says them", () => {
+    expect(describeFormat([{ type: "bold" }], [{ type: "italic" }])).toBe("Not bold, Italic");
+    expect(describeFormat([], [{ type: "textStyle", attrs: { fontFamily: "'Georgia', serif", color: "#ff0000" } }])).toBe("Font: Georgia, Text colour");
+    expect(describeBlockFormat({ type: "heading", attrs: { level: 2 } }, { type: "paragraph", attrs: { textAlign: "justify" } })).toBe("Normal text, Justify");
   });
 });

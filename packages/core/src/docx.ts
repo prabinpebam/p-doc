@@ -127,30 +127,21 @@ function runs(nodes: JSONContent[] | undefined, ctx: Ctx, extra: { font?: string
     }
     if (n.type !== "text") continue;
     const marks = (n.marks ?? []) as Mark[];
-    const has = (t: string) => marks.some((m) => m.type === t);
-    const style = marks.find((m) => m.type === "textStyle")?.attrs ?? {};
-    const highlight = marks.find((m) => m.type === "highlight")?.attrs?.color as string | undefined;
-    const opts = {
-      text: n.text ?? "",
-      bold: has("bold") || undefined,
-      italics: has("italic") || undefined,
-      underline: has("underline") ? {} : undefined,
-      strike: has("strike") || undefined,
-      superScript: has("superscript") || undefined,
-      subScript: has("subscript") || undefined,
-      font: (style.fontFamily as string | undefined)?.split(",")[0]?.replace(/['"]/g, "").trim() ?? extra.font,
-      size: points(style.fontSize) ? Math.round(points(style.fontSize)! * 2) : undefined,
-      color: hex(style.color as string),
-      shading: has("highlight") ? { type: ShadingType.CLEAR, fill: hex(highlight) ?? "FFF59D", color: "auto" } : undefined,
-      style: has("link") ? "Hyperlink" : undefined,
-    };
     const ins = marks.find((m) => m.type === "insertion");
     const del = marks.find((m) => m.type === "deletion");
+    const change = !ins && !del ? marks.find((m) => m.type === "formatChange") : undefined;
+    const link = marks.find((m) => m.type === "link");
+    const opts = {
+      text: n.text ?? "",
+      ...runFormat(marks, extra),
+      style: link ? "Hyperlink" : undefined,
+      // A formatting suggestion is Word's tracked formatting change, holding the formatting the text had (U67).
+      ...(change ? { revision: { id: ctx.revision++, author: String(change.attrs?.author || "P-Doc"), date: String(change.attrs?.time || new Date().toISOString()), ...runFormat((change.attrs?.old ?? []) as Mark[], extra), style: link ? "Hyperlink" : undefined } } : {}),
+    };
     let run: ParagraphChild;
     if (ins) run = new InsertedTextRun({ ...opts, id: ctx.revision++, author: String(ins.attrs?.author || "P-Doc"), date: String(ins.attrs?.time || new Date().toISOString()) });
     else if (del) run = new DeletedTextRun({ ...opts, id: ctx.revision++, author: String(del.attrs?.author || "P-Doc"), date: String(del.attrs?.time || new Date().toISOString()) });
     else run = new TextRun(opts);
-    const link = marks.find((m) => m.type === "link");
     const href = String(link?.attrs?.href ?? "");
     const anchor = href.startsWith("#") ? ctx.anchors.get(href.slice(1)) : undefined;
     for (const id of ctx.commentStarts.get(n) ?? []) out.push(new CommentRangeStart(id));
@@ -197,6 +188,40 @@ function wordComments(doc: PDocFile, ctx: Ctx): ICommentOptions[] {
     ctx.commentEnds.set(end, [...(ctx.commentEnds.get(end) ?? []), ...ids]);
   }
   return out;
+}
+
+/** A run's formatting as Word writes it, from its marks. */
+function runFormat(marks: Mark[], extra: { font?: string }) {
+  const has = (t: string) => marks.some((m) => m.type === t);
+  const style = marks.find((m) => m.type === "textStyle")?.attrs ?? {};
+  const highlight = marks.find((m) => m.type === "highlight")?.attrs?.color as string | undefined;
+  return {
+    bold: has("bold") || undefined,
+    italics: has("italic") || undefined,
+    underline: has("underline") ? {} : undefined,
+    strike: has("strike") || undefined,
+    superScript: has("superscript") || undefined,
+    subScript: has("subscript") || undefined,
+    font: (style.fontFamily as string | undefined)?.split(",")[0]?.replace(/['"]/g, "").trim() ?? extra.font,
+    size: points(style.fontSize) ? Math.round(points(style.fontSize)! * 2) : undefined,
+    color: hex(style.color as string),
+    shading: has("highlight") ? { type: ShadingType.CLEAR, fill: hex(highlight) ?? "FFF59D", color: "auto" as const } : undefined,
+  };
+}
+
+/** A paragraph's style as Word names it: a heading level, Title or Subtitle. */
+function paraStyle(n: JSONContent): Partial<IParagraphOptions> {
+  if (n.type === "heading") return { heading: HEADING[Number(n.attrs?.level ?? 1) - 1] };
+  const ts = n.attrs?.textStyle;
+  return ts === "title" ? { heading: HeadingLevel.TITLE } : ts === "subtitle" ? { style: "Subtitle" } : {};
+}
+
+/** A paragraph's formatting suggestion as Word's tracked paragraph change, holding its old style and layout (U67). */
+function paraRevision(n: JSONContent, ctx: Ctx): Partial<IParagraphOptions> {
+  const f = n.attrs?.formatChange as { author?: string; time?: string; old?: { type: string; attrs: Record<string, unknown> } } | null | undefined;
+  if (!f?.old) return {};
+  const old: JSONContent = { type: f.old.type, attrs: f.old.attrs };
+  return { revision: { id: ctx.revision++, author: f.author || "P-Doc", date: f.time || new Date().toISOString(), ...paraOptions(old), ...paraStyle(old) } as IParagraphOptions["revision"] };
 }
 
 /** An equation as Word's own (A17), which Word edits as one typed into it; LaTeX it can't read stays as text. */
@@ -306,6 +331,7 @@ function blocks(nodes: JSONContent[] | undefined, ctx: Ctx, list?: { ref: string
             ...paraOptions(n),
             ...(ts === "title" ? { heading: HeadingLevel.TITLE } : ts === "subtitle" ? { style: "Subtitle" } : {}),
             ...(list ? { numbering: { reference: list.ref, level: list.level, instance: list.instance } } : {}),
+            ...paraRevision(n, ctx),
             children: runs(n.content, ctx),
           }),
         );
@@ -315,7 +341,7 @@ function blocks(nodes: JSONContent[] | undefined, ctx: Ctx, list?: { ref: string
       case "heading": {
         const name = ctx.anchors.get(String(n.attrs?.id ?? ""));
         const children = runs(n.content, ctx);
-        out.push(new Paragraph({ ...paraOptions(n), heading: HEADING[Number(n.attrs?.level ?? 1) - 1], children: name ? [new DocxBookmark({ id: name, children })] : children }));
+        out.push(new Paragraph({ ...paraOptions(n), heading: HEADING[Number(n.attrs?.level ?? 1) - 1], ...paraRevision(n, ctx), children: name ? [new DocxBookmark({ id: name, children })] : children }));
         break;
       }
       case "blockquote":
