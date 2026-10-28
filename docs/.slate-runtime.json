@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "sourcePackage": "@slate/docs",
+  "sourceVersion": "0.11.1",
+  "sourcePath": "../slate",
+  "files": [
+    {
+      "path": "shell/slate.css",
+      "sha256": "1064096234b1f8d52364fc580c3cc88d87686ec4af589ecdc276d77203fa2ae7"
+    },
+    {
+      "path": "shell/presentation.js",
+      "sha256": "84955134e832258d212afe7519d8b5a9225e5d033f16626d91d6573ad110c6dc"
+    },
+    {
+      "path": "shell/slate.js",
+      "sha256": "cab2a108b5bfe723b505cf9fd13b81da9f91e311eb04f897ec000ad7bbd2e478"
+    },
+    {
+      "path": "shell/canvas/canvas.css",
+      "sha256": "97196e90b21bc8cdcc100b56713da725f5088f435aa87e88c4e3213a3a0ef935"
+    },
+    {
+      "path": "shell/canvas/canvas.js",
+      "sha256": "c4cc9bc3c244bc5a49ba54de148cfffe66ac91ff704928044d3d666eb2012cf3"
+    },
+    {
+      "path": "shell/canvas/index.html",
+      "sha256": "71450737b344d5f0ff229d19664d390f1721de8ab4720c1da8e34811ae402d85"
+    },
+    {
+      "path": "shell/canvas/THIRD_PARTY_NOTICES.txt",
+      "sha256": "a061a0a8ba70a4064d8533dc4a3846b472d7cc908b0d935cacd65cf884755550"
+    },
+    {
+      "path": "shell/vendor/github-dark.min.css",
+      "sha256": "9f208d022102b1d0c7aebfecd8e42ca7997d5de636649d2b31ea63093d809019"
+    },
+    {
+      "path": "shell/vendor/github.min.css",
+      "sha256": "3a9a5def8b9c311e5ae43abde85c63133185eed4f0d9f67fea4b00a8308cf066"
+    },
+    {
+      "path": "shell/vendor/highlight.min.js",
+      "sha256": "837a6fa5b0c736b52bbde2b2b6190f305da3fc9ed41681db5321507057b5c846"
+    },
+    {
+      "path": "shell/vendor/LICENSES/DOMPurify.LICENSE.txt",
+      "sha256": "274ba7d358207cebdbff44a8d221fd5478395e0b93fce92698e1f5172e5c2f16"
+    },
+    {
+      "path": "shell/vendor/LICENSES/highlight.js.LICENSE.txt",
+      "sha256": "ba98a4816e09175c3b526e4da5ef6d4eee5c3728ac778551e8f3e1779571eb4a"
+    },
+    {
+      "path": "shell/vendor/LICENSES/marked.LICENSE.md",
+      "sha256": "8c2857d4762624ec11c303ccbd3f885ff214eae5126dca24997a68e7466e7cd6"
+    },
+    {
+      "path": "shell/vendor/LICENSES/material-symbols.LICENSE.txt",
+      "sha256": "c5ffa8248492590c8e2d7a386f1bf40fafd313e4fe3b8572c8d3fa76e82c3f12"
+    },
+    {
+      "path": "shell/vendor/marked.min.js",
+      "sha256": "0a0fbf5ea62f007e7ede02d6f75b4eb142ee8acb310cd957ed566af3304c0bcc"
+    },
+    {
+      "path": "shell/vendor/material-symbols-outlined.ttf",
+      "sha256": "c13f2c860092297d3d8560e591ea8d9ea41ad71811e3224fac4c4e3290445e6b"
+    },
+    {
+      "path": "shell/vendor/purify.min.js",
+      "sha256": "dbabb5b205a333ec49c8c09e7fca30ef66df0523bb8bc0fa9ea843841f111dbd"
+    },
+    {
+      "path": "shell/vendor/README.md",
+      "sha256": "4de1f772f0ed145b3ac7552de79f4d719293d3f6758747847fafff011b20cb3b"
+    }
+  ]
+}

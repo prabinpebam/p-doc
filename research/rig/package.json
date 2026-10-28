@@ -1,0 +1,13 @@
+{
+  "name": "p-doc-research-rig",
+  "private": true,
+  "type": "module",
+  "description": "Stagehand-driven capture rig for the RES studies of Google Docs and Microsoft Word.",
+  "license": "MIT",
+  "scripts": {
+    "capture": "node capture.mjs"
+  },
+  "dependencies": {
+    "@browserbasehq/stagehand": "4.3.0"
+  }
+}

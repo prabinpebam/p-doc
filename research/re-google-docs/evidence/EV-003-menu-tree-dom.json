@@ -1,0 +1,449 @@
+{
+  "id": "EV-002",
+  "url": "https://docs.google.com/document/d/1VQDIAB0OqiSjIHI8AWMvSdceWhnz56jNpZrLs6o7NJY/edit?tab=t.0#heading=h.lk3ecc5rt40z",
+  "title": "Kubernetes Community Meeting Topics - Google Docs",
+  "date": "2026-10-28",
+  "extract": [
+    {
+      "i": 1,
+      "items": [
+        "Afrikaans",
+        "Azərbaycan",
+        "Bahasa Indonesia",
+        "Bahasa Melayu",
+        "Català",
+        "Čeština",
+        "Cymraeg",
+        "Dansk",
+        "Deutsch",
+        "Schweizer Hochdeutsch",
+        "Eesti",
+        "English (Canada)",
+        "English (United Kingdom)",
+        "English (United States)",
+        "Español",
+        "Español (Latinoamérica)",
+        "Euskara",
+        "Filipino",
+        "Français",
+        "Français (Canada)",
+        "Galego",
+        "Hrvatski",
+        "Isizulu",
+        "Íslenska",
+        "Italiano",
+        "Kiswahili",
+        "Latviešu",
+        "Lietuvių",
+        "Magyar",
+        "Malti",
+        "Nederlands",
+        "Norsk (Nynorsk)",
+        "Norsk (Bokmål)",
+        "Oʻzbek",
+        "Polski",
+        "Português (Brasil)",
+        "Português (Portugal)",
+        "Română",
+        "Shqip",
+        "Slovenčina",
+        "Slovenščina",
+        "Suomi",
+        "Svenska",
+        "Tiếng Việt",
+        "Türkçe",
+        "မြန်မာစာ",
+        "беларуская",
+        "Български",
+        "Қазақ",
+        "Македонски",
+        "Монгол",
+        "Русский",
+        "Српски",
+        "Українська",
+        "Ελληνικά",
+        "հայերեն",
+        "עברית",
+        "اردو",
+        "العربية",
+        "فارسی",
+        "नेपाली",
+        "मराठी",
+        "हिन्दी",
+        "বাংলা",
+        "ਪੰਜਾਬੀ",
+        "অসমীয়া",
+        "ગુજરાતી",
+        "தமிழ்",
+        "తెలుగు",
+        "ಕನ್ನಡ",
+        "മലയാളം",
+        "සිංහල",
+        "ไทย",
+        "ລາວ",
+        "ქართულად",
+        "አማርኛ",
+        "ខ្មែរ",
+        "ଓଡ଼ିଆ",
+        "中文（中国）",
+        "中文（台灣）",
+        "中文（香港）",
+        "日本語",
+        "한국어"
+      ]
+    },
+    {
+      "i": 2,
+      "items": [
+        "New >",
+        "Open [Ctrl+O]",
+        "Make a copy",
+        "Save as Google Docs(U)",
+        "Share >",
+        "Email >",
+        "Download >",
+        "Approvals(F2)",
+        "Unlock(J)",
+        "Record videoNew(X)",
+        "Rename",
+        "Move",
+        "Add a shortcut to Drive(,)",
+        "Move to bin",
+        "Version history >",
+        "Make available offline",
+        "Details(B)",
+        "Security limitations",
+        "Language >",
+        "Page setup",
+        "Print preview",
+        "Print preview(A)",
+        "Print [Ctrl+P]",
+        "Print(W) >"
+      ]
+    },
+    {
+      "i": 3,
+      "items": [
+        "Undo [Ctrl+Z]",
+        "Redo [Ctrl+Y]",
+        "Cut [Ctrl+X]",
+        "Copy [Ctrl+C]",
+        "Copy as Markdown(V)",
+        "Paste [Ctrl+V]",
+        "Paste without formatting [Ctrl+Shift+V]",
+        "Paste from Markdown(Q)",
+        "Select all [Ctrl+A]",
+        "Delete",
+        "Find and replace [Ctrl+H]"
+      ]
+    },
+    {
+      "i": 4,
+      "items": [
+        "Mode >",
+        "Comments(D) >",
+        "Expand tabs and outlines sidebar [Ctrl+Alt+A Ctrl+Alt+H]",
+        "Collapse tabs and outlines sidebar [Ctrl+Alt+A Ctrl+Alt+H]",
+        "Text width >",
+        "Show print layout",
+        "Show ruler",
+        "Show equation toolbar",
+        "Show non-printing characters [Ctrl+Shift+P]",
+        "Show increased menu spacing",
+        "Show markups",
+        "Zoom >",
+        "Full screen"
+      ]
+    },
+    {
+      "i": 5,
+      "items": [
+        "Image >",
+        "Cover image >",
+        "Table >",
+        "Building blocks >",
+        "Smart chips(Z) >",
+        "Link [Ctrl+K]",
+        "Drawing >",
+        "Chart(Q) >",
+        "Symbols >",
+        "Equation",
+        "Tab(F11) [Shift+F11]",
+        "Horizontal line",
+        "Break >",
+        "Bookmark",
+        "Page elementsUpdated► >",
+        "Comment [Ctrl+Alt+M]"
+      ]
+    },
+    {
+      "i": 6,
+      "items": [
+        "Left-to-right text",
+        "Right-to-left text",
+        "Text(S) >",
+        "Paragraph styles >",
+        "Align and indent >",
+        "Line & paragraph spacing >",
+        "Columns >",
+        "Bullets and numbering >",
+        "Headers and footers >",
+        "Headers and footers",
+        "Page numbers",
+        "Page orientation(3)",
+        "Switch to pages format(F10)",
+        "Switch to pageless format(SEMICOLON)",
+        "Table(2) >",
+        "Image >",
+        "Borders and lines(Q) >",
+        "Clear formatting [Ctrl+\\]"
+      ]
+    },
+    {
+      "i": 7,
+      "items": [
+        "Spelling and grammar >",
+        "Word count [Ctrl+Shift+C]",
+        "Review suggested edits [Ctrl+Alt+O Ctrl+Alt+U]",
+        "Compare documents",
+        "Citations(K)",
+        "Variables(7)",
+        "Line numbers(F1)",
+        "Explore [Ctrl+Alt+Shift+I]",
+        "Linked objects",
+        "Dictionary [Ctrl+Shift+Y]",
+        "Translate document",
+        "Voice typing [Ctrl+Shift+S]",
+        "Notification settings",
+        "Preferences",
+        "Accessibility",
+        "Activity dashboard(Z)",
+        "Activity dashboard"
+      ]
+    },
+    {
+      "i": 8,
+      "items": [
+        "Add-ons >",
+        "Apps Script(E)"
+      ]
+    },
+    {
+      "i": 9,
+      "items": [
+        "Search the menus [Alt+/]",
+        "Docs Help",
+        "Training",
+        "Updates",
+        "Help Docs improve",
+        "Report abuse",
+        "Privacy Policy",
+        "Terms of Service",
+        "Keyboard shortcuts [Ctrl+/]"
+      ]
+    },
+    {
+      "i": 10,
+      "items": [
+        "Verbalise to screen reader >",
+        "Edits >",
+        "Comments >",
+        "Footnote >",
+        "Headings >",
+        "Graphics >",
+        "List >",
+        "Link >",
+        "Table >",
+        "Section >",
+        "Tabs >",
+        "Misspelling >",
+        "Formatting >",
+        "Bookmarks >",
+        "Show live edits [Ctrl+Alt+Shift+R]"
+      ]
+    },
+    {
+      "i": 12,
+      "items": [
+        "Upload from computer",
+        "Search the web",
+        "Drive",
+        "Photos",
+        "Camera",
+        "By URL"
+      ]
+    },
+    {
+      "i": 13,
+      "items": [
+        "Single",
+        "1.15",
+        "1.5",
+        "Double",
+        "Custom",
+        "Remove space before paragraph",
+        "Remove space after paragraph",
+        "Custom spacing",
+        "Keep with next",
+        "Keep lines together",
+        "Prevent single lines",
+        "Add page break before"
+      ]
+    },
+    {
+      "i": 14,
+      "items": [
+        "---",
+        "Checklist menu >"
+      ]
+    },
+    {
+      "i": 15,
+      "items": [
+        "1pt",
+        "2pt",
+        "3pt",
+        "4pt",
+        "8pt",
+        "12pt",
+        "16pt",
+        "24pt"
+      ]
+    },
+    {
+      "i": 16,
+      "items": [
+        "Line dash: Solid",
+        "Line dash: Dot",
+        "Line dash: Dash"
+      ]
+    },
+    {
+      "i": 17,
+      "items": [
+        "0pt",
+        "0.5pt",
+        "0.75pt",
+        "1pt",
+        "1.5pt",
+        "2.25pt",
+        "3pt",
+        "4.5pt",
+        "6pt"
+      ]
+    },
+    {
+      "i": 18,
+      "items": [
+        "Line dash: Solid",
+        "Line dash: Dot",
+        "Line dash: Dash"
+      ]
+    },
+    {
+      "i": 19,
+      "items": [
+        "Upload from computer",
+        "Search the web",
+        "Drive",
+        "Photos",
+        "By URL",
+        "Camera"
+      ]
+    },
+    {
+      "i": 20,
+      "items": [
+        "More fonts",
+        "---"
+      ]
+    },
+    {
+      "i": 21,
+      "items": [
+        "Save as my default styles",
+        "Use my default styles",
+        "Reset styles"
+      ]
+    },
+    {
+      "i": 22,
+      "items": [
+        "Choose emoji",
+        "Clear emoji"
+      ]
+    },
+    {
+      "i": 23,
+      "items": [
+        "Add subtab",
+        "Delete",
+        "Duplicate",
+        "Rename",
+        "Choose emoji",
+        "Copy link",
+        "Show outline",
+        "Hide outline",
+        "Move up",
+        "Move down",
+        "Move into >"
+      ]
+    },
+    {
+      "i": 24,
+      "items": [
+        "Ask to editRequest to be an editor",
+        "EditingEdit document directly",
+        "SuggestingEdits become suggestions",
+        "CommentingAdd comments to the document",
+        "ViewingRead or print final document"
+      ]
+    },
+    {
+      "i": 25,
+      "items": [
+        "Verbalise to screen reader >",
+        "Edits >",
+        "Comments >",
+        "Footnote >",
+        "Headings >",
+        "Graphics >",
+        "List >",
+        "Link >",
+        "Table >",
+        "Section >",
+        "Tabs >",
+        "Misspelling >",
+        "Formatting >",
+        "Bookmarks >",
+        "Show live edits [Ctrl+Alt+Shift+R]"
+      ]
+    },
+    {
+      "i": 26,
+      "items": [
+        "Copy link",
+        "Copy link to this time",
+        "Reply to email with fileNew"
+      ]
+    },
+    {
+      "i": 27,
+      "items": [
+        "Reply with this file",
+        "Open original message",
+        "Email this file",
+        "Email collaborators",
+        "Email draft"
+      ]
+    },
+    {
+      "i": 28,
+      "items": [
+        "Since you last viewed",
+        "Since you last approved",
+        "Since approval started"
+      ]
+    }
+  ]
+}

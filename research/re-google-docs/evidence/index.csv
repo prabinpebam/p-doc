@@ -1,0 +1,4 @@
+id,date,session,route,shows,masked
+EV-001,2026-10-28,s01,/document/d/1VQDIAB0OqiSjIHI8AWMvSdceWhnz56jNpZrLs6o7NJY/edit,"Screenshot: editor chrome for an anonymous visitor (title bar, menu bar, toolbar, tabs and outline sidebar, ruler, page, suggesting badge)",yes
+EV-002,2026-10-28,s01,/document/d/1VQDIAB0OqiSjIHI8AWMvSdceWhnz56jNpZrLs6o7NJY/edit,"inventory.js and tokens.js output for the same view: toolbar labels, ARIA roles, colours, type scale, radius, fonts",yes
+EV-003,2026-10-28,s01,/document/d/1VQDIAB0OqiSjIHI8AWMvSdceWhnz56jNpZrLs6o7NJY/edit,"Menu tree read from the DOM without opening menus: File, Edit, View, Insert, Format, Tools, Extensions, Help, mode menu, spacing menu",n/a

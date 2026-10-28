@@ -1,0 +1,7 @@
+{
+  "projectName": "P-Doc",
+  "defaultTheme": "auto",
+  "density": "comfortable",
+  "landing": "landing.html",
+  "themeStylesheet": "project.theme.css"
+}

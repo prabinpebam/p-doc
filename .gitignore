@@ -1,0 +1,14 @@
+node_modules/
+out/
+release/
+dist/
+.refs/
+.agent-orchestration/
+research/rig/.cache/
+research/rig/node_modules/
+*.log
+.DS_Store
+Thumbs.db
+coverage/
+test-results/
+playwright-report/
