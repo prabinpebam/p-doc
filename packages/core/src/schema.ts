@@ -3,6 +3,7 @@
  * TipTap extensions, so every surface reads and writes the same content.
  */
 import { ColumnBreak, SectionBreak } from "./sections.ts";
+import { MathBlock, MathInline } from "./equations.ts";
 import { Extension, Mark, Node, mergeAttributes, getSchema, type AnyExtension } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import { TextStyleKit } from "@tiptap/extension-text-style";
@@ -242,6 +243,8 @@ export function extensions(options: SchemaOptions = {}): AnyExtension[] {
     Note,
     Notes,
     Bookmark,
+    MathInline,
+    MathBlock,
     ...(options.extra ?? []),
   ];
 }

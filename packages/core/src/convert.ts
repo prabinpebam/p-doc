@@ -1,13 +1,14 @@
 /** Conversions between P-Doc documents and HTML, Markdown and plain text (U17, U18). */
 import type { JSONContent } from "@tiptap/core";
 import { generateHTML, generateJSON } from "@tiptap/html";
-import { marked } from "marked";
+import { Marked, type TokenizerAndRendererExtension } from "marked";
 import { createDocument, headerFooterText, pageInches, type PDocFile } from "./format.ts";
 import { extensions } from "./schema.ts";
 import { styleCss } from "./styles.ts";
 import { acceptAll } from "./suggestions.ts";
 import { nodeText } from "./outline.ts";
 import { noteLabelsOf, notesListOf, withNoteLabels } from "./notes.ts";
+import { equationsToMathml } from "./equations.ts";
 
 type Mark = NonNullable<JSONContent["marks"]>[number];
 
@@ -40,7 +41,7 @@ const escapeHtml = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;")
 /** A standalone web page for a document. */
 export function toHTML(doc: PDocFile, o: { final?: boolean } = { final: true }): string {
   const content = o.final === false ? doc.content : finalContent(doc.content);
-  const body = contentToHTML(content);
+  const body = equationsToMathml(contentToHTML(content));
   const { width } = pageInches(doc.page);
   const textWidth = width - doc.page.margins.left - doc.page.margins.right;
   return `<!doctype html>
@@ -64,6 +65,7 @@ ul[data-type="taskList"] li { display: flex; gap: 0.5em; }
 .pd-notes { margin-top: 2em; border-top: 1px solid #999; padding-top: 0.5em; }
 .pd-note > p:first-child::before { content: var(--pd-n) " "; vertical-align: super; font-size: 0.7em; }
 .pd-note > p { margin: 0 0 0.25em; }
+.pd-math-block { text-align: center; margin: 0.5em 0; }
 </style>
 </head>
 <body>
@@ -82,7 +84,7 @@ export function fromHTML(html: string): JSONContent {
 
 // ------------------------------------------------------------------------------ Markdown
 
-const mdEscape = (s: string) => s.replace(/([\\`*_[\]<>])/g, "\\$1").replace(/^(\s*)([#>+-]|\d+\.)(\s)/, "$1\\$2$3");
+const mdEscape = (s: string) => s.replace(/([\\`*_[\]<>$])/g, "\\$1").replace(/^(\s*)([#>+-]|\d+\.)(\s)/, "$1\\$2$3");
 
 /** Markdown footnote names of the notes being written ([^1]); endnotes whose label a footnote has get an "e". */
 let mdNotes: Map<string, string> | null = null;
@@ -93,6 +95,10 @@ function inlineMd(nodes: JSONContent[] | undefined): string {
     if (n.type === "noteRef") {
       const name = mdNotes?.get(String(n.attrs?.id ?? ""));
       if (name) out += `[^${name}]`;
+      continue;
+    }
+    if (n.type === "mathInline") {
+      out += `$${String(n.attrs?.latex ?? "")}$`;
       continue;
     }
     if (n.type === "hardBreak") {
@@ -154,6 +160,8 @@ function blockMd(n: JSONContent, indent = ""): string[] {
       return n.attrs?.kind === "continuous" ? [] : ['<div style="page-break-after: always"></div>'];
     case "columnBreak":
       return [];
+    case "mathBlock":
+      return [`$$\n${String(n.attrs?.latex ?? "")}\n$$`];
     case "image":
       return [inlineMd([n])];
     case "tableOfContents":
@@ -232,8 +240,35 @@ export function toMarkdown(doc: PDocFile | JSONContent): string {
   }
 }
 
+const attr = (s: string) => s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+/** `$…$` and `$$…$$` as equations (U62); a `$` before a digit or after a space is a dollar sign. */
+const mathMd: TokenizerAndRendererExtension[] = [
+  {
+    name: "mathBlock",
+    level: "block",
+    start: (src) => src.match(/^\$\$/m)?.index,
+    tokenizer(src) {
+      const m = /^\$\$\s*\n?([\s\S]+?)\n?\s*\$\$[ \t]*(?:\n|$)/.exec(src);
+      return m ? { type: "mathBlock", raw: m[0], text: m[1]!.trim() } : undefined;
+    },
+    renderer: (t) => `<div data-type="math-block" data-latex="${attr(String(t.text))}"></div>`,
+  },
+  {
+    name: "mathInline",
+    level: "inline",
+    start: (src) => src.indexOf("$") < 0 ? undefined : src.indexOf("$"),
+    tokenizer(src) {
+      const m = /^\$(?![\s$])((?:\\.|[^$\\\n])+?)(?<!\s)\$(?!\d)/.exec(src);
+      return m ? { type: "mathInline", raw: m[0], text: m[1]! } : undefined;
+    },
+    renderer: (t) => `<span data-type="math-inline" data-latex="${attr(String(t.text))}"></span>`,
+  },
+];
+const marked = new Marked({ gfm: true, extensions: mathMd });
+
 export function fromMarkdown(md: string): JSONContent {
-  const html = marked.parse(md, { gfm: true, async: false }) as string;
+  const html = marked.parse(md, { async: false }) as string;
   // GFM task items to the schema's task list.
   const tasks = html.replace(/<ul>\s*((?:<li><input[^>]*type="checkbox"[^>]*>[\s\S]*?<\/li>\s*)+)<\/ul>/g, (_m, items: string) =>
     `<ul data-type="taskList">${items.replace(/<li><input([^>]*)>\s*([\s\S]*?)<\/li>/g, (_x, attrs: string, body: string) => `<li data-type="taskItem" data-checked="${/checked/.test(attrs)}"><p>${body.trim()}</p></li>`)}</ul>`,
@@ -267,6 +302,8 @@ function blockText(n: JSONContent, indent = ""): string[] {
       return n.attrs?.kind === "continuous" ? [] : ["\f"];
     case "columnBreak":
       return [];
+    case "mathBlock":
+      return [`${indent}${String(n.attrs?.latex ?? "")}`];
     case "blockquote":
       return (n.content ?? []).flatMap((c) => blockText(c, indent));
     default:

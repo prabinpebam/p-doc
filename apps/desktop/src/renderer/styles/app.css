@@ -1929,3 +1929,22 @@ kbd {
     animation: none !important;
   }
 }
+
+/* The Equation dialog's drawn maths, beside the LaTeX as it is typed. */
+.equation-preview {
+  min-height: var(--space-8);
+  padding: var(--space-3);
+  margin-bottom: var(--space-3);
+  border: var(--border-hairline) solid var(--color-rule);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-raised);
+  overflow-x: auto;
+}
+
+.equation-preview.is-display {
+  text-align: center;
+}
+
+.field.mono {
+  font-family: Consolas, "Cascadia Mono", monospace;
+}

@@ -938,3 +938,24 @@
 .pd-toc .pd-toc-l6 {
   padding-left: calc(var(--doc-toc-indent) * 5);
 }
+
+/* Equations (U62): MathML from their LaTeX; a display equation is centred on its own line. */
+.pd-content .pd-math {
+  cursor: pointer;
+}
+
+.pd-content .pd-math-block {
+  margin: var(--doc-gap) 0;
+  text-align: center;
+  cursor: pointer;
+}
+
+.pd-content .pd-math.ProseMirror-selectednode,
+.pd-content .pd-math-block.ProseMirror-selectednode {
+  outline: var(--border-focus) solid var(--color-focus);
+}
+
+.pd-content .pd-math-error {
+  color: var(--color-negative);
+  font-family: Consolas, "Cascadia Mono", monospace;
+}

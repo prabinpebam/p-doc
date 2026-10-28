@@ -22,6 +22,7 @@ import {
   LineRuleType,
   PageBreak,
   ColumnBreak as DocxColumnBreak,
+  Math as DocxMath,
   NumberFormat,
   PageNumber,
   SectionType,
@@ -43,6 +44,7 @@ import {
   type ParagraphChild,
 } from "docx";
 import mammoth from "mammoth";
+import { latexToMath } from "docx/math";
 import { PAPER, type HfAlign, type HfTexts, type NumFormat, type PDocFile, type StyleDef } from "./format.ts";
 import { sectionsOf, type SectionStart } from "./sections.ts";
 import { fromHTML } from "./convert.ts";
@@ -103,6 +105,10 @@ function runs(nodes: JSONContent[] | undefined, ctx: Ctx, extra: { font?: string
       if (name) out.push(new DocxBookmark({ id: name, children: [] }));
       continue;
     }
+    if (n.type === "mathInline") {
+      out.push(equation(String(n.attrs?.latex ?? "")));
+      continue;
+    }
     if (n.type === "noteRef") {
       const note = ctx.noteIds.get(String(n.attrs?.id ?? ""));
       if (note) out.push(note.kind === "endnote" ? new EndnoteReferenceRun(note.num) : new FootnoteReferenceRun(note.num));
@@ -141,6 +147,15 @@ function runs(nodes: JSONContent[] | undefined, ctx: Ctx, extra: { font?: string
     else out.push(run);
   }
   return out;
+}
+
+/** An equation as Word's own (A17), which Word edits as one typed into it; LaTeX it can't read stays as text. */
+function equation(latex: string): ParagraphChild {
+  try {
+    return new DocxMath({ children: latexToMath(latex) });
+  } catch {
+    return new TextRun({ text: latex, font: "Cambria Math" });
+  }
 }
 
 /**
@@ -269,6 +284,9 @@ function blocks(nodes: JSONContent[] | undefined, ctx: Ctx, list?: { ref: string
         break;
       case "columnBreak":
         out.push(new Paragraph({ children: [new DocxColumnBreak()] }));
+        break;
+      case "mathBlock":
+        out.push(new Paragraph({ alignment: AlignmentType.CENTER, children: [equation(String(n.attrs?.latex ?? ""))] }));
         break;
       case "sectionBreak":
         // Each section is written as a Word section of its own (see toDocx).

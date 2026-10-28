@@ -10,6 +10,7 @@ import { Tabs } from "./tabs.ts";
 import { NonPrinting } from "./marks.ts";
 import { CommentDraft } from "./review.ts";
 import { NotesKeys, textEnd } from "./notes.ts";
+import { Equations } from "./equations.ts";
 
 /**
  * TipTap's `focus` waits a frame before focusing, so keys pressed straight after a toolbar or menu
@@ -66,6 +67,7 @@ export function editorExtensions(o: { author: string; images: () => ImageHost })
       Suggest.configure({ author: o.author }),
       CommentDraft,
       FindHighlight,
+      Equations,
       ImageFiles(o.images),
       // Before Pages: tab widths are set before the page layout measures.
       Tabs,

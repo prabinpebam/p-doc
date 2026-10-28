@@ -47,3 +47,4 @@ Words P-Doc uses, and the words it doesn't. Sentence case everywhere; no exclama
 | note reference | The small number in the text that a footnote or endnote belongs to | marker, anchor, callout |
 | bookmark | A named place in the text that links and cross-references can go to | anchor, target, marker |
 | headings and bookmarks | The places in this document a link can go to (the link dialog's list) | internal links, anchors, targets |
+| equation | Maths typed as LaTeX that draws in the text (inline) or on its own line (display) | formula, math object, expression |

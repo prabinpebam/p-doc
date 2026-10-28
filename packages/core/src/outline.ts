@@ -7,6 +7,7 @@ export function nodeText(node: JSONContent | undefined): string {
   if (node.type === "text") return node.text ?? "";
   if (node.type === "hardBreak") return "\n";
   if (node.type === "tab") return "\t";
+  if (node.type === "mathInline" || node.type === "mathBlock") return String(node.attrs?.latex ?? "");
   return (node.content ?? []).map(nodeText).join("");
 }
 
