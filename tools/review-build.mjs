@@ -200,10 +200,9 @@ async function refresh(paths, commit, force) {
   if (!existsSync(paths.worktree)) git(REPO, 'worktree', 'add', '--detach', paths.worktree, target);
   else git(paths.worktree, 'checkout', '--detach', '--force', target);
   const short = git(paths.worktree, 'rev-parse', '--short', 'HEAD');
-  const pnpm = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
-  const sh = { cwd: paths.worktree, stdio: 'inherit', shell: process.platform === 'win32' };
-  if (spawnSync(pnpm, ['install', '--frozen-lockfile'], sh).status !== 0) throw new Error('pnpm install failed in the review worktree.');
-  if (spawnSync(pnpm, ['build'], sh).status !== 0) throw new Error(`The build of ${short} failed; the running review build is unchanged.`);
+  const sh = { cwd: paths.worktree, stdio: 'inherit', shell: true };
+  if (spawnSync('pnpm install --frozen-lockfile', sh).status !== 0) throw new Error('pnpm install failed in the review worktree.');
+  if (spawnSync('pnpm build', sh).status !== 0) throw new Error(`The build of ${short} failed; the running review build is unchanged.`);
   const s = readState(paths);
   if (s && alive(s.pid)) {
     if (s.commit === short && windowTitle(s.pid)) return { ...s, note: 'already at this commit' };
