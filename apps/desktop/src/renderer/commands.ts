@@ -251,6 +251,8 @@ const commands: Command[] = [
   { id: "view.zoomReset", label: "Actual size", keys: ["Ctrl+0"], global: true, run: () => void updateSettings({ zoom: 100 }) },
   { id: "view.focus", label: "Focus view", keys: ["Ctrl+Alt+Shift+F"], global: true, checked: () => app.get().focus, run: () => app.set((s) => ({ focus: !s.focus })) },
   { id: "view.compact", label: "Compact mode", keys: ["Ctrl+Shift+F"], global: true, checked: () => !!app.get().settings?.compact, run: () => void updateSettings({ compact: !app.get().settings?.compact }) },
+  { id: "view.ruler", label: "Show ruler", keywords: "indents tabs margins", global: true, checked: () => !!app.get().settings?.ruler, run: () => void updateSettings({ ruler: !app.get().settings?.ruler }) },
+  { id: "view.marks", label: "Show non-printing characters", keywords: "pilcrow formatting marks spaces tabs paragraph", keys: ["Ctrl+Shift+P"], global: true, checked: () => !!app.get().settings?.marks, run: () => void updateSettings({ marks: !app.get().settings?.marks }) },
   { id: "view.fullScreen", label: "Full screen", keys: ["F11"], global: true, checked: () => app.get().fullscreen, run: () => void window.pdoc.app.toggleFullScreen() },
   { id: "view.pages", label: "Pages", keywords: "print layout page view", global: true, checked: () => app.get().doc?.page.mode === "pages", run: () => setPage({ mode: "pages" }), enabled: hasDoc },
   { id: "view.pageless", label: "Pageless", keywords: "web layout continuous", global: true, checked: () => app.get().doc?.page.mode === "pageless", run: () => setPage({ mode: "pageless" }), enabled: hasDoc },
@@ -424,13 +426,17 @@ const commands: Command[] = [
   { id: "image.resetSize", label: "Reset size", keywords: "image picture", run: () => setImage({ width: null, height: null }), enabled: () => canImage() && image()?.node.attrs.width != null },
   { id: "image.resetCrop", label: "Reset crop", keywords: "image picture uncrop", run: resetCrop, enabled: () => canImage() && !!cleanCrop(image()?.node.attrs.crop) },
 
+  // Format > Paragraph (U46–U50)
+  { id: "format.paragraph", label: "Paragraph…", keywords: "indent spacing first line hanging keep with next lines together page break before widow orphan border shading background right to left rtl direction", run: () => openDialog({ kind: "paragraph" }), enabled: () => canEdit() && !!ed() && !!currentBlock(ed()!) },
+  { id: "format.tabs", label: "Tabs…", keywords: "tab stops leader dots decimal", run: () => openDialog({ kind: "paragraph", tab: "tabs" }), enabled: () => canEdit() && !!ed() && !!currentBlock(ed()!) },
+  { id: "format.sort", label: "Sort…", keywords: "sort order alphabetical a to z ascending descending table rows list", run: () => openDialog({ kind: "sort" }), enabled: canEdit },
   {
     id: "format.clear",
     label: "Clear formatting",
     keys: ["Ctrl+\\"],
     run: withEditor((e) => {
       e.chain().focus().unsetAllMarks().unsetTextAlign().run();
-      setBlockAttrs(e, { lineHeight: null, spaceBefore: null, spaceAfter: null, indent: 0 });
+      setBlockAttrs(e, { lineHeight: null, spaceBefore: null, spaceAfter: null, indent: 0, layout: null });
     }),
     enabled: canEdit,
   },
@@ -556,6 +562,8 @@ export const MENUS: Menu[] = [
       "-",
       "view.pages",
       "view.pageless",
+      "view.ruler",
+      "view.marks",
       { label: "Text width", items: ["view.width.narrow", "view.width.medium", "view.width.wide", "view.width.full"] },
       "-",
       { label: "Zoom", items: ["view.zoomIn", "view.zoomOut", "view.zoomReset"] },
@@ -588,6 +596,10 @@ export const MENUS: Menu[] = [
         label: "Image",
         items: ["image.inline", "image.wrapLeft", "image.wrapRight", "-", "image.alignLeft", "image.alignCenter", "image.alignRight", "-", "image.crop", "image.resetCrop", "image.resetSize", "-", "image.replace", "image.alt", "image.options"],
       },
+      "-",
+      "format.paragraph",
+      "format.tabs",
+      "format.sort",
       "-",
       "format.clear",
     ],

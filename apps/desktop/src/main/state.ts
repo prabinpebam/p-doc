@@ -13,7 +13,7 @@ export function defaultSettings(): Settings {
   } catch {
     // No user name on this system.
   }
-  return { version: 1, firstRun: "pending", firstRunStep: "welcome", theme: "system", zoom: 100, identity: { name, email: "" }, spelling: true, leftPanel: "outline", compact: false, pageDefault: null, last: null, github: null, library: null };
+  return { version: 1, firstRun: "pending", firstRunStep: "welcome", theme: "system", zoom: 100, identity: { name, email: "" }, spelling: true, leftPanel: "outline", compact: false, ruler: false, marks: false, pageDefault: null, last: null, github: null, library: null };
 }
 
 const STEPS: FirstRunStep[] = ["welcome", "git", "signIn", "identity", "repos", "done"];
@@ -65,6 +65,8 @@ export class SettingsStore {
     if (typeof patch.spelling === "boolean") next.spelling = patch.spelling;
     if (patch.leftPanel === null || patch.leftPanel === "library" || patch.leftPanel === "outline") next.leftPanel = patch.leftPanel;
     if (typeof patch.compact === "boolean") next.compact = patch.compact;
+    if (typeof patch.ruler === "boolean") next.ruler = patch.ruler;
+    if (typeof patch.marks === "boolean") next.marks = patch.marks;
     if (patch.pageDefault === null || (patch.pageDefault && typeof patch.pageDefault === "object")) next.pageDefault = patch.pageDefault ? cleanPage(patch.pageDefault) : null;
     if (patch.last === null || isDocRef(patch.last)) next.last = patch.last;
     if (STEPS.includes(patch.firstRunStep as FirstRunStep)) next.firstRunStep = patch.firstRunStep!;

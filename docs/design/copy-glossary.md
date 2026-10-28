@@ -36,3 +36,9 @@ Words P-Doc uses, and the words it doesn't. Sentence case everywhere; no exclama
 | crop | Hide the edges of an image without changing the file | trim, clip |
 | In line with text / Wrap left / Wrap right | Where an image sits: in the line, or with text flowing round it | float, square, tight |
 | Image missing | An image whose file isn't in the repository | broken image |
+| indent (Left, Right, First line, Hanging) | How far a paragraph sits in from the margins; Left is where the body lines start | margin (for a paragraph), outdent |
+| tab stop | A position a tab moves to, with alignment Left, Centre, Right or Decimal | tab position, tabulator |
+| leader | Dots, dashes or a line filling the space before a tab stop | fill, tab fill |
+| ruler | The scale above the page with the margins, indents and tab stops | guide, measure bar |
+| non-printing characters | ¶, ·, → and ↵ shown on screen and never printed | formatting marks, hidden characters, pilcrows |
+| Sort | Put paragraphs, list items or table rows in order, A to Z or Z to A | order, arrange |

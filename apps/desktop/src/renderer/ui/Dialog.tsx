@@ -3,6 +3,7 @@
  * control to start in carries `data-autofocus`; without one, the first control gets the keyboard.
  */
 import { useEffect, useId, useRef, type ReactNode } from "react";
+import { getEditor } from "../session.ts";
 
 export interface DialogProps {
   title: string;
@@ -26,7 +27,13 @@ export function Dialog({ title, onClose, children, actions, wide, className, onS
     d.querySelector<HTMLElement>("[data-autofocus]")?.focus();
     return () => {
       if (d.open) d.close();
-      if (back?.isConnected) back.focus();
+      // Never back to the menu bar a command was picked from: the page takes the keyboard again.
+      const inMenu = (el: Element | null) => !!el?.closest('[role="menubar"], [role="menu"]');
+      if (back?.isConnected && back !== document.body && !inMenu(back)) back.focus();
+      else {
+        const a = document.activeElement;
+        if (!a || a === document.body || d.contains(a) || inMenu(a)) getEditor()?.view.focus();
+      }
     };
   }, []);
   return (

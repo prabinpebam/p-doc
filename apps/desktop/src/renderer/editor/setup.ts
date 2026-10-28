@@ -6,6 +6,8 @@ import { extensions, Suggest, TocSync } from "@p-doc/core";
 import { FindHighlight } from "./find.ts";
 import { ImageFiles, LiveImage, type ImageHost } from "./image.ts";
 import { Pages } from "./pages.ts";
+import { Tabs } from "./tabs.ts";
+import { NonPrinting } from "./marks.ts";
 import { CommentDraft } from "./review.ts";
 
 /**
@@ -60,6 +62,9 @@ export function editorExtensions(o: { author: string; images: () => ImageHost })
       CommentDraft,
       FindHighlight,
       ImageFiles(o.images),
+      // Before Pages: tab widths are set before the page layout measures.
+      Tabs,
+      NonPrinting,
       Pages,
     ],
   });

@@ -300,3 +300,54 @@ test("9.3 A10 paragraphs split across pages at lines, and the PDF breaks at the 
   }
   await quit(l);
 });
+
+test("9.3 keep with next, keep lines together and page break before move blocks to the next page, and the PDF agrees", async () => {
+  const saveDir = mkdtempSync(join(tmpdir(), "pdoc-keep-"));
+  const l = await launch({ env: { PDOC_SAVE_DIR: saveDir } });
+  const { page } = l;
+  const para = (text: string, layout?: Record<string, unknown>) => ({ type: "paragraph", ...(layout ? { attrs: { layout } } : {}), content: [{ type: "text", text }] });
+  const filler = (n: number) => Array.from({ length: n }, (_, i) => para(`Filler ${i + 1}`));
+  const long = "Body text that runs on for several lines so that it would split across the foot of a page when nothing keeps it together, ".repeat(5).trim();
+  const firstOn = async (sheet: number) => {
+    await settled(page);
+    return (await screenSheets(page)).sheets[sheet]?.first ?? "";
+  };
+
+  // How many one-line paragraphs fill the first page.
+  await load(page, { type: "doc", content: filler(120) });
+  const k = Number((await firstOn(1)).replace("Filler ", "")) - 1;
+  expect(k).toBeGreaterThan(20);
+
+  // A one-line paragraph fits at the foot of page 1; kept with the next, it goes over with it.
+  const intro = (keep: boolean) => [...filler(k - 1), para("Kept intro", keep ? { keepNext: true } : undefined), para(long), ...filler(5)];
+  await load(page, { type: "doc", content: intro(false) });
+  expect(await firstOn(1)).not.toBe("Kept intro");
+  await load(page, { type: "doc", content: intro(true) });
+  expect(await firstOn(1)).toBe("Kept intro");
+
+  // A paragraph that would split at the foot, kept together, starts the next page whole.
+  const together = (keep: boolean) => [...filler(k - 3), para(long, keep ? { keepLines: true } : undefined), ...filler(5)];
+  await load(page, { type: "doc", content: together(false) });
+  expect(await firstOn(1)).toBe("(continued)");
+  await load(page, { type: "doc", content: together(true) });
+  expect(await firstOn(1)).toBe(long.slice(0, 40));
+
+  // Page break before starts a new page even with room to spare.
+  await load(page, { type: "doc", content: [...filler(5), para("Fresh page", { breakBefore: true }), ...filler(3)] });
+  expect(await firstOn(1)).toBe("Fresh page");
+  expect((await screenSheets(page)).pages).toBe(2);
+
+  // The PDF has the same pages.
+  await load(page, { type: "doc", content: intro(true) });
+  await settled(page);
+  const pages = (await screenSheets(page)).pages;
+  await page.getByRole("menuitem", { name: "File" }).click();
+  await page.getByRole("menuitem", { name: /^Download/ }).click();
+  await page.getByRole("menuitem", { name: /^PDF document/ }).click();
+  await expect(page.getByText(new RegExp(`^Saved Untitled document\\.pdf · ${pages} pages$`))).toBeVisible({ timeout: 20_000 });
+  const printed = await pdfPages(join(saveDir, readdirSync(saveDir).find((n) => n.endsWith(".pdf"))!));
+  expect(printed.length).toBe(pages);
+  expect(printed[0]!.endsWith(`Filler${k - 1}`), "page 1 ends before the kept paragraph").toBe(true);
+  expect(printed[1]!.startsWith("Keptintro")).toBe(true);
+  await quit(l);
+});

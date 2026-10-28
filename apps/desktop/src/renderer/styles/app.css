@@ -683,6 +683,38 @@ kbd {
   font-weight: var(--weight-medium);
 }
 
+/* The Paragraph dialog (V13): tabs over a panel that keeps its height as tabs change. */
+.paragraph-dialog .tabs {
+  padding: 0 0 var(--space-3);
+}
+
+.dialog-panel {
+  min-height: var(--size-dialog-panel);
+}
+
+.border-row .check {
+  min-width: var(--size-label);
+  margin-bottom: 0;
+}
+
+.tab-stop-form {
+  grid-template-columns: 1fr 1fr 1fr auto;
+}
+
+.tab-stops {
+  list-style: none;
+  margin: 0 0 var(--space-3);
+  padding: 0;
+}
+
+.tab-stops li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-1) 0;
+  border-bottom: var(--border-hairline) solid var(--color-rule);
+}
+
 .tabpanel {
   display: flex;
   flex-direction: column;
@@ -969,6 +1001,152 @@ kbd {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
+}
+
+/* Ruler (U46, V13): margins, the paragraph's indents and tab stops; positions are set as --x from the ruler's left. */
+.ruler {
+  position: relative;
+  flex: none;
+  height: var(--size-ruler);
+  overflow: hidden;
+  border-bottom: var(--border-hairline) solid var(--color-rule);
+  background: var(--color-canvas);
+  color: var(--color-text-muted);
+  user-select: none;
+}
+
+.ruler-kind {
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  z-index: var(--layer-raised);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--size-ruler);
+  padding: 0;
+  border: 0;
+  border-right: var(--border-hairline) solid var(--color-rule);
+  background: var(--color-canvas);
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.ruler-kind svg,
+.ruler-mark.tab svg {
+  width: var(--space-3);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+}
+
+.ruler-page {
+  position: absolute;
+  inset-block: var(--space-1);
+  left: var(--page-l);
+  width: var(--page-w);
+  background: var(--color-hover);
+  cursor: copy;
+}
+
+.ruler-text {
+  position: absolute;
+  inset-block: 0;
+  left: calc(var(--text-l) - var(--page-l));
+  width: var(--text-w);
+  background: var(--color-bg-raised);
+  pointer-events: none;
+}
+
+.ruler-tick {
+  position: absolute;
+  top: 50%;
+  left: calc(var(--x) - var(--page-l));
+  width: var(--border-hairline);
+  height: var(--space-1);
+  translate: -50% -50%;
+  background: var(--color-text-muted);
+  pointer-events: none;
+}
+
+.ruler-tick.half {
+  height: var(--space-2);
+}
+
+.ruler-tick.whole {
+  width: auto;
+  height: auto;
+  background: none;
+  font-size: var(--text-sm);
+  line-height: 1;
+}
+
+.ruler-mark {
+  position: absolute;
+  left: var(--x);
+  z-index: var(--layer-raised);
+  display: flex;
+  width: var(--space-3);
+  translate: -50% 0;
+  color: var(--color-text);
+  cursor: ew-resize;
+  touch-action: none;
+}
+
+.ruler-mark svg {
+  width: 100%;
+  fill: var(--color-bg-raised);
+  stroke: currentColor;
+  stroke-width: 1;
+}
+
+.ruler-mark.first {
+  top: 0;
+}
+
+.ruler-mark.hanging {
+  bottom: calc(var(--space-3) / 2);
+}
+
+.ruler-mark.left,
+.ruler-mark.right,
+.ruler-mark.tab {
+  bottom: 0;
+}
+
+/* Tab stops sit low, under the numbers, as Word draws them. */
+.ruler-mark.tab {
+  width: auto;
+  height: var(--space-2);
+}
+
+.ruler-mark.tab svg {
+  width: var(--space-2);
+  height: var(--space-2);
+}
+
+.ruler-mark.is-off {
+  opacity: 0.4;
+}
+
+.ruler-mark[aria-disabled] {
+  cursor: default;
+}
+
+.ruler-guide {
+  position: fixed;
+  top: var(--y);
+  bottom: 0;
+  left: var(--gx);
+  z-index: var(--layer-sticky);
+  border-left: var(--border-hairline) dashed var(--color-text-muted);
+  pointer-events: none;
+}
+
+@media (hover: hover) {
+  .ruler-kind:hover {
+    background: var(--color-hover);
+  }
 }
 
 /* The open document can't take typing (made by a newer P-Doc, or changed from under it). */

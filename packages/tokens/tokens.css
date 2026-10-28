@@ -52,6 +52,7 @@
   --radius-pill: 999px;
   --border-hairline: 1px;
   --border-focus: 3px;
+  --border-leader: 2px;
   --size-control: 2.75rem;
   --size-measure: 42rem;
   --size-control-dense: 2rem;
@@ -63,6 +64,9 @@
   --size-panel-wide: 21.25rem;
   --size-dialog: 30rem;
   --size-dialog-wide: 40rem;
+  --size-dialog-panel: 18rem;
+  --size-label: 6rem;
+  --size-ruler: 1.5rem;
   --size-popover: 36rem;
   --size-icon: 1.25rem;
   --size-select: 8.5rem;

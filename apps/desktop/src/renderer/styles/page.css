@@ -161,6 +161,95 @@
   background: var(--color-page-selection);
 }
 
+/* A tab: its width comes from the next tab stop (editor/tabs.ts); a leader fills it. */
+.pd-content .pd-tab {
+  display: inline-block;
+  overflow: hidden;
+  width: 1em;
+  white-space: pre;
+  text-indent: 0;
+  vertical-align: baseline;
+}
+
+.pd-content .pd-tab[data-leader="dots"] {
+  border-bottom: var(--border-leader) dotted currentColor;
+}
+
+.pd-content .pd-tab[data-leader="dashes"] {
+  border-bottom: var(--border-hairline) dashed currentColor;
+}
+
+.pd-content .pd-tab[data-leader="line"] {
+  border-bottom: var(--border-hairline) solid currentColor;
+}
+
+/* Non-printing characters (View > Show non-printing characters); print copies blocks without them. */
+.pd-show-marks .pd-content :is(p, h1, h2, h3, h4, h5, h6)::after {
+  content: "¶";
+  color: var(--color-page-muted);
+}
+
+/* The tab box has no height of its own (its bottom is the baseline), so the arrow stands on it. */
+.pd-show-marks .pd-content .pd-tab {
+  position: relative;
+  overflow: visible;
+}
+
+.pd-show-marks .pd-content .pd-tab::before {
+  content: "→";
+  position: absolute;
+  inset-block-end: 0;
+  inset-inline: 0;
+  line-height: 1;
+  text-align: center;
+  color: var(--color-page-muted);
+}
+
+.pd-show-marks .pd-content [dir="rtl"] .pd-tab::before {
+  content: "←";
+}
+
+.pd-show-marks .pd-content .pd-np-space {
+  position: relative;
+}
+
+.pd-show-marks .pd-content .pd-np-space::after {
+  content: "·";
+  position: absolute;
+  inset-inline-start: 0;
+  width: 100%;
+  text-align: center;
+  /* A hanging or first-line indent is the paragraph's, not the dot's. */
+  text-indent: 0;
+  color: var(--color-page-muted);
+}
+
+.pd-content .pd-np-break {
+  display: none;
+}
+
+.pd-show-marks .pd-content .pd-np-break {
+  display: inline;
+  color: var(--color-page-muted);
+}
+
+.pd-show-marks .pd-content .pd-page-break {
+  position: relative;
+  border-top: var(--border-hairline) dashed var(--color-page-muted);
+}
+
+.pd-show-marks .pd-content .pd-page-break::after {
+  content: "Page break";
+  position: absolute;
+  inset-inline-start: 50%;
+  transform: translate(-50%, -50%);
+  padding: 0 var(--space-1);
+  background: var(--color-page);
+  color: var(--color-page-muted);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+}
+
 .pd-content p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
   float: left;

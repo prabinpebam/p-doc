@@ -274,9 +274,9 @@ Waits name their class from the perceived-performance skill: *instant* (< 100 ms
 
 ### 4.11 Paragraph layout (U46–U50)
 
-1. **Format > Paragraph…** (and a paragraph's context menu) has three tabs. **Indents and spacing**: left, right, special (None, First line, Hanging) by an amount, space before and after, line spacing (Single, 1.15, 1.5, Double, Multiple, At least, Exactly). **Line and page breaks**: Keep with next, Keep lines together, Page break before, Widow and orphan control (on by default for new documents). **Borders, shading and direction**: a border on any side (width, colour), a background colour, and Left to right or Right to left.
-2. **Tabs** (in the same dialog): positions with alignment (left, centre, right, decimal) and leader (none, dots, dashes, line), and **Clear all**. Tab in a paragraph moves to the next stop (in lists Tab still nests).
-3. **View > Show ruler**: the ruler above the page shows the margins, the indents of the paragraph at the cursor and its tab stops. Dragging an indent marker or a tab moves it; a click on the ruler adds a left tab; dragging a tab off removes it. *(instant)*
+1. **Format > Paragraph…** has four tabs. **Indents and spacing**: left, right, special (None, First line, Hanging) by an amount (Left is where the paragraph's body lines start and First line or Hanging sets the first line against it, as in Word), space before and after, line spacing (Single, 1.15, 1.5, Double, Multiple, At least, Exactly). **Line and page breaks**: Keep with next, Keep lines together, Page break before, Widow and orphan control (on by default for new documents). **Borders, shading and direction**: a border on any side (width, colour), a background colour, and Left to right or Right to left.
+2. **Tabs** (the dialog's fourth tab, also **Format > Tabs…**): positions with alignment (left, centre, right, decimal) and leader (none, dots, dashes, line), and **Clear all**. Tab in a paragraph moves to the next stop, or the next half inch past the last one (in lists Tab still nests and in tables it moves between cells).
+3. **View > Show ruler**: the ruler above the page shows the margins, the indents of the paragraph at the cursor and its tab stops. Dragging an indent marker or a tab moves it; a click on the ruler adds a tab of the kind shown at its left end (a click there cycles left, centre, right, decimal); dragging a tab off removes it; a double-click on a tab opens Tabs. Each marker is also a slider: arrow keys move it (Shift for bigger steps) and Delete removes a tab. *(instant)*
 4. **View > Show non-printing characters** (Ctrl+Shift+P): ¶ at each paragraph end, · for spaces, → for tabs, ↵ for line breaks, and labelled page, column and section breaks. They never print.
 5. **Format > Sort…** sorts the selected paragraphs, list items, or a table's rows by a column, A to Z or Z to A, with numbers in number order. Undo returns.
 
@@ -368,7 +368,7 @@ Waits name their class from the perceived-performance skill: *instant* (< 100 ms
 | V10 Settings | Dialog with sections | U14, U20, U35 | Appearance; Editing (spelling, smart quotes); Storage (library folder, Show in folder); GitHub (account, repositories, sync on/off, Sync now, Sign out); About (version, licences). |
 | V11 Image bar | Floating bar over a selected image, with corner handles | U40 | Wrap, align, crop, replace, alt text, reset (§4.9). |
 | V12 Styles dialog | Dialog: style list with preview at left, properties at right | U41, U42 | Styles, properties, New style, defaults (§4.10). |
-| V13 Paragraph dialog and ruler | Dialog with three tabs; ruler 24 px above the page | U46–U48 | Indents and spacing, breaks, borders, tabs; ruler markers (§4.11). |
+| V13 Paragraph dialog and ruler | Dialog with four tabs; ruler 24 px above the page | U46–U48 | Indents and spacing, breaks, borders, tabs; ruler markers (§4.11). |
 | V14 Citations panel | Right panel 340 px | U68 | Sources, style, Add source, Cite (§4.16). |
 | V15 Go to | Small dialog | U71 | Kind, number or list (§4.17). |
 | V16 Read-aloud bar | Small bar at the foot of the page area | U74 | Pause, Stop, speed, voice (§4.17). |
@@ -683,3 +683,26 @@ Engineering notes:
 - The image NodeView mirrors the size, crop and natural size onto its element, because print and export clone the page's DOM. A missing picture hides the `img` itself so neither the broken-image icon nor the alt text shows.
 - `pnpm perf` adds "Open a 100-page document with 20 images" (budget 500 ms; p95 87 ms) and "Insert a 20 MB image" (budget 300 ms; p95 143 ms). `PDOC_MEASURE=1` unit `a6-measure` now measures the stored form: a 0.7 MB file for 100 pages with 20 pictures of 2 MB, and 0.2 MB of Git for 10 more text-only versions.
 - Known limitations: pictures are never deleted from `assets/`, even when no version uses them (P-Doc can't know every clone's history); wrap is square only (tight, through, behind and in front of text are Later in the parity audit).
+
+### Stage 9: Paragraph layout (built)
+
+What a person meets, beyond the flows above:
+
+- **Format > Paragraph…** (V13) has four tabs: Indents and spacing, Line and page breaks, Borders and direction, Tabs. It shows the paragraph at the cursor and applies only the settings that were changed, to every paragraph in the selection. Lengths are in inches or centimetres by locale. Apply is one Undo step, and the cursor is back in the text.
+- **Indents** use Word's meaning: Left is where the body lines start; First line pushes the first line in and Hanging pulls it out (into the margin if Left is 0, as Word allows).
+- **Tabs.** Tab types a tab in a paragraph; it reaches the next stop or, past them, the next half inch. Right tabs end the text at the stop, centre tabs centre it, decimal tabs line up the first full stop. Leaders fill the gap with dots, dashes or a line.
+- **View > Show ruler** (V13): the page's margins shaded, the paragraph's first line, hanging, left and right indents and its tab stops, measured from the margin. See §4.11 item 3. It follows the cursor into list items and table cells; while a document can't be typed in its markers stay where they are, and it's hidden while an older version is shown.
+- **View > Show non-printing characters** (Ctrl+Shift+P): ¶, · for spaces (including at the end of a wrapped line), → for tabs (← in right-to-left paragraphs), ↵ for line breaks, and a labelled dashed line at a page break. Print, PDF and exports never carry them.
+- **Line and page breaks.** Keep with next, Keep lines together, Page break before, and Widow and orphan control (on unless turned off for a paragraph). A paragraph splits across pages at a line, never leaving one line alone at a page's foot or head.
+- **Borders and direction.** Top, bottom, left and right borders, a shading colour, and Left to right or Right to left.
+- **Format > Sort…** sorts the selected paragraphs, the list the cursor is in, or a table's rows by a column (with a header row kept first), A to Z or Z to A; numbers sort as numbers and case doesn't change the order. Undo returns the old order in one step.
+- **.docx** export writes the indents, spacing (exact, at least, multiple), keep rules, tabs with leaders, borders, shading and right-to-left as Word's own paragraph properties.
+
+Engineering notes:
+
+- Layout attributes live in one `layout` object per textblock (`packages/core/src/paragraph.ts`: `cleanLayout`, `patchLayout`, `layoutCss`); `indent` stays a half-inch count, and `indentPositions`/`indentFromPositions` convert to Word's Left and First/Hanging positions. A tab is an inline `tab` node rendered as `span.pd-tab` holding `\t`.
+- Tab widths are set by `editor/tabs.ts` after each change, from the paragraph's own stops (`tabTo` in core); print copies the widths, so paper matches the screen.
+- The keep rules are inputs to `paginate`: keep-with-next chains move with the block they keep with, a kept-together block moves whole when it fits a page, and the widow rule needs four lines to split.
+- Non-printing marks: CSS for ¶, →, the page break label; decorations (`editor/marks.ts`) for spaces and line breaks, only while shown. Print strips the decoration classes and unwraps their spans.
+- Dialogs return focus to the control that opened them unless that was the menu bar or the page itself, when the text gets it back. Sorting and every paragraph format are their own undo step (`closeHistory`).
+- Not built in this stage: a paragraph context menu (there is no context menu yet; the commands are in Format, command search and the ruler).

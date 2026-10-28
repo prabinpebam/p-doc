@@ -21,7 +21,12 @@ export type Dialog =
   | { kind: "connect" }
   | { kind: "syncProblem" }
   | { kind: "imageAlt" }
-  | { kind: "imageOptions" };
+  | { kind: "imageOptions" }
+  | { kind: "paragraph"; tab?: ParagraphTab }
+  | { kind: "sort" };
+
+/** The Paragraph dialog's tabs (spec §4.11). */
+export type ParagraphTab = "indents" | "breaks" | "borders" | "tabs";
 
 /** Editing, Suggesting or Viewing (U21, U27). */
 export type Mode = "editing" | "suggesting" | "viewing";

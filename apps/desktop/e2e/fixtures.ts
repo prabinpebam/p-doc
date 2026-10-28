@@ -1,7 +1,7 @@
 /** Documents for journeys, built the same way every run. */
 import type { Page } from "@playwright/test";
 import { randomBytes } from "node:crypto";
-import { deflateSync } from "node:zlib";
+import { deflateSync, inflateRawSync } from "node:zlib";
 
 /** Replaces the open document's content, as typing would (it saves and lays out again). */
 export async function load(page: Page, doc: unknown): Promise<void> {
@@ -172,3 +172,22 @@ export function png(w: number, h: number, rgb: [number, number, number], noise =
   return Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), chunk("IHDR", ihdr), chunk("IDAT", deflateSync(raw, { level: noise ? 0 : 6 })), chunk("IEND", Buffer.alloc(0))]);
 }
 
+/** One file's text from a zip (a .docx): read through the central directory, stored or deflated. */
+export function zipText(zip: Buffer, name: string): string {
+  const end = zip.lastIndexOf(Buffer.from([0x50, 0x4b, 0x05, 0x06]));
+  let at = zip.readUInt32LE(end + 16);
+  for (let i = zip.readUInt16LE(end + 10); i > 0; i--) {
+    const method = zip.readUInt16LE(at + 10);
+    const size = zip.readUInt32LE(at + 20);
+    const nameLen = zip.readUInt16LE(at + 28);
+    const skip = nameLen + zip.readUInt16LE(at + 30) + zip.readUInt16LE(at + 32);
+    const local = zip.readUInt32LE(at + 42);
+    if (zip.toString("utf8", at + 46, at + 46 + nameLen) === name) {
+      const data = local + 30 + zip.readUInt16LE(local + 26) + zip.readUInt16LE(local + 28);
+      const raw = zip.subarray(data, data + size);
+      return (method === 8 ? inflateRawSync(raw) : raw).toString("utf8");
+    }
+    at += 46 + skip;
+  }
+  throw new Error(`${name} is not in the zip`);
+}

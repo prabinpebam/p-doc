@@ -11,9 +11,9 @@ import pageCss from "../styles/page.css?inline";
 import { geometry, layoutNow } from "./pages.ts";
 
 // The editor's own state: selection, find highlights, the empty-document placeholder.
-const EDITOR_ONLY = ["ProseMirror-selectednode", "selectedCell", "pd-match", "pd-match-current", "has-focus", "is-empty", "is-editor-empty", "is-cropping", "is-resizing"];
+const EDITOR_ONLY = ["ProseMirror-selectednode", "selectedCell", "pd-match", "pd-match-current", "has-focus", "is-empty", "is-editor-empty", "is-cropping", "is-resizing", "pd-np-space"];
 // Drawn only on screen: resize handles, the crop frame, and an image whose file is missing (exports skip it).
-const SCREEN_ONLY = ".column-resize-handle, .pd-img-handle, .pd-crop, .pd-img-missing, .pd-img.is-missing";
+const SCREEN_ONLY = ".pd-np-break, .column-resize-handle, .pd-img-handle, .pd-crop, .pd-img-missing, .pd-img.is-missing";
 
 /**
  * A block's HTML without the editor's own state (selection, find highlights, resize handles): one part,
@@ -30,6 +30,10 @@ function blockHtml(node: Node | null): string[] {
     x.classList.remove(...EDITOR_ONLY);
   }
   for (const x of c.querySelectorAll(SCREEN_ONLY)) x.remove();
+  // A decoration's span (a find match, a marked space) leaves nothing behind once its class is gone.
+  for (const x of c.querySelectorAll<HTMLElement>("[class]")) if (!x.classList.length) x.removeAttribute("class");
+  for (const x of c.querySelectorAll<HTMLElement>("span")) if (!x.attributes.length) x.replaceWith(...x.childNodes);
+  c.normalize();
   const parts: string[] = [];
   let rest = c;
   for (;;) {

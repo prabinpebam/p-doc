@@ -41,6 +41,10 @@ export interface Settings {
   spelling: boolean;
   leftPanel: LeftPanel;
   compact: boolean;
+  /** View > Show ruler. */
+  ruler: boolean;
+  /** View > Show non-printing characters. */
+  marks: boolean;
   /** "Set as default" in Page setup. */
   pageDefault: PageSetup | null;
   /** The document open when P-Doc last closed. */

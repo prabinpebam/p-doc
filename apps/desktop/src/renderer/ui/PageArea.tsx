@@ -6,6 +6,7 @@ import { FORMAT_VERSION, headerFooterText, knownContent, styleCss, TEXT_WIDTH, C
 import { editorExtensions } from "../editor/setup.ts";
 import { insertImageFiles, replaceImageFile, selectedImage, type ImageHost } from "../editor/image.ts";
 import { jumpToBlock } from "../editor/blocks.ts";
+import { showMarks } from "../editor/marks.ts";
 import { geometry, pageLayout, setPageSetup, type Layout } from "../editor/pages.ts";
 import { attachEditor, changed, detachEditor, getEditor } from "../session.ts";
 import { app, openDialog, toast } from "../state.ts";
@@ -14,6 +15,7 @@ import { applyMode, review, reviewCss } from "../review.ts";
 import { FindBar } from "./FindBar.tsx";
 import { VersionView } from "./HistoryPanel.tsx";
 import { ImageBar } from "./ImageBar.tsx";
+import { Ruler } from "./Ruler.tsx";
 
 /** The first page's header and the last page's footer; the ones between are drawn by sheet breaks. */
 function HfOverlay({ cls, which, page, pages }: { cls: string; which: "header" | "footer"; page: number; pages: number }) {
@@ -56,6 +58,7 @@ function shownOfNewer(doc: PDocFile, extensions: ReturnType<typeof editorExtensi
 function DocEditor({ doc }: { doc: PDocFile }) {
   const author = app.use((s) => s.settings?.identity.name || "Me");
   const spelling = app.use((s) => s.settings?.spelling ?? true);
+  const marks = app.use((s) => !!s.settings?.marks);
   const extensions = editorExtensions({ author, images: imageHost });
   const editor = useEditor(
     {
@@ -109,6 +112,10 @@ function DocEditor({ doc }: { doc: PDocFile }) {
     if (editor && !editor.isDestroyed) editor.view.dom.setAttribute("spellcheck", String(spelling));
   }, [editor, spelling]);
 
+  useEffect(() => {
+    if (editor && !editor.isDestroyed) showMarks(editor.view, marks);
+  }, [editor, marks]);
+
   // A new name in Settings signs suggestions made from now on.
   useEffect(() => {
     if (editor && !editor.isDestroyed) editor.commands.setSuggestAuthor(author);
@@ -155,6 +162,8 @@ export function PageArea() {
   const markup = app.use((s) => s.markup);
   const active = review.use((s) => s.active);
   const locked = app.use((s) => s.locked);
+  const ruler = app.use((s) => !!s.settings?.ruler);
+  const marks = app.use((s) => !!s.settings?.marks);
   const page = doc?.page ?? null;
   useEffect(() => setPageSetup(page), [page]);
   if (!doc) return <main className="canvas" aria-busy="true" />;
@@ -172,8 +181,9 @@ export function PageArea() {
       ) : null}
       <FindBar />
       <ImageBar />
+      {ruler && !viewing ? <Ruler /> : null}
       <div
-        className="page-scroll"
+        className={`page-scroll${marks ? " pd-show-marks" : ""}`}
         onMouseDown={(e) => {
           // A click on the grey canvas below the text puts the cursor at the end, as on paper.
           if (e.target === e.currentTarget) {

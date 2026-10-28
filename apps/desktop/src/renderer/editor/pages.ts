@@ -137,7 +137,17 @@ function measure(view: EditorView): void {
         };
       }
     }
-    boxes.push({ height, pageBreak: node.type.name === "pageBreak", float, lines, widows: true });
+    const layout = (node.attrs.layout ?? null) as { keepNext?: boolean; keepLines?: boolean; breakBefore?: boolean; widows?: boolean } | null;
+    boxes.push({
+      height,
+      pageBreak: node.type.name === "pageBreak",
+      float,
+      lines,
+      widows: layout?.widows !== false,
+      keepNext: !!layout?.keepNext,
+      keepLines: !!layout?.keepLines,
+      breakBefore: !!layout?.breakBefore,
+    });
     if (node.type.name === "heading" && node.attrs.id) headingAt.push([String(node.attrs.id), i]);
   });
   const p = paginate(boxes, g.content);

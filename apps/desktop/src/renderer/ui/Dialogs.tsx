@@ -15,6 +15,8 @@ import { countWords } from "./StatusBar.tsx";
 import { HeaderFooterDialog, PageSetupDialog } from "./PageDialogs.tsx";
 import { ConnectDialog, GitHubSection, SyncProblemDialog } from "./GitHubSettings.tsx";
 import { ImageAltDialog, ImageOptionsDialog } from "./ImageDialogs.tsx";
+import { ParagraphDialog } from "./ParagraphDialog.tsx";
+import { SortDialog } from "./SortDialog.tsx";
 
 export function Dialogs() {
   const d = app.use((s) => s.dialog);
@@ -52,6 +54,10 @@ export function Dialogs() {
       return <ImageAltDialog />;
     case "imageOptions":
       return <ImageOptionsDialog />;
+    case "paragraph":
+      return <ParagraphDialog tab={d.tab} />;
+    case "sort":
+      return <SortDialog />;
   }
 }
 

@@ -1,8 +1,9 @@
 /** Editor operations on blocks: paragraph attributes, styles, indent, outline jumps and section moves. */
 import type { Editor } from "@tiptap/core";
 import { Node as PMNode } from "@tiptap/pm/model";
+import { closeHistory } from "@tiptap/pm/history";
 import { TextSelection } from "@tiptap/pm/state";
-import { moveSection, styleKeyOf, TEXTBLOCKS, type StyleDef, type StyleKey, type Styles } from "@p-doc/core";
+import { moveSection, patchLayout, styleKeyOf, TEXTBLOCKS, type StyleDef, type StyleKey, type Styles } from "@p-doc/core";
 
 const isTextblockType = (name: string) => (TEXTBLOCKS as readonly string[]).includes(name);
 
@@ -33,7 +34,8 @@ export function insertAtomBlock(editor: Editor, type: string): void {
 }
 
 /** Sets attributes on every paragraph and heading the selection touches, in one step. */
-export function setBlockAttrs(editor: Editor, attrs: Record<string, unknown> | ((a: Record<string, unknown>) => Record<string, unknown>)): void {
+/** `step`: an undo step of its own (a dialog or the ruler), never merged with typing around it. */
+export function setBlockAttrs(editor: Editor, attrs: Record<string, unknown> | ((a: Record<string, unknown>) => Record<string, unknown>), step = false): void {
   const { state } = editor;
   const tr = state.tr;
   const { from, to } = state.selection;
@@ -43,7 +45,13 @@ export function setBlockAttrs(editor: Editor, attrs: Record<string, unknown> | (
     tr.setNodeMarkup(pos, undefined, { ...node.attrs, ...next });
     return false;
   });
-  if (tr.docChanged) editor.view.dispatch(tr);
+  if (tr.docChanged) editor.view.dispatch(step ? closeHistory(tr) : tr);
+}
+
+/** Sets paragraph attributes and changes layout settings on every paragraph the selection touches (U46–U48), in one step. */
+export function setParagraphFormat(editor: Editor, attrs: Record<string, unknown>, layout: Record<string, unknown>): void {
+  if (!Object.keys(attrs).length && !Object.keys(layout).length) return;
+  setBlockAttrs(editor, (a) => ({ ...attrs, ...(Object.keys(layout).length ? { layout: patchLayout(a.layout, layout) } : {}) }), true);
 }
 
 /** The paragraph or heading at the start of the selection. */
@@ -117,7 +125,7 @@ export function clearBlockDirectFormatting(editor: Editor): void {
     const tr = state.tr;
     const marks = ["textStyle", "bold", "italic"].map((m) => state.schema.marks[m]).filter(Boolean);
     for (const m of marks) tr.removeMark(start + 1, start + 1 + n.content.size, m);
-    tr.setNodeMarkup(start, undefined, { ...n.attrs, lineHeight: null, spaceBefore: null, spaceAfter: null });
+    tr.setNodeMarkup(start, undefined, { ...n.attrs, lineHeight: null, spaceBefore: null, spaceAfter: null, layout: null });
     editor.view.dispatch(tr);
     return;
   }
@@ -131,7 +139,11 @@ export function indent(editor: Editor, dir: 1 | -1): void {
     else editor.chain().focus().liftListItem(type).run();
     return;
   }
-  setBlockAttrs(editor, (a) => ({ indent: Math.max(0, Math.min(8, Number(a.indent ?? 0) + dir)) }));
+  // An indent set in the Paragraph dialog moves to the next half-inch step.
+  setBlockAttrs(editor, (a) => {
+    const at = Number(a.indent ?? 0);
+    return { indent: Math.max(0, Math.min(8, dir > 0 ? Math.floor(at + 0.001) + 1 : Math.ceil(at - 0.001) - 1)) };
+  });
 }
 
 /** Top-level block index → document position. */
