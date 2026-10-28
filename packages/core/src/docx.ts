@@ -13,13 +13,17 @@ import {
   HeadingLevel,
   ImageRun,
   InsertedTextRun,
+  LeaderType,
   LevelFormat,
+  LineRuleType,
   PageBreak,
   PageNumber,
   PageOrientation,
   Packer,
   Paragraph,
   ShadingType,
+  Tab as DocxTab,
+  TabStopType,
   Table,
   TableCell,
   TableRow,
@@ -35,6 +39,7 @@ import mammoth from "mammoth";
 import { PAPER, type PDocFile, type StyleDef } from "./format.ts";
 import { fromHTML } from "./convert.ts";
 import { nodeText } from "./outline.ts";
+import { BORDER_SIDES, cleanLayout } from "./paragraph.ts";
 import { cleanCrop, dataImageParts, imageInfo } from "./image.ts";
 
 type Mark = NonNullable<JSONContent["marks"]>[number];
@@ -68,6 +73,10 @@ function runs(nodes: JSONContent[] | undefined, ctx: Ctx, extra: { font?: string
   for (const n of nodes ?? []) {
     if (n.type === "hardBreak") {
       out.push(new TextRun({ text: "", break: 1 }));
+      continue;
+    }
+    if (n.type === "tab") {
+      out.push(new TextRun({ children: [new DocxTab()] }));
       continue;
     }
     if (n.type === "image") {
@@ -149,16 +158,48 @@ function imageRun(n: JSONContent, ctx: Ctx): ImageRun | null {
 const ALIGN: Record<string, (typeof AlignmentType)[keyof typeof AlignmentType]> = { left: AlignmentType.LEFT, center: AlignmentType.CENTER, right: AlignmentType.RIGHT, justify: AlignmentType.JUSTIFIED };
 const HEADING = [HeadingLevel.HEADING_1, HeadingLevel.HEADING_2, HeadingLevel.HEADING_3, HeadingLevel.HEADING_4];
 
+const LEADER = { none: undefined, dots: LeaderType.DOT, dashes: LeaderType.HYPHEN, line: LeaderType.UNDERSCORE } as const;
+const TAB_TYPE = { left: TabStopType.LEFT, center: TabStopType.CENTER, right: TabStopType.RIGHT, decimal: TabStopType.DECIMAL } as const;
+
+/** A paragraph's layout as Word writes it (U44–U47): indents, spacing, breaks, borders, shading, direction and tab stops. */
 function paraOptions(n: JSONContent): Partial<IParagraphOptions> {
   const a = n.attrs ?? {};
+  const l = cleanLayout(a.layout);
   const o: Record<string, unknown> = {};
   if (a.textAlign && ALIGN[a.textAlign]) o.alignment = ALIGN[a.textAlign];
-  if (a.indent) o.indent = { left: Math.round(Number(a.indent) * 0.5 * TWIP) };
-  const spacing: Record<string, number> = {};
-  if (a.lineHeight) spacing.line = Math.round(Number(a.lineHeight) * 240);
+  // A hanging indent in Word sets the other lines' indent and pulls the first line back by the hang.
+  const hang = l?.first && l.first < 0 ? -l.first : 0;
+  const indent: Record<string, number> = {};
+  const left = Number(a.indent ?? 0) * 0.5 + hang;
+  if (left) indent.left = Math.round(left * TWIP);
+  if (l?.right) indent.right = Math.round(l.right * TWIP);
+  if (hang) indent.hanging = Math.round(hang * TWIP);
+  else if (l?.first) indent.firstLine = Math.round(l.first * TWIP);
+  if (Object.keys(indent).length) o.indent = indent;
+  const spacing: Record<string, unknown> = {};
+  if (a.lineHeight) {
+    if (l?.lineRule) Object.assign(spacing, { line: Math.round(Number(a.lineHeight) * 20), lineRule: l.lineRule === "exact" ? LineRuleType.EXACT : LineRuleType.AT_LEAST });
+    else spacing.line = Math.round(Number(a.lineHeight) * 240);
+  }
   if (a.spaceBefore != null) spacing.before = Math.round(Number(a.spaceBefore) * 20);
   if (a.spaceAfter != null) spacing.after = Math.round(Number(a.spaceAfter) * 20);
   if (Object.keys(spacing).length) o.spacing = spacing;
+  if (!l) return o as Partial<IParagraphOptions>;
+  if (l.keepNext) o.keepNext = true;
+  if (l.keepLines) o.keepLines = true;
+  if (l.breakBefore) o.pageBreakBefore = true;
+  if (l.widows === false) o.widowControl = false;
+  if (l.borders) {
+    const border: Record<string, unknown> = {};
+    for (const side of BORDER_SIDES) {
+      const b = l.borders[side];
+      if (b) border[side] = { style: BorderStyle.SINGLE, size: Math.round(b.width * 8), color: hex(b.color), space: side === "top" || side === "bottom" ? 1 : 4 };
+    }
+    o.border = border;
+  }
+  if (l.shading) o.shading = { type: ShadingType.CLEAR, fill: hex(l.shading), color: "auto" };
+  if (l.dir === "rtl") o.bidirectional = true;
+  if (l.tabs) o.tabStops = l.tabs.map((t) => ({ type: TAB_TYPE[t.align], position: Math.round(t.pos * TWIP), ...(LEADER[t.leader] ? { leader: LEADER[t.leader] } : {}) }));
   return o as Partial<IParagraphOptions>;
 }
 

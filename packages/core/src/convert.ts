@@ -86,6 +86,10 @@ function inlineMd(nodes: JSONContent[] | undefined): string {
       out += "  \n";
       continue;
     }
+    if (n.type === "tab") {
+      out += "\t";
+      continue;
+    }
     if (n.type === "image") {
       out += `![${mdEscape(String(n.attrs?.alt ?? ""))}](${String(n.attrs?.src ?? "")})`;
       continue;

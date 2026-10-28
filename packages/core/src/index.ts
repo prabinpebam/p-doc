@@ -12,3 +12,5 @@ export * from "./suggestions.ts";
 export * from "./comments.ts";
 export * from "./styles.ts";
 export * from "./convert.ts";
+export * from "./paragraph.ts";
+export * from "./sort.ts";

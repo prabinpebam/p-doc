@@ -19,7 +19,9 @@ function decl(s: StyleDef, isNormal: boolean): string {
     `font-style: ${s.italic ? "italic" : "normal"}`,
     `line-height: ${s.lineHeight}`,
     // Space before is padding so it adds to the space after the block above instead of collapsing into it (as in Word).
-    `padding-top: ${s.spaceBefore}pt`,
+    // A paragraph's own space before sets --pd-sb; a bordered one takes it as a margin outside the border.
+    `--pd-sb: ${s.spaceBefore}pt`,
+    "padding-top: var(--pd-sb)",
     `margin: 0 0 ${s.spaceAfter}pt 0`,
   ];
   if (s.color) out.push(`color: ${s.color}`);

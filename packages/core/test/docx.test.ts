@@ -28,6 +28,38 @@ const unzip = async (bytes: Uint8Array, name: string) => {
 };
 
 describe("export-docx", () => {
+  it("writes paragraph layout: indents, exact spacing, keep rules, borders, shading, direction, tab stops and tabs (U44–U47)", async () => {
+    const layout = {
+      right: 0.5,
+      first: -0.25,
+      lineRule: "exact",
+      keepNext: true,
+      keepLines: true,
+      breakBefore: true,
+      widows: false,
+      borders: { top: { width: 1, color: "#336699" } },
+      shading: "#ffff00",
+      dir: "rtl",
+      tabs: [{ pos: 3, align: "right", leader: "dots" }],
+    };
+    const content: JSONContent = { type: "doc", content: [{ type: "paragraph", attrs: { indent: 1, lineHeight: 18, layout }, content: [{ type: "text", text: "Name" }, { type: "tab" }, { type: "text", text: "12" }] }] };
+    const xml = await unzip(await toDocx(createDocument({ content })), "word/document.xml");
+    // Half an inch of indent plus a quarter-inch hang: 0.75 in from the margin, the first line pulled back 0.25 in.
+    expect(xml).toMatch(/<w:ind [^>]*w:left="1080"/);
+    expect(xml).toMatch(/<w:ind [^>]*w:right="720"/);
+    expect(xml).toMatch(/<w:ind [^>]*w:hanging="360"/);
+    expect(xml).toMatch(/<w:spacing [^>]*w:line="360"[^>]*w:lineRule="exact"|<w:spacing [^>]*w:lineRule="exact"[^>]*w:line="360"/);
+    expect(xml).toContain("<w:keepNext/>");
+    expect(xml).toContain("<w:keepLines/>");
+    expect(xml).toContain("<w:pageBreakBefore/>");
+    expect(xml).toMatch(/<w:widowControl w:val="(false|0)"\/>/);
+    expect(xml).toMatch(/<w:top w:val="single" w:color="336699" w:sz="8" w:space="1"\/>|<w:top [^>]*w:sz="8"/);
+    expect(xml).toMatch(/<w:shd [^>]*w:fill="FFFF00"/);
+    expect(xml).toContain("<w:bidi/>");
+    expect(xml).toMatch(/<w:tab w:val="right" w:pos="4320" w:leader="dot"\/>/);
+    expect(xml).toMatch(/<w:r>(<w:rPr\/>)?<w:tab\/><\/w:r>/);
+  });
+
   it("writes page size, margins, header/footer page numbers and tracked changes", async () => {
     const doc = createDocument({ title: "Report", content: sample() });
     doc.page.size = "a4";

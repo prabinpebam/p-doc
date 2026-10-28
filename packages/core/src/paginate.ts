@@ -22,6 +22,12 @@ export interface BlockBox {
   lines?: () => number[];
   /** Widow and orphan control: a split leaves at least two lines on each side. */
   widows?: boolean;
+  /** Keep with next (U47): starts on the page the next block starts on, when the run of them fits a page. */
+  keepNext?: boolean;
+  /** Keep lines together (U47): never splits, unless it is taller than a page. */
+  keepLines?: boolean;
+  /** Page break before (U47): starts a page, unless it already does. */
+  breakBefore?: boolean;
 }
 
 export interface Pagination {
@@ -72,11 +78,30 @@ export function paginate(blocks: BlockBox[], pageContentHeight: number): Paginat
     if (at === 0 && end < 2) return 0;
     return Math.max(at, end);
   };
+  const splits = (b: BlockBox) => !!b.lines && !b.float && !(b.keepLines && b.height <= h + EPS);
+  /** The height a run kept with the next block needs: all of it, and the start of the block it keeps with. */
+  const keptRun = (i: number): number => {
+    let need = 0;
+    let j = i;
+    for (; j < blocks.length && blocks[j]!.keepNext && !blocks[j]!.pageBreak; j++) need += blocks[j]!.height;
+    const next = blocks[j];
+    if (!next || next.breakBefore) return need;
+    if (!splits(next)) return need + next.height;
+    // The fewest lines the next block can start with here: two under the widow rule (which needs four to split).
+    const ls = next.lines!();
+    if (next.widows) return need + (ls.length >= 3 ? ls[1]! : next.height);
+    return need + (ls[0] ?? next.height);
+  };
   blocks.forEach((b, i) => {
     const need = Math.max(b.height, b.float ?? 0);
     const full = () => Math.max(used, floats) > 0;
-    if (i > 0 && breakNext) newSheet(i, 0, Math.max(0, h - Math.max(used, floats)));
+    if (i > 0 && (breakNext || (b.breakBefore && full()))) newSheet(i, 0, Math.max(0, h - Math.max(used, floats)));
     breakNext = Boolean(b.pageBreak);
+    // A run kept with the next block moves on whole when it doesn't fit here but fits a page; a longer one breaks at the page.
+    if (b.keepNext && !b.float && full() && !blocks[i - 1]?.keepNext) {
+      const run = keptRun(i);
+      if (run <= h + EPS && used + run > h + EPS) newSheet(i, 0, Math.max(0, h - Math.max(used, floats)));
+    }
     const fits = !full() || used + need <= h + EPS;
     if (fits && b.height <= h - used + EPS) {
       pageOf.push(page);
@@ -84,7 +109,7 @@ export function paginate(blocks: BlockBox[], pageContentHeight: number): Paginat
       used += b.height;
       return;
     }
-    if (!b.lines || b.float) {
+    if (!splits(b)) {
       if (!fits) newSheet(i, 0, Math.max(0, h - Math.max(used, floats)));
       pageOf.push(page);
       if (b.float) floats = Math.min(h, Math.max(floats, used + b.float));
@@ -97,7 +122,7 @@ export function paginate(blocks: BlockBox[], pageContentHeight: number): Paginat
       return;
     }
     // Split between lines: as many as fit on each page, the rest on the next.
-    const ls = b.lines();
+    const ls = b.lines!();
     const widows = Boolean(b.widows);
     let at = 0;
     let offset = 0;

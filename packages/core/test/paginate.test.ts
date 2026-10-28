@@ -59,6 +59,50 @@ describe("paginate", () => {
     expect(r.pages).toBe(Math.ceil(100 / 18));
   });
 
+  describe("keep rules (U47)", () => {
+    /** A paragraph of `n` 20 px lines. */
+    const para = (n: number, extra: Partial<Parameters<typeof paginate>[0][number]> = {}) => ({ height: n * 20, lines: () => Array.from({ length: n - 1 }, (_, k) => (k + 1) * 20), widows: true, ...extra });
+
+    it("starts a page at a paragraph with page break before, unless it already starts one", () => {
+      const r = paginate([{ height: 100 }, { height: 50, breakBefore: true }, { height: 50, breakBefore: true }], 500);
+      expect(r.pageOf).toEqual([1, 2, 3]);
+      const top = paginate([{ height: 50, breakBefore: true }, { height: 50 }], 500);
+      expect(top.pageOf).toEqual([1, 1]);
+    });
+
+    it("moves a heading kept with next onto the page its paragraph starts on", () => {
+      // 430 used; the heading (40) fits, but none of the next paragraph's first two lines do.
+      const r = paginate([{ height: 430 }, { height: 40, keepNext: true }, para(10)], 500);
+      expect(r.pageOf).toEqual([1, 2, 2]);
+      expect(r.starts).toEqual([0, 1]);
+      // Without keep with next it stays at the foot of page 1.
+      expect(paginate([{ height: 430 }, { height: 40 }, para(10)], 500).pageOf[1]).toBe(1);
+    });
+
+    it("keeps a run of blocks with the next one, and breaks a run longer than a page at the page", () => {
+      const r = paginate([{ height: 300 }, { height: 60, keepNext: true }, { height: 60, keepNext: true }, { height: 100 }], 500);
+      expect(r.pageOf).toEqual([1, 2, 2, 2]);
+      const long = paginate([{ height: 300 }, { height: 200, keepNext: true }, { height: 200, keepNext: true }, { height: 200, keepNext: true }, { height: 100 }], 500);
+      expect(long.pageOf[1]).toBe(1);
+    });
+
+    it("keeps a paragraph's lines together unless it is taller than a page", () => {
+      const r = paginate([{ height: 400 }, para(10, { keepLines: true })], 500);
+      expect(r.pageOf).toEqual([1, 2]);
+      expect(r.startLines).toEqual([0, 0]);
+      const tall = paginate([{ height: 400 }, para(40, { keepLines: true })], 500);
+      expect(tall.startLines.some((l) => l > 0)).toBe(true);
+    });
+
+    it("lets a widow-free paragraph split down to a single line on each side", () => {
+      const off = paginate([{ height: 480 }, para(10, { widows: false })], 500);
+      expect(off.pageOf).toEqual([1, 1]);
+      expect(off.startLines[1]).toBe(1);
+      const on = paginate([{ height: 480 }, para(10)], 500);
+      expect(on.pageOf).toEqual([1, 2]);
+    });
+  });
+
   describe("split paragraphs (A10)", () => {
     // A paragraph of n lines of 20 px each, with 10 px after it: bottoms of each line but the last.
     const para = (n: number, widows = true) => ({ height: n * 20 + 10, lines: () => Array.from({ length: n - 1 }, (_, k) => (k + 1) * 20), widows });

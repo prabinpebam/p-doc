@@ -12,6 +12,7 @@ import Superscript from "@tiptap/extension-superscript";
 import { PImage } from "./image.ts";
 import { TableKit } from "@tiptap/extension-table";
 import { TaskList, TaskItem } from "@tiptap/extension-list";
+import { cleanLayout, layoutCss, lineHeightCss, Tab } from "./paragraph.ts";
 
 export const TEXTBLOCKS = ["paragraph", "heading"] as const;
 
@@ -26,12 +27,12 @@ export const BlockFormat = Extension.create({
           lineHeight: {
             default: null,
             parseHTML: (el) => el.getAttribute("data-line-height") || null,
-            renderHTML: (a) => (a.lineHeight ? { "data-line-height": a.lineHeight, style: `line-height: ${a.lineHeight}` } : {}),
+            renderHTML: (a) => (a.lineHeight ? { "data-line-height": a.lineHeight, style: lineHeightCss(a.lineHeight, cleanLayout(a.layout)) } : {}),
           },
           spaceBefore: {
             default: null,
             parseHTML: (el) => numberAttr(el.getAttribute("data-space-before")),
-            renderHTML: (a) => (a.spaceBefore != null ? { "data-space-before": a.spaceBefore, style: `padding-top: ${a.spaceBefore}pt` } : {}),
+            renderHTML: (a) => (a.spaceBefore != null ? { "data-space-before": a.spaceBefore, style: `--pd-sb: ${a.spaceBefore}pt` } : {}),
           },
           spaceAfter: {
             default: null,
@@ -41,7 +42,18 @@ export const BlockFormat = Extension.create({
           indent: {
             default: 0,
             parseHTML: (el) => numberAttr(el.getAttribute("data-indent")) ?? 0,
-            renderHTML: (a) => (a.indent ? { "data-indent": a.indent, style: `margin-left: ${a.indent * 0.5}in` } : {}),
+            renderHTML: (a) => (a.indent ? { "data-indent": a.indent, style: `margin-inline-start: ${a.indent * 0.5}in` } : {}),
+          },
+          /** Right and first-line indents, exact spacing, page-break control, borders, shading, direction, tabs (see paragraph.ts). */
+          layout: {
+            default: null,
+            parseHTML: (el) => cleanLayout(jsonAttr(el.getAttribute("data-layout"))),
+            renderHTML: (a) => {
+              const l = cleanLayout(a.layout);
+              if (!l) return {};
+              const css = layoutCss(l);
+              return { "data-layout": JSON.stringify(l), ...(css ? { style: css } : {}), ...(l.dir ? { dir: l.dir } : {}) };
+            },
           },
           /** A paragraph style other than Normal or a heading: "title" or "subtitle". */
           textStyle: {
@@ -195,6 +207,7 @@ export function extensions(options: SchemaOptions = {}): AnyExtension[] {
     TextAlign.configure({ types: [...TEXTBLOCKS] }),
     Subscript,
     Superscript,
+    Tab,
     options.image ?? (options.resolveImage ? PImage.configure({ resolve: options.resolveImage }) : PImage),
     TableKit.configure({ table: { resizable: false } }),
     TaskList,

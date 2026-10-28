@@ -6,6 +6,7 @@ export function nodeText(node: JSONContent | undefined): string {
   if (!node) return "";
   if (node.type === "text") return node.text ?? "";
   if (node.type === "hardBreak") return "\n";
+  if (node.type === "tab") return "\t";
   return (node.content ?? []).map(nodeText).join("");
 }
 
