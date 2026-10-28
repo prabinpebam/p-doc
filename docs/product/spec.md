@@ -289,7 +289,7 @@ Waits name their class from the perceived-performance skill: *instant* (< 100 ms
 3. **Insert > Bookmark** marks the cursor's place, named from the next few words (renamable, or removed, in the same dialog when the bookmark is selected); it takes no room, and a small flag shows at its place when non-printing characters are shown. The link dialog (Ctrl+K) lists **Headings and bookmarks** beside the address field; Ctrl+click follows a link to its place. In the PDF, HTML and .docx the links go to the same places (Word gets bookmarks, hidden ones for headings). Bookmarks and headings are listed by Go to (U71).
 4. Selecting an image, table or equation and choosing **Insert > Caption…** adds "Figure *n*: ", "Table *n*: " or "Equation *n*: " (label editable, or a new label) above tables and below the rest. Numbers follow the order of the document as things move.
 5. **Insert > Cross-reference…**: kind (Heading, Bookmark, Figure, Table, Equation, Footnote, Endnote), the item, and **Insert as** text, number ("Figure 2"), page number or "above/below". The reference updates itself; a click jumps to its target; if the target is deleted it reads "Reference missing" in the error colour, and the accessibility check lists it.
-6. **Insert > Table of figures** lists one caption label with page numbers. The table of contents gets **Contents options** (its menu): **Page numbers** (dotted leaders, the default in Pages) or **Links** (Pageless always), and **Levels** 1 to 1–6.
+6. **Insert > Table of figures** lists one caption label with page numbers. The table of contents gets **Insert > Contents options…**: **Page numbers** (dotted leaders, the default in Pages) or **Links** (Pageless always), and **Levels** 1 to 1–6.
 
 **Branches:** in Pageless page numbers have nothing to count, so references and tables show links and "page" references read "see *heading*".
 
@@ -712,3 +712,19 @@ Engineering notes:
 - Non-printing marks: CSS for ¶, →, the page break label; decorations (`editor/marks.ts`) for spaces and line breaks, only while shown. Print strips the decoration classes and unwraps their spans.
 - Dialogs return focus to the control that opened them unless that was the menu bar or the page itself, when the text gets it back. Sorting and every paragraph format are their own undo step (`closeHistory`).
 - Not built in this stage: a paragraph context menu (there is no context menu yet; the commands are in Format, command search and the ruler).
+
+### Stage 10: References (built; 10.3 in I10b)
+
+What a person meets, beyond the flows above:
+
+- **Insert > Footnote** (Ctrl+Alt+F) and **Insert > Endnote** (Ctrl+Alt+D). Notes number themselves in document order and renumber when one is deleted; a footnote sits at the foot of the page its number is on, and a long one goes on at the foot of the next page. **Convert to endnote** / **Convert to footnote** work on the note at the cursor; **Format > Notes…** sets the number formats and converts all. The PDF prints each page's notes once, as on screen.
+- **Insert > Bookmark…** names the cursor's place from the next few words; the same dialog renames or removes the bookmark at the cursor. Its flag shows only with non-printing characters. **Ctrl+K** lists **Headings and bookmarks**; **Ctrl+click** on such a link goes to its place, or says the place is gone.
+- **Insert > Contents options…** (when the document has a contents): **Levels** 1 to 1–6 and **Show** Page numbers (dotted leaders) or Links. Pageless always shows links. Clicking an entry goes to its heading.
+
+Engineering notes:
+
+- One anchor resolver (`packages/core/src/refs.ts`: `anchorsOf`, `anchorsOfJSON`) lists headings and bookmarks for links, Word export and, in I10b, cross-references. A bookmark is an inline atom with an `id` (`bm-…`) and a `name`; pasted duplicates get fresh ids (`syncHeadingsAndToc`).
+- .docx: headings are wrapped in hidden `_pd_…` bookmarks, bookmarks keep sanitised unique names, `#` links are `w:hyperlink w:anchor`, and each contents entry is a link to its heading. No PAGEREF fields are written, so Word never asks to update fields; Word's own page numbers in the contents come when the owner updates it there. Import turns Word's heading bookmarks back into heading ids and drops hidden ones nothing links to.
+- Page numbers settle (A19): `settlePages` repeats layout until two passes agree (at most 5) and `digitsFor` gives the widest number's digits; every number reserves that width (live as `--pd-toc-digits`), so a contents grows only when a number gains a digit. Page references in I10b must reserve the same way.
+- Found on the way: closing a dialog opened from the page put the caret at the start, because the page was focused natively; dialogs now give focus back through the editor view.
+- Not built in this stage: captions, cross-references and the table of figures (DoD 10.3, increment I10b, before stage 14).
