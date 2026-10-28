@@ -10,7 +10,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Page } from "@playwright/test";
 import { expect, launch, quit, tempDirs, test } from "../e2e/helpers.ts";
-import { bigDocument, imageNode, load, png, settled } from "../e2e/fixtures.ts";
+import { bigDocument, imageNode, load, notesDocument, png, settled } from "../e2e/fixtures.ts";
 import { fakeHelperConfig, startFakeGitHub } from "../test/fakes/fake-github.ts";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
@@ -165,6 +165,31 @@ test("typing, repagination and saving in a 50-page document", async () => {
   });
   expect(scans.found).toBeGreaterThanOrEqual(50);
   record("review50", "Review list after an edit", 16, scans.out, `Finding every suggestion and comment in a 50-page document with ${scans.found} changes`);
+  await quit(l);
+});
+
+test("repagination with 40 footnotes in a 50-page document", async () => {
+  const l = await launch();
+  const { page } = l;
+  await load(page, notesDocument(50, 40));
+  const pages = await settled(page);
+  expect(pages).toBeGreaterThanOrEqual(45);
+  await expect(page.locator(".pd-note--placed")).toHaveCount(40);
+  await caretMid(page);
+  const relayout = await page.evaluate(async () => {
+    const w = window as unknown as { __pdoc: { getEditor(): { view: any }; perf: Perf } };
+    const view = w.__pdoc.getEditor().view;
+    const out: number[] = [];
+    for (let i = 0; i < 40; i++) {
+      view.dispatch(i % 2 ? view.state.tr.insertText("y") : view.state.tr.split(view.state.selection.from));
+      const t = performance.now();
+      w.__pdoc.perf.layoutNow();
+      out.push(performance.now() - t);
+      await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
+    }
+    return out;
+  });
+  record("repaginate50Notes", "Repagination with 40 notes", 16, relayout, `Measuring every block and placing 40 footnotes (every fifth one long) at the foot of their pages, ${pages} pages`);
   await quit(l);
 });
 

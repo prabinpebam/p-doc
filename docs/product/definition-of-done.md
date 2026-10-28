@@ -210,7 +210,7 @@ A person can write with notes, bookmarks, numbered captions and cross-references
 | 10.2 | Bookmarks, and links to headings and bookmarks, work in the page, the PDF, HTML and .docx (U52) | e2e `notes`; unit `export-docx` | |
 | 10.3 | Captions number by kind in document order; cross-references show text, number or page and follow moves; a deleted target reads "Reference missing"; a table of figures lists captions with pages (U53) | unit `references`; e2e `references` | |
 | 10.4 | Contents with page numbers and dotted leaders or links, levels 1–6, matching the PDF's pages (U54) | e2e `toc` | |
-| 10.5 | Repagination with 40 notes stays ≤ 16 ms on 50 pages (§7) | `pnpm perf` | |
+| 10.5 | Repagination with 40 notes stays ≤ 16 ms on 50 pages (§7) | `pnpm perf` | Pass 2026-10-28: repagination with 40 footnotes (every fifth one long) p95 10.3 ms, median 7.6 ms (budget 16) on 50 pages; in the baseline as `repaginate50Notes` |
 | 10.6 | Page numbers settle: a 50-page fixture with contents, index fields and page references reaches a stable layout within 2 passes (A19) | unit `paginate` | |
 
 ### Stage 11: Sections and page layout
