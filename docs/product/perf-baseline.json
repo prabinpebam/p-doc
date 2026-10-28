@@ -114,6 +114,22 @@
       "p95Ms": 10.3,
       "note": "Measuring every block and placing 40 footnotes (every fifth one long) at the foot of their pages, 50 pages"
     },
+    "compare50": {
+      "wait": "Compare two 50-page documents",
+      "budgetMs": 1000,
+      "samples": 5,
+      "medianMs": 518.5,
+      "p95Ms": 844.3,
+      "note": "From comparison request to a new private document saved, drawn and laid out; 51 original and 51 revised pages, every fourth paragraph changed"
+    },
+    "repaginateTable": {
+      "wait": "Repagination with a split table",
+      "budgetMs": 16,
+      "samples": 40,
+      "medianMs": 1.6,
+      "p95Ms": 2.3,
+      "note": "Measuring and placing a 111-row table with repeated headers and a row-spanning cell, 13 pages"
+    },
     "repaginate50Sections": {
       "wait": "Repagination with sections",
       "budgetMs": 16,

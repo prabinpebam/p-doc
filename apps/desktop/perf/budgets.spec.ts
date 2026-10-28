@@ -9,8 +9,10 @@ import { cpus, tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Page } from "@playwright/test";
+import type { JSONContent } from "@tiptap/core";
+import type { CompareSide } from "../src/renderer/compare.ts";
 import { expect, launch, quit, tempDirs, test } from "../e2e/helpers.ts";
-import { bigDocument, imageNode, load, notesDocument, png, settled } from "../e2e/fixtures.ts";
+import { bigDocument, imageNode, load, notesDocument, png, settled, tableDocument } from "../e2e/fixtures.ts";
 import { fakeHelperConfig, startFakeGitHub } from "../test/fakes/fake-github.ts";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
@@ -49,6 +51,7 @@ type Perf = {
   downloadPdf(): Promise<void>;
   downloadAs(kind: string): Promise<void>;
   reviewScan(): number;
+  compareInto(original: CompareSide, revised: CompareSide): Promise<boolean>;
 };
 
 /** Puts the caret inside the middle paragraph of the open document. */
@@ -234,6 +237,65 @@ test("repagination with sections in a 50-page document", async () => {
   });
   const sections = await page.locator(".pd-content .pd-section-break").count();
   record("repaginate50Sections", "Repagination with sections", 16, relayout, `Measuring every block across ${sections + 1} sections (each kind of break, landscape pages, own headers and numbers), ${pages} pages`);
+  await quit(l);
+});
+
+test("13.6 comparing two 50-page documents", async () => {
+  const l = await launch();
+  const { page } = l;
+  const original = bigDocument(54) as JSONContent;
+  const revised = structuredClone(original);
+  revised.content!.forEach((node, i) => {
+    if (node.type === "paragraph" && i % 4 === 0) node.content![0]!.text += " A revised sentence.";
+  });
+  await load(page, original);
+  const originalPages = await settled(page);
+  await load(page, revised);
+  const revisedPages = await settled(page);
+  expect(originalPages).toBeGreaterThanOrEqual(50);
+  expect(revisedPages).toBeGreaterThanOrEqual(50);
+  const samples = await page.evaluate(async ({ original, revised }) => {
+    const w = window as unknown as { __pdoc: { perf: Perf } };
+    const out: number[] = [];
+    for (let i = 0; i < 5; i++) {
+      const t = performance.now();
+      const ok = await w.__pdoc.perf.compareInto(
+        { kind: "file", title: "Original", content: original },
+        { kind: "file", title: "Revised", content: revised },
+      );
+      if (!ok) throw new Error("Comparison failed");
+      w.__pdoc.perf.layoutNow();
+      await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
+      out.push(performance.now() - t);
+    }
+    return out;
+  }, { original, revised });
+  await expect(page.locator(".pd-content ins").first()).toBeVisible();
+  record("compare50", "Compare two 50-page documents", 1000, samples, `From comparison request to a new private document saved, drawn and laid out; ${originalPages} original and ${revisedPages} revised pages, every fourth paragraph changed`);
+  await quit(l);
+});
+
+test("repagination with a long split table", async () => {
+  const l = await launch();
+  const { page } = l;
+  await load(page, tableDocument());
+  const pages = await settled(page);
+  expect(pages).toBeGreaterThanOrEqual(3);
+  const relayout = await page.evaluate(async () => {
+    const w = window as unknown as { __pdoc: { getEditor(): { view: any; commands: any }; perf: Perf } };
+    const e = w.__pdoc.getEditor();
+    e.commands.setTextSelection(3);
+    const out: number[] = [];
+    for (let i = 0; i < 40; i++) {
+      e.view.dispatch(e.state.tr.insertText(i % 2 ? "y" : "x"));
+      const t = performance.now();
+      w.__pdoc.perf.layoutNow();
+      out.push(performance.now() - t);
+      await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
+    }
+    return out;
+  });
+  record("repaginateTable", "Repagination with a split table", 16, relayout, `Measuring and placing a 111-row table with repeated headers and a row-spanning cell, ${pages} pages`);
   await quit(l);
 });
 

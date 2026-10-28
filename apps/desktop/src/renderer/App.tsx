@@ -10,6 +10,7 @@ import { printDocument } from "./editor/print.ts";
 import { app, shownPanel, toast } from "./state.ts";
 import { backToCurrent, history, loadHistory } from "./versions.ts";
 import { reviewItems } from "./review.ts";
+import { compareInto } from "./compare.ts";
 import { applySync, loadSync } from "./sync.ts";
 import { sameRef } from "../shared/api.ts";
 import { CommandSearch } from "./ui/CommandSearch.tsx";
@@ -47,6 +48,7 @@ async function start(): Promise<void> {
           newDoc,
           downloadPdf,
           downloadAs,
+          compareInto,
           // What the title bar's count and the Review panel read after each edit.
           reviewScan: () => {
             const e = getEditor();
