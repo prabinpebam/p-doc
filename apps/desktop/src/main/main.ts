@@ -149,7 +149,10 @@ function createWindow(): BrowserWindow {
   if (process.env.PDOC_E2E) w.showInactive();
   w.once("ready-to-show", () => {
     log("window shown");
-    if (!process.env.PDOC_E2E) w.show();
+    if (process.env.PDOC_E2E) return;
+    // The review build starts and refreshes behind whatever the owner is doing.
+    if (process.env.PDOC_SHOW_INACTIVE) w.showInactive();
+    else w.show();
   });
   w.webContents.on("did-finish-load", () => log("window loaded"));
   w.webContents.on("did-fail-load", (_e, code, desc) => log("window failed to load", code, desc));
