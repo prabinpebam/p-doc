@@ -41,8 +41,8 @@ The spec and its Definitions of Done. Assumptions are tracked there (A1–A17). 
 | IL | Layout spike, before the pagination stages, 60 minutes at most: paragraphs split at lines on screen and in the PDF (A10), its repagination cost (A20), per-section paper in print (A12), columns on screen and in print (A13); notes and settling page numbers (A8, A19) decided by design and tested in stage 10. Each failing assumption takes its register fallback, logged | 9.3, 9.7, 10.1, 10.6, 11.1, 11.2, 12.2 | unit `paginate`; e2e `pagination` split fixture; probe PDFs | Done |
 | I9 | Stage 9 Paragraph layout | 9.1–9.7 | A10 built in IL; vitest; e2e; `pnpm perf` | Done |
 | I10 | Stage 10 References | 10.1, 10.2, 10.4–10.6 | A8 spike first; vitest; e2e; `pnpm perf` | Done |
-| I11 | Stage 11 Sections and page layout | 11.1–11.7 | A12 and A13 spikes first; vitest; e2e; `pnpm perf` | In progress |
-| I12 | Stage 12 Tables, code and equations | 12.1–12.5 | vitest; e2e; licence check for new dependencies | Not started |
+| I11 | Stage 11 Sections and page layout | 11.1–11.7 | A12 and A13 spikes first; vitest; e2e; `pnpm perf` | Done (11.2 part) |
+| I12 | Stage 12 Tables, code and equations | 12.1–12.5 | Order from the stage 11 review: licence check, then 12.4 equations with a unit test on the Word equation XML and a 10-equation .docx for the owner (12.5) first; then 12.2 with an e2e 3-page table fixture first (the same break rows on screen and in the PDF, header row repeated), placing blocks by page and column (column 0 until I11b); then 12.3; then the gaps in 12.1. vitest; e2e | Not started |
 | I13 | Stage 13 Review power | 13.1–13.6 | vitest; e2e; `pnpm perf` | Not started |
 | I8 | Stage 8 Styles and lists (moved after 13: no layout risk) | 8.1–8.6 | vitest; e2e | Not started |
 | I10b | Stage 10, rest: captions, cross-references, table of figures (cut from I10 at its cut line). Placed here because it builds on the same field atoms as 14 and needs the tables and equations of 12 to caption | 10.3 | e2e `references` first; vitest; page references reserve the widest number's digits as 10.6 does, re-checked by unit `paginate` settling | Not started |
@@ -63,6 +63,7 @@ The spec and its Definitions of Done. Assumptions are tracked there (A1–A17). 
 - **Commits** per group of DoD rows, so no more than about an hour of work is ever uncommitted.
 - **A stage runs 90 minutes at most** before a review. If it runs over, these go to Later first: read aloud (15.5), hyphenation and drop caps (11.5), and citation styles beyond APA, MLA and Chicago (14.1).
 - **Write-ups** are kept to the DoD rows, the spec's "As built" and the landing row.
+- **Scope each row at T0** (from the stage 11 review): five minutes per row to size it against the cut line, so a row too big for the stage is cut before work starts, not halfway through.
 
 ## 4. Decisions taken as working defaults
 
