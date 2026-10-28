@@ -67,6 +67,52 @@ export const CellFormat = Extension.create({
   },
 });
 
+/** Node types that can be suggested for adding or removing whole (Compare documents, U66). */
+export const BLOCK_CHANGE_TYPES = [
+  "paragraph",
+  "heading",
+  "codeBlock",
+  "blockquote",
+  "bulletList",
+  "orderedList",
+  "listItem",
+  "taskList",
+  "taskItem",
+  "table",
+  "tableRow",
+  "horizontalRule",
+  "image",
+  "mathBlock",
+  "pageBreak",
+  "sectionBreak",
+  "columnBreak",
+  "tableOfContents",
+  "note",
+  "notes",
+] as const;
+
+/** Suggestion {kind: "insertion" | "deletion", id, author, time}: this whole block was added or removed. */
+export const BlockChangeAttr = Extension.create({
+  name: "blockChange",
+  addGlobalAttributes() {
+    return [
+      {
+        types: [...BLOCK_CHANGE_TYPES],
+        attributes: {
+          blockChange: {
+            default: null,
+            parseHTML: (el: HTMLElement) => jsonAttr(el.getAttribute("data-block-change")),
+            renderHTML: (a: Record<string, unknown>) => {
+              const b = a.blockChange as { kind?: string } | null;
+              return b?.kind ? { "data-block-change": JSON.stringify(b), class: `pd-block-${b.kind === "deletion" ? "deletion" : "insertion"}` } : {};
+            },
+          },
+        },
+      },
+    ];
+  },
+});
+
 const num = (v: string | null) => (v != null && v !== "" && Number.isFinite(Number(v)) ? Number(v) : null);
 
 /** `rgb(…)` (how a browser reports a colour) or `#rgb` as `#rrggbb`. */
@@ -318,6 +364,7 @@ export function extensions(options: SchemaOptions = {}): AnyExtension[] {
     TaskList,
     TaskItem.configure({ nested: true }),
     BlockFormat,
+    BlockChangeAttr,
     Insertion,
     Deletion,
     FormatChange,

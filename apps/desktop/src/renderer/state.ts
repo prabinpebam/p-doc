@@ -29,7 +29,8 @@ export type Dialog =
   | { kind: "bookmark" }
   | { kind: "contents" }
   | { kind: "equation" }
-  | { kind: "table" };
+  | { kind: "table" }
+  | { kind: "compare" };
 
 /** The Paragraph dialog's tabs (spec §4.11). */
 export type ParagraphTab = "indents" | "breaks" | "borders" | "tabs";

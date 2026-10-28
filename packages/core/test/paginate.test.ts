@@ -308,8 +308,8 @@ describe("sectionsOf (U55)", () => {
     const columns = { count: 2, gap: 0.3 };
     const json = { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "A" }] }, { type: "sectionBreak", attrs: { kind: "odd", page: land, hf, numbering, columns } }, { type: "columnBreak" }, { type: "paragraph", content: [{ type: "text", text: "B" }] }] };
     const back = fromHTML(contentToHTML(json));
-    expect(back.content?.[1]).toEqual({ type: "sectionBreak", attrs: { kind: "odd", page: land, hf, numbering, columns } });
-    expect(back.content?.[2]).toEqual({ type: "columnBreak" });
+    expect(back.content?.[1]).toEqual({ type: "sectionBreak", attrs: { kind: "odd", page: land, hf, numbering, columns, blockChange: null } });
+    expect(back.content?.[2]).toEqual({ type: "columnBreak", attrs: { blockChange: null } });
     expect(sectionsOf(back, defaultPage()).map((s) => s.columns.count)).toEqual([1, 2]);
   });
 });

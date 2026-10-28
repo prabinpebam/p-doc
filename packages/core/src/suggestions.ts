@@ -38,7 +38,7 @@ export interface BlockFormatChange extends SuggestionInfo {
 
 /** Marks that are content or review, not formatting: a formatting suggestion neither records nor restores them. */
 const NOT_FORMAT = new Set(["insertion", "deletion", "formatChange", "comment", "link"]);
-const BLOCK_REVIEW = new Set(["split", "join", "formatChange", "id"]);
+const BLOCK_REVIEW = new Set(["split", "join", "formatChange", "blockChange", "id"]);
 export const isFormatMark = (name: string) => !NOT_FORMAT.has(name);
 
 type MarkJSON = { type: string; attrs?: Record<string, unknown> };
@@ -110,6 +110,8 @@ export function changesOf(doc: PMNode): Change[] {
     }
   };
   doc.descendants((node, pos) => {
+    const b = node.attrs.blockChange as (SuggestionInfo & { kind: "insertion" | "deletion" }) | null | undefined;
+    if (b?.id) add({ id: b.id, author: b.author, time: b.time, kind: b.kind === "deletion" ? "deletion" : "insertion", text: blockLabel(node), from: pos, to: pos + node.nodeSize });
     if (node.isTextblock) {
       for (const kind of ["split", "join"] as const) {
         const s = node.attrs[kind] as SuggestionInfo | null;
@@ -118,13 +120,13 @@ export function changesOf(doc: PMNode): Change[] {
       const f = node.attrs.formatChange as BlockFormatChange | null;
       if (f?.id) add({ id: f.id, author: f.author, time: f.time, kind: "format", text: node.textContent, format: describeBlockFormat(f.old, blockFormat(node)), from: pos, to: pos + node.nodeSize });
     }
-    if (node.isText) {
+    if (node.isInline) {
       for (const m of node.marks) {
         if (m.type.name === "insertion" || m.type.name === "deletion") {
-          add({ id: m.attrs.id, author: m.attrs.author, time: m.attrs.time, kind: m.type.name as Change["kind"], text: node.text ?? "", from: pos, to: pos + node.nodeSize });
+          add({ id: m.attrs.id, author: m.attrs.author, time: m.attrs.time, kind: m.type.name as Change["kind"], text: node.text ?? blockLabel(node), from: pos, to: pos + node.nodeSize });
         }
         if (m.type.name === "formatChange") {
-          add({ id: m.attrs.id, author: m.attrs.author, time: m.attrs.time, kind: "format", text: node.text ?? "", format: describeFormat(m.attrs.old as MarkJSON[], formatMarks(node.marks)), from: pos, to: pos + node.nodeSize });
+          add({ id: m.attrs.id, author: m.attrs.author, time: m.attrs.time, kind: "format", text: node.text ?? blockLabel(node), format: describeFormat(m.attrs.old as MarkJSON[], formatMarks(node.marks)), from: pos, to: pos + node.nodeSize });
         }
       }
     }
@@ -132,6 +134,25 @@ export function changesOf(doc: PMNode): Change[] {
   });
   return order;
 }
+
+const OBJECT_NAMES: Record<string, string> = {
+  image: "Image",
+  table: "Table",
+  mathBlock: "Equation",
+  mathInline: "Equation",
+  horizontalRule: "Line",
+  pageBreak: "Page break",
+  sectionBreak: "Section break",
+  columnBreak: "Column break",
+  tableOfContents: "Contents",
+  noteRef: "Note",
+  hardBreak: "Line break",
+  tab: "Tab",
+  bookmark: "Bookmark",
+};
+
+/** A block's or object's text, or its name in brackets when it has none ("[Image]"). */
+const blockLabel = (node: PMNode) => node.textContent || `[${OBJECT_NAMES[node.type.name] ?? "Object"}]`;
 
 export type Decision = "accept" | "reject";
 
@@ -149,7 +170,22 @@ export function resolveSuggestions<T extends Transform>(tr: T, ids: ReadonlySet<
   type Op = { pos: number; end: number; do: (t: Transform) => void };
   const ops: Op[] = [];
   doc.descendants((node, pos) => {
-    if (node.isText) {
+    const b = node.attrs.blockChange as (SuggestionInfo & { kind: string }) | null | undefined;
+    if (b && hit(b.id)) {
+      const remove = (b.kind === "deletion") === (decision === "accept");
+      // After every decision inside and at the start of this block.
+      ops.push({
+        pos: pos - 0.75,
+        end: pos,
+        do: (t) => {
+          const at = t.doc.nodeAt(pos);
+          if (!at) return;
+          if (remove) t.delete(pos, pos + at.nodeSize);
+          else t.setNodeMarkup(pos, undefined, { ...at.attrs, blockChange: null });
+        },
+      });
+    }
+    if (node.isInline) {
       const end = pos + node.nodeSize;
       for (const m of node.marks) {
         if (m.type === ins && hit(m.attrs.id)) ops.push({ pos, end, do: (t) => (decision === "accept" ? t.removeMark(pos, end, ins) : t.delete(pos, end)) });
@@ -186,7 +222,7 @@ export function resolveSuggestions<T extends Transform>(tr: T, ids: ReadonlySet<
             const at = t.doc.nodeAt(pos);
             if (!at) return;
             const type = decision === "reject" ? (schema.nodes[f.old.type] ?? at.type) : at.type;
-            const attrs = decision === "reject" ? { ...f.old.attrs, id: at.attrs.id, split: at.attrs.split, join: at.attrs.join } : at.attrs;
+            const attrs = decision === "reject" ? { ...f.old.attrs, id: "id" in f.old.attrs ? f.old.attrs.id : at.attrs.id, split: at.attrs.split, join: at.attrs.join, blockChange: at.attrs.blockChange } : at.attrs;
             t.setNodeMarkup(pos, type, { ...attrs, formatChange: null });
           },
         });

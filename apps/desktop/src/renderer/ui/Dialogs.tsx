@@ -22,6 +22,7 @@ import { TableDialog } from "./TableDialog.tsx";
 import { BookmarkDialog } from "./BookmarkDialog.tsx";
 import { ContentsDialog } from "./ContentsDialog.tsx";
 import { EquationDialog } from "./EquationDialog.tsx";
+import { CompareDialog } from "./CompareDialog.tsx";
 
 export function Dialogs() {
   const d = app.use((s) => s.dialog);
@@ -65,6 +66,8 @@ export function Dialogs() {
       return <ParagraphDialog tab={d.tab} />;
     case "sort":
       return <SortDialog />;
+    case "compare":
+      return <CompareDialog />;
     case "notes":
       return <NotesDialog />;
     case "table":

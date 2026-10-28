@@ -197,6 +197,12 @@ export interface ExportResult {
   path: string;
 }
 
+/** A file read as a document for Compare documents: its title and content. */
+export interface FileContent {
+  title: string;
+  content: PDocFile["content"];
+}
+
 /** A file opened with File > Open from file or dropped on the window (U18). */
 export interface Imported {
   opened: Opened;
@@ -240,6 +246,8 @@ export interface PDocApi {
     importFile(): Promise<Imported | null>;
     /** A new Private document from a file dropped on the window (its bytes, never its path). */
     importData(name: string, data: Uint8Array): Promise<Imported>;
+    /** Asks for a file and reads it as a document without adding it to the library (Compare documents); null when cancelled. */
+    readFile(): Promise<FileContent | null>;
     /** Open from file: the dialog has closed and the file is being read. */
     onImporting(cb: () => void): () => void;
   };
@@ -254,6 +262,8 @@ export interface PDocApi {
     list(): Promise<DocSummary[]>;
     create(req: CreateRequest): Promise<Opened>;
     open(ref: DocRef): Promise<Opened>;
+    /** A document as it is on disk, without switching to it (no version is made). */
+    read(ref: DocRef): Promise<Opened>;
     save(ref: DocRef, doc: PDocFile): Promise<DocSummary>;
     rename(ref: DocRef, title: string): Promise<DocSummary>;
     copy(ref: DocRef): Promise<DocSummary>;

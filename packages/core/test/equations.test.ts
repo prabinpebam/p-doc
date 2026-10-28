@@ -71,7 +71,7 @@ describe("equations", () => {
     const back = fromHTML(html.replace(/^[\s\S]*<body>|<\/body>[\s\S]*$/g, ""));
     const types = JSON.stringify(back);
     expect(types).toContain('"mathInline","attrs":{"latex":"x^2"}');
-    expect(types).toContain('"mathBlock","attrs":{"latex":"\\\\frac{a}{b}"}');
+    expect(types).toContain('"mathBlock","attrs":{"blockChange":null,"latex":"\\\\frac{a}{b}"}');
   });
 
   it("writes $…$ and $$…$$ in Markdown and reads them back; a dollar sign stays a dollar sign", () => {
@@ -81,7 +81,7 @@ describe("equations", () => {
     expect(md).toContain("It costs \\$5 and \\$6.");
     const back = JSON.stringify(fromMarkdown(md));
     expect(back).toContain('"mathInline","attrs":{"latex":"x^2"}');
-    expect(back).toContain('"mathBlock","attrs":{"latex":"\\\\frac{a}{b}"}');
+    expect(back).toContain('"mathBlock","attrs":{"blockChange":null,"latex":"\\\\frac{a}{b}"}');
     expect(back).toContain("It costs $5 and $6.");
     expect(JSON.stringify(fromMarkdown("Pay $5 now, $6 later"))).not.toContain("mathInline");
   });

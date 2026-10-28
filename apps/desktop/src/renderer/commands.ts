@@ -490,6 +490,7 @@ const commands: Command[] = [
   // Tools
   { id: "tools.wordCount", label: "Word count", keys: ["Ctrl+Shift+C"], global: true, run: () => openDialog({ kind: "wordCount" }), enabled: hasEditor },
   { id: "tools.spelling", label: "Spelling", keywords: "spell check", checked: () => !!app.get().settings?.spelling, run: () => void updateSettings({ spelling: !app.get().settings?.spelling }) },
+  { id: "tools.compare", label: "Compare documents…", keywords: "compare diff differences two documents versions redline", run: () => openDialog({ kind: "compare" }), enabled: () => !!app.get().current },
   { id: "tools.search", label: "Command search", keys: ["Alt+/"], global: true, run: () => app.set((s) => ({ palette: !s.palette })) },
 
   // Review (spec §4.5)
@@ -675,7 +676,7 @@ export const MENUS: Menu[] = [
     id: "tools",
     label: "Tools",
     key: "T",
-    items: ["tools.wordCount", "tools.spelling", "-", "tools.review", { label: "Changes", items: ["review.next", "review.prev", "-", "review.acceptAll", "review.rejectAll"] }, "-", "tools.search"],
+    items: ["tools.wordCount", "tools.spelling", "-", "tools.review", { label: "Changes", items: ["review.next", "review.prev", "-", "review.acceptAll", "review.rejectAll"] }, "tools.compare", "-", "tools.search"],
   },
   { id: "help", label: "Help", key: "H", items: ["help.shortcuts", "help.about", "help.logs"] },
 ];

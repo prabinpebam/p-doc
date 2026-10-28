@@ -9,14 +9,14 @@ import { basename, join } from "node:path";
 import { ASSET_SCHEME, assetOfUrl, cleanPage, importKind, parseDocument, type PDocFile } from "@p-doc/core";
 import { Library } from "./library.ts";
 import { exported, exportDocument, printDocument, savePdf } from "./output.ts";
-import { ImportError, importInto, isExportKind, MAX_IMPORT } from "./files.ts";
+import { ImportError, importInto, isExportKind, MAX_IMPORT, readFile as readDocFile } from "./files.ts";
 import { RecoveryStore, SettingsStore } from "./state.ts";
 import { Versions } from "./versions.ts";
 import { Account, SignInError } from "./account.ts";
 import { GitHubError } from "./github.ts";
 import { planRepos, runSetup, SetupError } from "./setup.ts";
 import { Sync, SyncProblem } from "./sync.ts";
-import { DEFAULT_REPOS, isDocRef, isRepoName, isSpace, type CreateRequest, type DocRef, type Imported, type PrintRequest, type Recovered, type Settings, type Space } from "../shared/api.ts";
+import { DEFAULT_REPOS, isDocRef, isRepoName, isSpace, type CreateRequest, type DocRef, type FileContent, type Imported, type PrintRequest, type Recovered, type Settings, type Space } from "../shared/api.ts";
 
 // Isolation for tests and portable use: data and library folders from the environment. Otherwise the data
 // folder is %APPDATA%\P-Doc in development and when installed, so the `pdoc` CLI finds the same settings.
@@ -250,6 +250,7 @@ function handlers(): void {
     void versions.commitExcept(r);
     return library.read(r);
   });
+  h("library:read", (ref: DocRef) => library.read(asRef(ref)));
   // Images (spec §4.9): stored beside the document before it refers to them.
   h("assets:put", (space: unknown, data: unknown) => {
     if (!isSpace(space)) throw new Error("Unknown space");
@@ -375,19 +376,26 @@ function handlers(): void {
     log("import", { kind: importKind(name), leftOut: r.leftOut });
     return r;
   };
-  h("output:importFile", async () => {
-    let file: string | undefined;
+  const chooseFile = async (title: string): Promise<string | null> => {
     // Tests name the file instead of answering a dialog.
-    if (process.env.PDOC_E2E && process.env.PDOC_OPEN_FILE) file = process.env.PDOC_OPEN_FILE;
-    else {
-      const opts: OpenDialogOptions = { title: "Open from file", properties: ["openFile"], filters: [{ name: "Documents", extensions: ["docx", "md", "markdown", "html", "htm", "txt", "json"] }] };
-      const res = win ? await dialog.showOpenDialog(win, opts) : await dialog.showOpenDialog(opts);
-      if (res.canceled || !res.filePaths[0]) return null;
-      file = res.filePaths[0];
-    }
+    if (process.env.PDOC_E2E && process.env.PDOC_OPEN_FILE) return process.env.PDOC_OPEN_FILE;
+    const opts: OpenDialogOptions = { title, properties: ["openFile"], filters: [{ name: "Documents", extensions: ["docx", "md", "markdown", "html", "htm", "txt", "json"] }] };
+    const res = win ? await dialog.showOpenDialog(win, opts) : await dialog.showOpenDialog(opts);
+    return res.canceled || !res.filePaths[0] ? null : res.filePaths[0];
+  };
+  h("output:importFile", async () => {
+    const file = await chooseFile("Open from file");
+    if (!file) return null;
     if (statSync(file).size > MAX_IMPORT) throw new ImportError("This file is larger than 50 MB.");
     send("importing");
     return importBytes(basename(file), new Uint8Array(readFileSync(file)));
+  });
+  h("output:readFile", async (): Promise<FileContent | null> => {
+    const file = await chooseFile("Compare with a file");
+    if (!file) return null;
+    if (statSync(file).size > MAX_IMPORT) throw new ImportError("This file is larger than 50 MB.");
+    const f = await readDocFile(basename(file), new Uint8Array(readFileSync(file)));
+    return f.kind === "pdoc" ? { title: f.doc.title, content: f.doc.content } : { title: f.title, content: f.content };
   });
   h("output:importData", (name: unknown, data: unknown) => {
     if (typeof name !== "string" || !name || name.length > 260) throw new Error("Not a file");

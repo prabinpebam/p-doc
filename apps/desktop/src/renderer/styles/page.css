@@ -887,6 +887,19 @@
   text-decoration: line-through;
 }
 
+/* A whole block added or removed (Compare documents, U66): tables, images and equations too. */
+.pd-block-insertion {
+  color: var(--color-insertion);
+  text-decoration: underline;
+  outline: var(--border-hairline) solid var(--color-insertion);
+}
+
+.pd-block-deletion {
+  color: var(--color-deletion);
+  text-decoration: line-through;
+  outline: var(--border-hairline) dashed var(--color-deletion);
+}
+
 /* A formatting suggestion (U63): the text shows its new formatting, outlined; a changed paragraph gets a bar. */
 .pd-format {
   outline: var(--border-hairline) dotted var(--color-insertion);
@@ -919,9 +932,20 @@
   text-decoration: none;
 }
 
+.page.markup-simple .pd-content .pd-block-insertion,
+.page.markup-none .pd-content .pd-block-insertion,
+.page.markup-original .pd-content .pd-block-deletion {
+  color: inherit;
+  text-decoration: none;
+  outline: none;
+}
+
 .page.markup-simple .pd-content .pd-deletion,
 .page.markup-none .pd-content .pd-deletion,
-.page.markup-original .pd-content .pd-insertion {
+.page.markup-original .pd-content .pd-insertion,
+.page.markup-simple .pd-content .pd-block-deletion,
+.page.markup-none .pd-content .pd-block-deletion,
+.page.markup-original .pd-content .pd-block-insertion {
   display: none;
 }
 
@@ -935,12 +959,12 @@
 }
 
 /* Simple markup: a bar in the margin beside each block with a change; All markup: beside a paragraph whose formatting changed. */
-.page.markup-simple .pd-content > :is(:has(.pd-insertion, .pd-deletion, .pd-format), .pd-split, .pd-join, .pd-format-block),
+.page.markup-simple .pd-content > :is(:has(.pd-insertion, .pd-deletion, .pd-format, .pd-block-insertion, .pd-block-deletion), .pd-split, .pd-join, .pd-format-block, .pd-block-insertion),
 .page.markup-all .pd-content > .pd-format-block {
   position: relative;
 }
 
-.page.markup-simple .pd-content > :is(:has(.pd-insertion, .pd-deletion, .pd-format), .pd-split, .pd-join, .pd-format-block)::after,
+.page.markup-simple .pd-content > :is(:has(.pd-insertion, .pd-deletion, .pd-format, .pd-block-insertion, .pd-block-deletion), .pd-split, .pd-join, .pd-format-block, .pd-block-insertion)::after,
 .page.markup-all .pd-content > .pd-format-block::after {
   content: "";
   position: absolute;
