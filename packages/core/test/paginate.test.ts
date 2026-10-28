@@ -103,6 +103,32 @@ describe("paginate", () => {
     });
   });
 
+  describe("long tables (U60)", () => {
+    // A table of a 30 px header row and n body rows of 40 px: a line per row, the header with the first.
+    const table = (n: number, repeat = 30) => ({ height: 30 + n * 40, lines: () => Array.from({ length: n - 1 }, (_, k) => 30 + (k + 1) * 40), widows: false, repeat });
+
+    it("breaks between rows and starts each later page below the repeated header", () => {
+      const r = paginate([{ height: 100 }, table(20)], 500);
+      // Page 1: 100 + header + 9 rows (390) = 490. Page 2: the header again (30) + the other 11 rows (440) = 470.
+      expect(r.startLines).toEqual([0, 9]);
+      expect(r.pages).toBe(2);
+      expect(r.fills[1]).toBeCloseTo(10);
+      const long = paginate([table(40)], 500);
+      // 30 + 11 rows on page 1, then 11 rows below the header on each page after.
+      expect(long.startLines).toEqual([0, 11, 22, 33]);
+      expect(long.fills.slice(1).every((f) => f < 40)).toBe(true);
+      // Without a repeated header, 12 rows fit on later pages.
+      expect(paginate([table(40, 0)], 500).startLines).toEqual([0, 11, 23, 35]);
+    });
+
+    it("never loops when a row is taller than the room under the header: it overflows that page", () => {
+      const tall = { height: 30 + 600, lines: () => [30 + 40, 30 + 560], widows: false, repeat: 30 };
+      const r = paginate([tall], 500);
+      expect(r.startLines).toEqual([0, 1, 2]);
+      expect(r.pages).toBeGreaterThanOrEqual(3);
+    });
+  });
+
   describe("split paragraphs (A10)", () => {
     // A paragraph of n lines of 20 px each, with 10 px after it: bottoms of each line but the last.
     const para = (n: number, widows = true) => ({ height: n * 20 + 10, lines: () => Array.from({ length: n - 1 }, (_, k) => (k + 1) * 20), widows });

@@ -123,6 +123,26 @@
   text-indent: 0 !important;
 }
 
+/* A break inside a table (U60): a row across it that draws nothing of a cell; the header rows repeated under it. */
+.pd-content tr.pd-break-row > td {
+  padding: 0;
+  border: none;
+  background: none;
+}
+
+.pd-repeat-head {
+  user-select: none;
+}
+
+/* A table's parts in print: no space between a part and its page's break. */
+.pd-split-head > table {
+  margin-bottom: 0 !important;
+}
+
+.pd-split-tail > table {
+  margin-top: 0 !important;
+}
+
 .pd-sheet-fill {
   height: var(--fill);
 }

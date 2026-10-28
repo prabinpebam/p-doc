@@ -40,7 +40,7 @@ export interface Layout {
    * For a sheet that starts inside a split paragraph (A10): the document position of its first line,
    * and the paragraph's left and right inset from the text area (px), so the break spans the page.
    */
-  splits: ({ pos: number; left: number; right: number } | null)[];
+  splits: ({ pos: number; left: number; right: number; table?: TableSplit } | null)[];
   /** Page of each heading, by id, for the table of contents. */
   headings: Record<string, number>;
   /** Footnotes at the foot of their page (A8). */
@@ -170,7 +170,7 @@ function measure(view: EditorView): void {
   const scale = sheet ? sheet.getBoundingClientRect().width / drawnWidth || 1 : 1;
   const boxes: BlockBox[] = [];
   /** Line starts of the paragraphs asked for their lines, by block index. */
-  const lineStarts = new Map<number, { pos: number[]; left: number; right: number }>();
+  const lineStarts = new Map<number, { pos: number[]; left: number; right: number; table?: TableSplit }>();
   const domRect = view.dom.getBoundingClientRect();
   const contentLeft = domRect.left + (parseFloat(getComputedStyle(view.dom).paddingLeft) || 0) * scale;
   const contentRight = domRect.right - (parseFloat(getComputedStyle(view.dom).paddingRight) || 0) * scale;
@@ -195,6 +195,7 @@ function measure(view: EditorView): void {
     let height = 0;
     let float: number | undefined;
     let lines: (() => number[]) | undefined;
+    let repeat = 0;
     if (el instanceof HTMLElement && el.getClientRects().length) {
       const before = el.previousElementSibling;
       if (before?.classList.contains("pd-sheet-break")) flowEnd = before.getBoundingClientRect().bottom;
@@ -202,8 +203,8 @@ function measure(view: EditorView): void {
       const r = el.getBoundingClientRect();
       const top = Math.min(flowEnd, r.top - (parseFloat(cs.marginTop) || 0) * scale);
       const bottom = r.bottom + (parseFloat(cs.marginBottom) || 0) * scale;
-      // A break drawn inside a split paragraph is not the paragraph's own height.
-      const inner = [...el.querySelectorAll<HTMLElement>(".pd-sheet-break")].map((b) => b.getBoundingClientRect());
+      // A break drawn inside a split paragraph or table (and a table's repeated header rows) is not the block's own height.
+      const inner = [...el.querySelectorAll<HTMLElement>(INSIDE)].map((b) => b.getBoundingClientRect());
       height = Math.max(0, bottom - top - inner.reduce((sum, b) => sum + b.height, 0)) / scale;
       if (cs.float !== "none") [float, height] = [height, 0];
       else flowEnd = bottom;
@@ -213,6 +214,16 @@ function measure(view: EditorView): void {
           lineStarts.set(i, { pos: m.pos, left: (r.left - contentLeft) / scale, right: (contentRight - r.right) / scale });
           return m.bottoms;
         };
+      } else if (node.type.name === "table" && cs.float === "none") {
+        const t = tableOf(el, node, g.content * scale);
+        if (t) {
+          repeat = t.repeat / scale;
+          lines = () => {
+            const m = tableLines(el, node, offset, top, inner, scale, t.heads);
+            lineStarts.set(i, { pos: m.pos, left: (r.left - contentLeft) / scale, right: (contentRight - r.right) / scale, table: t.split });
+            return m.bottoms;
+          };
+        }
       }
     }
     let notes: NoteBox[] | undefined;
@@ -245,7 +256,9 @@ function measure(view: EditorView): void {
       pageBreak: node.type.name === "pageBreak" || node.type.name === "columnBreak",
       float,
       lines,
-      widows: layout?.widows !== false,
+      ...(repeat ? { repeat } : {}),
+      // A table breaks between any two rows (U60): widow control is for lines of text.
+      widows: node.type.name !== "table" && layout?.widows !== false,
       keepNext: !!layout?.keepNext,
       keepLines: !!layout?.keepLines,
       breakBefore: !!layout?.breakBefore,
@@ -262,7 +275,7 @@ function measure(view: EditorView): void {
     if (!sh.startLine) return null;
     const l = lineStarts.get(sh.start);
     const pos = l?.pos[sh.startLine];
-    return l && pos != null ? { pos, left: l.left, right: l.right } : null;
+    return l && pos != null ? { pos, left: l.left, right: l.right, ...(l.table ? { table: l.table } : {}) } : null;
   });
   const sheetGeos = sheets.map((sh) => geos[sectionIndexAt(sections, sh.start)]!);
   const paper = papersOf(sheets, sheetGeos, Math.max(...geos.map((x) => x.width)));
@@ -420,6 +433,71 @@ function measureLines(view: EditorView, el: HTMLElement, top: number, inner: DOM
   return { bottoms, pos: lines.map((l) => l.pos) };
 }
 
+/** What a break inside a table draws: the row it is in, and the header rows repeated under it. */
+export interface TableSplit {
+  /** Columns, for the break row to span. */
+  cols: number;
+  /** Header rows repeated at the top of the next page. */
+  heads: number;
+  /** The header rows' content: a change draws them again. */
+  key: string;
+}
+
+/** Drawn inside a block by the layout, not its own content: a sheet break, and a table's break row and repeated header. */
+const INSIDE = ".pd-break-row, .pd-repeat-head, .pd-sheet-break:not(.pd-break-row .pd-sheet-break)";
+
+/**
+ * A table's header rows (U60): its first rows whose cells are all header cells, repeated at the top of each
+ * page it continues on, as Word's "Repeat as header row". A header taller than a third of the page isn't
+ * repeated, and a table of only header rows has none.
+ */
+function tableOf(el: HTMLElement, node: PMNode, pageHeight: number): { heads: number; repeat: number; split: TableSplit } | null {
+  const table = el.matches("table") ? (el as HTMLTableElement) : el.querySelector("table");
+  if (!table) return null;
+  let heads = 0;
+  while (heads < node.childCount && node.child(heads).content.content.every((c) => c.type.name === "tableHeader")) heads++;
+  if (heads === node.childCount) heads = 0;
+  const rows = ownRows(table);
+  let repeat = heads && rows[heads - 1] && rows[0] ? rows[heads - 1]!.getBoundingClientRect().bottom - rows[0].getBoundingClientRect().top : 0;
+  if (repeat > pageHeight / 3) [heads, repeat] = [0, 0];
+  let cols = 0;
+  node.child(0).forEach((c) => void (cols += Number(c.attrs.colspan) || 1));
+  const key = Array.from({ length: heads }, (_, j) => node.child(j).toJSON() as unknown);
+  return { heads, repeat, split: { cols, heads, key: `${cols}:${JSON.stringify(key)}` } };
+}
+
+/** A table's own rows, without the rows the layout draws in it. */
+const ownRows = (table: HTMLTableElement) => [...table.rows].filter((r) => !r.matches(".pd-break-row, .pd-repeat-head"));
+
+/**
+ * A table's "lines" (U60): it breaks between rows, never inside the header rows or the first row after them,
+ * and never through a cell that spans rows. Each line's start is the position of its first row.
+ */
+function tableLines(el: HTMLElement, node: PMNode, offset: number, top: number, inner: DOMRect[], scale: number, heads: number): { bottoms: number[]; pos: number[] } {
+  const table = (el.matches("table") ? el : el.querySelector("table")) as HTMLTableElement;
+  const shift = (y: number) => inner.reduce((sum, b) => (b.bottom <= y + 1 ? sum + b.height : sum), 0);
+  const rows = ownRows(table);
+  const at: number[] = [];
+  node.forEach((_r, o) => void at.push(offset + 1 + o));
+  const lines: { top: number; bottom: number; pos: number }[] = [];
+  let spanned = -Infinity;
+  rows.forEach((tr, j) => {
+    const r = tr.getBoundingClientRect();
+    const t = r.top - shift(r.top);
+    const b = r.bottom - shift(r.top);
+    const last = lines[lines.length - 1];
+    if (last && (j <= heads || t < spanned - 1)) last.bottom = Math.max(last.bottom, b);
+    else lines.push({ top: t, bottom: b, pos: at[j] ?? at[at.length - 1]! });
+    for (const c of tr.cells) {
+      const cr = c.getBoundingClientRect();
+      spanned = Math.max(spanned, cr.bottom - shift(cr.top));
+    }
+  });
+  const bottoms: number[] = [];
+  for (let k = 0; k + 1 < lines.length; k++) bottoms.push(((lines[k]!.bottom + lines[k + 1]!.top) / 2 - top) / scale);
+  return { bottoms, pos: lines.map((l) => l.pos) };
+}
+
 /** The layout drawn before the one on screen, and whether the document or setup changed since. */
 let before: Layout | null = null;
 let edited = true;
@@ -442,7 +520,7 @@ function sameLayout(a: Layout | null, b: Layout | null): boolean {
     a.pages === b.pages &&
     a.sheets.length === b.sheets.length &&
     a.sheets.every((s, k) => s.start === b.sheets[k]!.start && s.startLine === b.sheets[k]!.startLine && s.span === b.sheets[k]!.span) &&
-    a.splits.every((s, k) => s?.pos === b.splits[k]?.pos) &&
+    a.splits.every((s, k) => s?.pos === b.splits[k]?.pos && s?.table?.key === b.splits[k]?.table?.key) &&
     a.fills.every((f, k) => Math.abs(f - b.fills[k]!) < 0.5) &&
     a.pageOf.length === b.pageOf.length &&
     JSON.stringify(a.headings) === JSON.stringify(b.headings) &&
@@ -529,6 +607,26 @@ function sheetBreak(s: PageSetup, layout: Layout, k: number): HTMLElement {
   return root;
 }
 
+/** A sheet break inside a table: a row of one cell across every column. */
+function breakRow(brk: HTMLElement, cols: number): HTMLElement {
+  const tr = el("tr", "pd-break-row");
+  tr.contentEditable = "false";
+  const td = document.createElement("td");
+  td.colSpan = cols;
+  td.append(brk);
+  tr.append(td);
+  return tr;
+}
+
+/** A copy of a header row, at the top of a page a table continues on; it can't be edited there. */
+function headRow(row: PMNode): HTMLElement {
+  const tr = DOMSerializer.fromSchema(row.type.schema).serializeNode(row) as HTMLElement;
+  tr.classList.add("pd-repeat-head");
+  tr.contentEditable = "false";
+  tr.setAttribute("aria-hidden", "true");
+  return tr;
+}
+
 function decorations(doc: PMNode, layout: Layout, s: PageSetup): DecorationSet {
   const offsets: number[] = [];
   doc.forEach((_n, off) => void offsets.push(off));
@@ -539,7 +637,16 @@ function decorations(doc: PMNode, layout: Layout, s: PageSetup): DecorationSet {
     const at = split ? split.pos : offsets[sh.start]!;
     const geo = (x: Geometry) => `${x.width}x${x.height}:${x.top}:${x.bottom}:${x.left}:${x.right}`;
     const key = ["sheet", k, sh.page, sh.blank, layout.width, geo(layout.geos[k - 1]!), geo(layout.geos[k]!), split ? `${split.pos}:${split.left.toFixed(1)}:${split.right.toFixed(1)}` : "", layout.pages, layout.fills[k]!.toFixed(1), JSON.stringify(layout.faces.slice(sh.page - 2 - sh.blank, sh.page)), s.headerAlign, s.footerAlign].join("|");
-    decos.push(Decoration.widget(at, () => sheetBreak(s, layout, k), { side: -1, key, ignoreSelection: true, stopEvent: () => true }));
+    if (split?.table) {
+      // In a table the break is a row across it, followed by copies of the header rows.
+      const t = split.table;
+      decos.push(Decoration.widget(at, () => breakRow(sheetBreak(s, layout, k), t.cols), { side: -100, key: `${key}|row|${t.cols}`, ignoreSelection: true, stopEvent: () => true }));
+      const table = doc.resolve(at).parent;
+      for (let j = 0; j < t.heads && j < table.childCount; j++) {
+        const row = table.child(j);
+        decos.push(Decoration.widget(at, () => headRow(row), { side: -99 + j, key: `head|${k}|${j}|${t.key}`, ignoreSelection: true, stopEvent: () => true }));
+      }
+    } else decos.push(Decoration.widget(at, () => sheetBreak(s, layout, k), { side: -1, key, ignoreSelection: true, stopEvent: () => true }));
   });
   return DecorationSet.create(doc, [...decos, ...shiftDecos(doc, layout), ...tocDecos(doc, layout), ...noteDecos(doc, layout)]);
 }

@@ -19,7 +19,8 @@ const PLACED = ".pd-note--placed, .pd-note-rest";
 
 /**
  * A block's HTML without the editor's own state (selection, find highlights, resize handles): one part,
- * or for a paragraph split across pages (A10) one part per page, cut where the page breaks inside it.
+ * or for a paragraph split across pages (A10) one part per page, cut where the page breaks inside it. A table
+ * (U60) is cut at its break row; each later part keeps the columns' widths and starts with the repeated header rows.
  */
 function blockHtml(node: Node | null, top?: number): string[] {
   if (!(node instanceof HTMLElement)) return [""];
@@ -40,12 +41,17 @@ function blockHtml(node: Node | null, top?: number): string[] {
   c.normalize();
   const parts: string[] = [];
   let rest = c;
+  const cutIn = (x: HTMLElement) => {
+    const b = x.querySelector(".pd-sheet-break");
+    return b ? (b.closest(".pd-break-row") ?? b) : null;
+  };
+  const cols = c.querySelector("colgroup");
   for (;;) {
-    const cut = rest.querySelector(".pd-sheet-break");
+    const cut = cutIn(rest);
     if (!cut) break;
     const head = rest.cloneNode(true) as HTMLElement;
     const r = document.createRange();
-    r.setStartBefore(head.querySelector(".pd-sheet-break")!);
+    r.setStartBefore(cutIn(head)!);
     r.setEndAfter(head.lastChild!);
     r.deleteContents();
     head.classList.add("pd-split-head");
@@ -53,6 +59,7 @@ function blockHtml(node: Node | null, top?: number): string[] {
     r.setStartBefore(rest.firstChild!);
     r.setEndAfter(cut);
     r.deleteContents();
+    if (cols && !rest.querySelector("colgroup")) rest.querySelector("table")?.prepend(cols.cloneNode(true));
     rest.classList.add("pd-split-tail");
   }
   parts.push(rest.outerHTML);

@@ -40,6 +40,11 @@ export interface BlockBox {
    * top. Asked only when the block crosses a page end.
    */
   lines?: () => number[];
+  /**
+   * Room repeated at the top of each page a split block continues on (a table's header rows, U60): the
+   * rest of the block starts below it.
+   */
+  repeat?: number;
   /** Widow and orphan control: a split leaves at least two lines on each side. */
   widows?: boolean;
   /** Keep with next (U47): starts on the page the next block starts on, when the run of them fits a page. */
@@ -252,6 +257,13 @@ export function paginate(blocks: BlockBox[], pageContentHeight: number, options:
     let at = 0;
     let offset = 0;
     let first = true;
+    /** On a page the block continues on, only its repeated rows are there: the page counts as empty. */
+    let cont = false;
+    const carryOn = (line: number, fill: number) => {
+      newSheet(i, line, fill);
+      used = b.repeat ?? 0;
+      cont = used > 0;
+    };
     for (;;) {
       const rest = b.height - offset;
       const tail = b.notes?.length ? notesOn(i, at) : [];
@@ -262,9 +274,9 @@ export function paginate(blocks: BlockBox[], pageContentHeight: number, options:
         return;
       }
       // On an empty page the rule gives way: the lines have nowhere better to go.
-      const end = fitting(i, ls, at, offset, h - used - noteH, widows && full());
+      const end = fitting(i, ls, at, offset, h - used - noteH, widows && full() && !cont);
       if (end === at) {
-        if (!full()) {
+        if (!full() || cont) {
           // Nothing fits on an empty page: the next line goes on anyway (one taller than a page overflows).
           if (at >= ls.length) {
             if (first) pageOf.push(page);
@@ -276,14 +288,14 @@ export function paginate(blocks: BlockBox[], pageContentHeight: number, options:
             if (tail.length) placeNotes(i, tail, used);
             return;
           }
-          const fill = Math.max(0, h - (ls[at]! - offset));
+          const fill = Math.max(0, h - used - (ls[at]! - offset));
           if (first) pageOf.push(page);
           first = false;
           const line = b.notes?.length ? notesOn(i, at, at + 1) : [];
           if (line.length) placeNotes(i, line, ls[at]! - offset);
           offset = ls[at]!;
           at += 1;
-          newSheet(i, at, fill);
+          carryOn(at, fill);
           continue;
         }
         newSheet(i, at, Math.max(0, h - Math.max(used, floats)));
@@ -296,7 +308,7 @@ export function paginate(blocks: BlockBox[], pageContentHeight: number, options:
       if (part.length) placeNotes(i, part, used + ls[end - 1]! - offset);
       offset = ls[end - 1]!;
       at = end;
-      newSheet(i, at, fill);
+      carryOn(at, fill);
     }
   });
   for (let k = 0; k < noteCount; k++) places[k] ??= { page };

@@ -75,6 +75,21 @@ export function splitDocument(): unknown {
   return { type: "doc", content };
 }
 
+/**
+ * A table about four pages long (U60): a header row, then rows of one to three lines; the second cell of
+ * row 40 spans two rows. Every row starts with its number, so a page's text tells where it broke.
+ */
+export function tableDocument(): unknown {
+  const cell = (type: string, t: string, attrs: Record<string, unknown> = {}) => ({ type, attrs: { colspan: 1, rowspan: 1, colwidth: null, ...attrs }, content: [p(t)] });
+  const rows: unknown[] = [{ type: "tableRow", content: ["Item", "Notes", "Amount"].map((t) => cell("tableHeader", t)) }];
+  for (let r = 1; r <= 110; r++) {
+    const notes = prose(6 + ((r * 7) % 4) * 14, r);
+    if (r === 41) rows.push({ type: "tableRow", content: [cell("tableCell", `R${r}`), cell("tableCell", `${r * 3}.00`)] });
+    else rows.push({ type: "tableRow", content: [cell("tableCell", `R${r}`), cell("tableCell", notes, r === 40 ? { rowspan: 2 } : {}), cell("tableCell", `${r * 3}.00`)] });
+  }
+  return { type: "doc", content: [h(1, "Table fixture", "tables"), p(prose(80, 1)), { type: "table", content: rows }, p("After the table.")] };
+}
+
 /** A short document with headings for the table of contents. */
 export function headedDocument(pages = 3): unknown {
   const content: unknown[] = [];

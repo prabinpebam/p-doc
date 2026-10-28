@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Page } from "@playwright/test";
 import { expect, launch, quit, test } from "./helpers.ts";
-import { imageDocument, load, longDocument, notesDocument, settled, splitDocument } from "./fixtures.ts";
+import { imageDocument, load, longDocument, notesDocument, settled, splitDocument, tableDocument, zipText } from "./fixtures.ts";
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 
 interface ScreenSheet {
@@ -396,5 +396,112 @@ test("10.1 A8 footnotes sit at the foot of the page that has their number, and e
     const on = printed.flatMap((t, i) => (t.includes(n.marker) ? [i] : []));
     expect(on, `${n.marker} prints on the same page`).toEqual([n.sheet]);
   }
+  await quit(l);
+});
+
+test("12.2 long tables break between rows with the header row repeated, on screen, in the PDF and in Word", async () => {
+  const saveDir = mkdtempSync(join(tmpdir(), "pdoc-pdf-"));
+  const l = await launch({ env: { PDOC_SAVE_DIR: saveDir } });
+  const { page } = l;
+  await load(page, tableDocument());
+  const art = page.getByTestId("page");
+  await expect.poll(async () => Number(await art.getAttribute("data-pages"))).toBeGreaterThanOrEqual(4);
+  await settled(page);
+
+  const screen = await page.evaluate(() => {
+    const art = document.querySelector<HTMLElement>("[data-testid=page]")!;
+    const scale = art.getBoundingClientRect().width / parseFloat(getComputedStyle(art).getPropertyValue("--page-width"));
+    const root = art.querySelector<HTMLElement>(".pd-content")!;
+    const breaks = [...root.querySelectorAll<HTMLElement>(".pd-sheet-break")];
+    const r = document.createRange();
+    const texts: string[] = [];
+    let from: [Node, number] = [root, 0];
+    for (const b of [...breaks, null]) {
+      r.setStart(...from);
+      if (b) r.setEndBefore(b);
+      else r.setEnd(root, root.childNodes.length);
+      texts.push(r.toString().replace(/\s+/g, ""));
+      if (b) from = [b.parentNode!, [...b.parentNode!.childNodes].indexOf(b) + 1];
+    }
+    const rows = [...root.querySelectorAll<HTMLTableRowElement>("tr.pd-break-row")];
+    const table = root.querySelector("table")!;
+    const own = [...table.rows].filter((x) => !x.matches(".pd-break-row, .pd-repeat-head"));
+    return {
+      pages: Number(art.dataset.pages),
+      texts,
+      breakRows: rows.length,
+      // What follows each break row: the header copy, and the row before it (the last on its page).
+      after: rows.map((x) => (x.nextElementSibling as HTMLElement | null)?.matches(".pd-repeat-head") ? x.nextElementSibling!.textContent : null),
+      before: rows.map((x) => {
+        let p = x.previousElementSibling as HTMLElement | null;
+        while (p?.matches(".pd-repeat-head")) p = p.previousElementSibling as HTMLElement | null;
+        return p?.cells[0]?.textContent ?? "";
+      }),
+      fills: rows.map((x) => x.querySelector<HTMLElement>(".pd-sheet-fill")!.getBoundingClientRect().height / scale),
+      tallest: Math.max(...own.map((x) => x.getBoundingClientRect().height / scale)),
+      // The break spans the page, like a break between blocks.
+      wide: rows.every((x) => x.querySelector<HTMLElement>(".pd-sheet-break")!.getBoundingClientRect().width >= art.getBoundingClientRect().width - 2),
+      ownRows: own.length,
+    };
+  });
+  expect(screen.texts.length).toBe(screen.pages);
+  expect(screen.breakRows).toBeGreaterThanOrEqual(3);
+  expect(screen.ownRows).toBe(111);
+  expect(screen.wide).toBe(true);
+  for (const [i, a] of screen.after.entries()) expect(a, `header repeated after break ${i + 1}`).toBe("ItemNotesAmount");
+  // A page ends at a row's end with no more room than the next row needs, and never inside the cell that spans rows 40 and 41.
+  for (const [i, f] of screen.fills.entries()) expect(f, `space at the foot of page ${i + 1}`).toBeLessThan(screen.tallest + 2);
+  expect(screen.before).not.toContain("R40");
+  for (const t of screen.texts.slice(2, -1)) expect(t.startsWith("ItemNotesAmountR")).toBe(true);
+  await page.locator(".pd-break-row").first().evaluate((b) => b.scrollIntoView({ block: "center" }));
+  await page.screenshot({ path: test.info().outputPath("table-break.png") });
+
+  // Editing the header row changes its copies.
+  await page.locator(".pd-content th").filter({ hasText: "Amount" }).first().click();
+  await page.keyboard.press("End");
+  await page.keyboard.type(" due");
+  await expect(page.locator(".pd-repeat-head").first()).toContainText("Amount due");
+  await expect(page.locator(".pd-repeat-head").last()).toContainText("Amount due");
+  // The copies can't be edited or selected.
+  await expect(page.locator(".pd-repeat-head").first()).toHaveAttribute("contenteditable", "false");
+  await settled(page);
+  const texts = await page.evaluate(() => {
+    const root = document.querySelector<HTMLElement>("[data-testid=page] .pd-content")!;
+    const breaks = [...root.querySelectorAll<HTMLElement>(".pd-sheet-break")];
+    const r = document.createRange();
+    const out: string[] = [];
+    let from: [Node, number] = [root, 0];
+    for (const b of [...breaks, null]) {
+      r.setStart(...from);
+      if (b) r.setEndBefore(b);
+      else r.setEnd(root, root.childNodes.length);
+      out.push(r.toString().replace(/\s+/g, ""));
+      if (b) from = [b.parentNode!, [...b.parentNode!.childNodes].indexOf(b) + 1];
+    }
+    return out;
+  });
+
+  // The PDF breaks at the same rows, with the header at the top of each page the table continues on.
+  await page.getByRole("menuitem", { name: "File" }).click();
+  await page.getByRole("menuitem", { name: /^Download/ }).click();
+  await page.getByRole("menuitem", { name: /^PDF document/ }).click();
+  await expect(page.getByText(new RegExp(`^Saved Untitled document\\.pdf · ${texts.length} pages$`))).toBeVisible({ timeout: 20_000 });
+  const printed = await pdfPages(join(saveDir, readdirSync(saveDir).find((n) => n.endsWith(".pdf"))!));
+  expect(printed.length).toBe(texts.length);
+  // Each PDF page has the same rows and the same text (a PDF lists table cells after the text round them, so compare rows, not order).
+  const labels = (t: string) => (t.match(/R\d+/g) ?? []).join(",");
+  for (const [i, t] of printed.entries()) {
+    expect(labels(t), `page ${i + 1} has the same rows`).toBe(labels(texts[i]!));
+    expect(t.length, `page ${i + 1} has the same text`).toBe(texts[i]!.length);
+    if (i > 0 && labels(t)) expect(t, `page ${i + 1} repeats the header`).toContain("ItemNotesAmountdueR");
+  }
+
+  // Word repeats the header row too.
+  await page.getByRole("menuitem", { name: "File" }).click();
+  await page.getByRole("menuitem", { name: /^Download/ }).click();
+  await page.getByRole("menuitem", { name: /^Microsoft Word/ }).click();
+  await expect(page.getByText(/^Saved Untitled document\.docx/)).toBeVisible({ timeout: 20_000 });
+  const xml = zipText(readFileSync(join(saveDir, readdirSync(saveDir).find((n) => n.endsWith(".docx"))!)), "word/document.xml");
+  expect(xml.match(/<w:tblHeader\/>/g)?.length).toBe(1);
   await quit(l);
 });
