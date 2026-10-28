@@ -179,6 +179,8 @@ export interface PrintRequest {
   size: { width: number; height: number };
   /** Inches; 0 in Pages mode, where each sheet draws its own margins. */
   margins: { top: number; bottom: number; left: number; right: number };
+  /** Sections with their own paper (U55): each sheet takes its size from the document's CSS. */
+  cssPages?: boolean;
 }
 
 export interface PdfResult {

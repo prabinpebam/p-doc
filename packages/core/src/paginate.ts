@@ -50,6 +50,12 @@ export interface BlockBox {
   breakBefore?: boolean;
   /** Footnotes referenced from the block, in order. */
   notes?: NoteBox[];
+  /**
+   * A section break (U55): the next block starts a section on the next page, the next odd or even page
+   * (a blank page between when needed) or, continuous, on this page. Pages from the next on have `height`
+   * of room for text.
+   */
+  section?: { start: "next" | "continuous" | "odd" | "even"; height: number };
 }
 
 export interface Pagination {
@@ -68,6 +74,8 @@ export interface Pagination {
   push: Map<number, number>;
   /** Each footnote's place, in the order of the blocks' `notes`. */
   notes: NotePlace[];
+  /** Blank pages before each sheet (an odd or even section break that lands on the wrong page). */
+  blanks: number[];
 }
 
 export interface PaginateOptions {
@@ -78,7 +86,10 @@ export interface PaginateOptions {
 const EPS = 0.5;
 
 export function paginate(blocks: BlockBox[], pageContentHeight: number, options: PaginateOptions = {}): Pagination {
-  const h = Math.max(1, pageContentHeight);
+  let h = Math.max(1, pageContentHeight);
+  /** The section the next page starts, and its room for text. */
+  let pending: { start: "next" | "continuous" | "odd" | "even"; height: number } | null = null;
+  const blanks: number[] = [0];
   const sep = options.noteSep ?? 0;
   const pageOf: number[] = [];
   const starts: number[] = [0];
@@ -104,6 +115,8 @@ export function paginate(blocks: BlockBox[], pageContentHeight: number, options:
     noteCount += b.notes?.length ?? 0;
   }
   const newPage = () => {
+    if (pending) h = Math.max(1, pending.height);
+    pending = null;
     used = 0;
     floats = 0;
     noteH = carry > 0 ? sep + carry : 0;
@@ -112,6 +125,10 @@ export function paginate(blocks: BlockBox[], pageContentHeight: number, options:
   const newSheet = (i: number, line: number, fill: number) => {
     if (line === 0) push.set(i, fill);
     page++;
+    // An odd or even section starts a page further on when this one has the wrong number.
+    const blank = pending && (pending.start === "odd" || pending.start === "even") && (page % 2 === 1) !== (pending.start === "odd") ? 1 : 0;
+    page += blank;
+    blanks.push(blank);
     firsts.push(page);
     starts.push(i);
     startLines.push(line);
@@ -195,6 +212,10 @@ export function paginate(blocks: BlockBox[], pageContentHeight: number, options:
     const full = () => Math.max(used, floats) > 0 || noteH > 0;
     if (i > 0 && (breakNext || (b.breakBefore && full()))) newSheet(i, 0, Math.max(0, h - Math.max(used, floats)));
     breakNext = Boolean(b.pageBreak);
+    if (b.section) {
+      pending = b.section;
+      if (b.section.start !== "continuous") breakNext = true;
+    }
     // A run kept with the next block moves on whole when it doesn't fit here but fits a page; a longer one breaks at the page.
     if (b.keepNext && !b.float && full() && !blocks[i - 1]?.keepNext) {
       const run = keptRun(i);
@@ -279,7 +300,7 @@ export function paginate(blocks: BlockBox[], pageContentHeight: number, options:
     }
   });
   for (let k = 0; k < noteCount; k++) places[k] ??= { page };
-  return { pageOf, starts, startLines, fills, firsts, pages: page, push, notes: places };
+  return { pageOf, starts, startLines, fills, firsts, pages: page, push, notes: places, blanks };
 }
 
 /**
@@ -318,6 +339,8 @@ export interface Sheet {
   page: number;
   /** Pages the sheet covers. */
   span: number;
+  /** Blank pages before the sheet. */
+  blank: number;
 }
 
 export function sheetsOf(p: Pagination): Sheet[] {
@@ -328,8 +351,8 @@ export function sheetsOf(p: Pagination): Sheet[] {
     // A block split onto the next sheet counts in both; a sheet holding only the rest of a note has no blocks.
     const end = next == null ? n : next + (nextLine > 0 ? 1 : 0);
     const first = p.firsts[k] ?? 1;
-    const nextPage = p.firsts[k + 1] ?? p.pages + 1;
-    return { start, startLine: p.startLines[k] ?? 0, end, page: first, span: Math.max(1, nextPage - first) };
+    const nextPage = (p.firsts[k + 1] ?? p.pages + 1) - (p.blanks?.[k + 1] ?? 0);
+    return { start, startLine: p.startLines[k] ?? 0, end, page: first, span: Math.max(1, nextPage - first), blank: p.blanks?.[k] ?? 0 };
   });
 }
 

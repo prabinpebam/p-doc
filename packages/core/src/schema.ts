@@ -2,6 +2,7 @@
  * The document schema shared by the editor (renderer), conversions (main) and the CLI: one list of
  * TipTap extensions, so every surface reads and writes the same content.
  */
+import { SectionBreak } from "./sections.ts";
 import { Extension, Mark, Node, mergeAttributes, getSchema, type AnyExtension } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import { TextStyleKit } from "@tiptap/extension-text-style";
@@ -234,6 +235,7 @@ export function extensions(options: SchemaOptions = {}): AnyExtension[] {
     Deletion,
     CommentMark,
     PageBreak,
+    SectionBreak,
     TableOfContents,
     NoteRef,
     Note,

@@ -52,7 +52,8 @@ test("2.6 page setup changes paper, orientation, margins and colour, checks the 
   await dialog.getByRole("button", { name: "Apply" }).click();
   await expect.poll(width).toBe(794);
   await expect.poll(padLeft).toBe(192);
-  await expect(art).toHaveCSS("background-color", "rgb(255, 248, 225)");
+  // The paper is drawn behind the text, sheet by sheet (U55).
+  await expect(page.locator(".pd-sheet-bg").first()).toHaveCSS("background-color", "rgb(255, 248, 225)");
   await expect.poll(() => (filesIn(l.dirs, "private")[0]?.doc as unknown as Saved)?.page, PROMPTLY).toMatchObject({ orientation: "portrait", size: "a4", color: "#fff8e1", margins: { left: 2 } });
   const firstId = (filesIn(l.dirs, "private")[0]!.doc as unknown as Saved).id;
 

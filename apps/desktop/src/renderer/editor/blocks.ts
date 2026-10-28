@@ -11,11 +11,21 @@ const isTextblockType = (name: string) => (TEXTBLOCKS as readonly string[]).incl
  * Inserts a block that holds no text (page break, table of contents) and leaves the cursor in the
  * text block after it, making an empty paragraph when there is none, so typing carries straight on.
  */
-export function insertAtomBlock(editor: Editor, type: string): void {
+export function insertAtomBlock(editor: Editor, type: string, attrs?: Record<string, unknown>): void {
+  const { $from, empty } = editor.state.selection;
+  // At the start of a top-level text block the break goes before it, as in Word, leaving no empty block behind.
+  if (empty && $from.depth === 1 && $from.parentOffset === 0 && $from.parent.isTextblock) {
+    const node = editor.schema.nodes[type]!.create(attrs);
+    editor.chain().focus().command(({ tr }) => {
+      tr.insert($from.before(1), node).scrollIntoView();
+      return true;
+    }).run();
+    return;
+  }
   editor
     .chain()
     .focus()
-    .insertContent({ type })
+    .insertContent({ type, attrs })
     .command(({ tr, dispatch }) => {
       if (!dispatch) return true;
       const sel = tr.selection;

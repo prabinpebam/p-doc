@@ -1,7 +1,8 @@
 /** File > Page setup and Insert > Header and footer (U13–U15, spec §4.4). */
 import { useRef, useState } from "react";
-import { defaultPage, PAPER, type HfAlign, type PageSetup, type PaperSize } from "@p-doc/core";
-import { syncSelection, updateDoc } from "../session.ts";
+import { defaultPage, PAPER, sectionPageOf, type HfAlign, type PageSetup, type PaperSize } from "@p-doc/core";
+import { getEditor, syncSelection, updateDoc } from "../session.ts";
+import { clearSectionPages, sectionAtCursor, setSectionPage } from "../editor/sections.ts";
 import { app, closeDialog, toast, updateSettings } from "../state.ts";
 import { Dialog } from "./Dialog.tsx";
 
@@ -33,7 +34,17 @@ export function PageSetupDialog() {
   const inches = usesInches();
   const unit = inches ? "in" : "cm";
   const k = inches ? 1 : 2.54;
-  const start = doc?.page ?? defaultPage(navigator.language);
+  const base = doc?.page ?? defaultPage(navigator.language);
+  // With sections, the dialog starts on the cursor's section (U55).
+  const [at] = useState(() => {
+    const ed = getEditor();
+    return ed ? sectionAtCursor(ed.state, base) : null;
+  });
+  const sectioned = !!at && at.sections.length > 1;
+  const [scope, setScope] = useState<"document" | "section">(sectioned ? "section" : "document");
+  const start: PageSetup = sectioned ? { ...base, ...sectionPageOf(at.sections[at.index]!.page) } : base;
+  const continuous = sectioned && at.index > 0 && at.sections[at.index]!.start === "continuous";
+  const [newPage, setNewPage] = useState(false);
   const [p, setP] = useState<PageSetup>(start);
   const [margins, setMargins] = useState<Record<string, string>>(() => Object.fromEntries(MARGINS.map(([m]) => [m, fmt(start.margins[m] * k)])));
   if (!doc) return null;
@@ -53,7 +64,17 @@ export function PageSetupDialog() {
       onSubmit={() => {
         const r = result();
         if (!r) return;
-        if (JSON.stringify(r) !== JSON.stringify(doc.page)) updateDoc({ page: r });
+        const ed = getEditor();
+        if (sectioned && ed && scope === "section") {
+          // This section: its geometry on its break (the first section's is the document's); the rest is the document's.
+          const own = sectionPageOf(r);
+          setSectionPage(ed, at.sections, at.index, own, continuous && newPage ? "next" : undefined);
+          const page = at.index === 0 ? r : { ...r, ...sectionPageOf(doc.page) };
+          if (JSON.stringify(page) !== JSON.stringify(doc.page)) updateDoc({ page });
+        } else {
+          if (sectioned && ed) clearSectionPages(ed);
+          if (JSON.stringify(r) !== JSON.stringify(doc.page)) updateDoc({ page: r });
+        }
         closeDialog();
       }}
       actions={
@@ -96,6 +117,22 @@ export function PageSetupDialog() {
         <p className="muted">{pageless ? "One long sheet. Headers, footers and page breaks are kept and show again with pages." : "Pages as they print, with headers, footers and page breaks."}</p>
       </div>
       <fieldset className="plain" disabled={pageless}>
+        {sectioned ? (
+          <label className="form-row">
+            <span>Apply to</span>
+            <select className="field" value={scope} onChange={(e) => setScope(e.target.value as "document" | "section")}>
+              <option value="section">This section</option>
+              <option value="document">Whole document</option>
+            </select>
+          </label>
+        ) : null}
+        {continuous && scope === "section" ? (
+          <label className="check">
+            <input type="checkbox" checked={newPage} onChange={(e) => setNewPage(e.target.checked)} />
+            Starts on a new page
+          </label>
+        ) : null}
+        <fieldset className="plain" disabled={continuous && scope === "section" && !newPage}>
         <div role="radiogroup" aria-labelledby="ps-orient" className="settings-section">
           <h3 id="ps-orient" className="group-title">
             Orientation
@@ -121,6 +158,8 @@ export function PageSetupDialog() {
             ))}
           </select>
         </label>
+        {continuous && scope === "section" && !newPage ? <p className="muted">A section that starts on the same page keeps its paper. Choose Starts on a new page to change it.</p> : null}
+        </fieldset>
         <div className="form-grid" role="group" aria-label={`Margins (${unit === "in" ? "inches" : "centimetres"})`}>
           {MARGINS.map(([m, label]) => (
             <label key={m} className="form-row">

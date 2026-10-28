@@ -16,3 +16,4 @@ export * from "./paragraph.ts";
 export * from "./sort.ts";
 export * from "./notes.ts";
 export * from "./refs.ts";
+export * from "./sections.ts";

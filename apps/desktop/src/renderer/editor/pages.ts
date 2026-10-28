@@ -7,7 +7,7 @@ import { Extension } from "@tiptap/core";
 import { Plugin, PluginKey, type EditorState, type Transaction } from "@tiptap/pm/state";
 import { Decoration, DecorationSet, type EditorView, type NodeView } from "@tiptap/pm/view";
 import { DOMSerializer, type Node as PMNode } from "@tiptap/pm/model";
-import { CSS_PX_PER_INCH, headerFooterText, notesOf, pageInches, paginate, sheetsOf, type BlockBox, type HfAlign, type NoteBox, type PageSetup, type Sheet, type TocEntry, digitsFor } from "@p-doc/core";
+import { CSS_PX_PER_INCH, headerFooterText, notesOf, pageInches, paginate, sectionIndexAt, sectionsOf, sheetsOf, type BlockBox, type HfAlign, type NoteBox, type PageSetup, type Sheet, type TocEntry, digitsFor } from "@p-doc/core";
 import { createStore } from "../lib/store.ts";
 
 /** A page's geometry in CSS pixels, rounded as the page is drawn. */
@@ -47,6 +47,24 @@ export interface Layout {
   notes: PlacedNote[];
   /** The rest of each footnote continued from the page before. */
   rests: PlacedNote[];
+  /** Each sheet's geometry: its first block's section's (U55). */
+  geos: Geometry[];
+  /** Every sheet of paper as drawn, blank pages included, in order. */
+  papers: Paper[];
+  /** The page area: as wide as the widest paper, as tall as the sheets and the gaps between them (px). */
+  width: number;
+  height: number;
+  /** For a block in a section whose text column is not the page area's: how far it moves right and how much narrower it is (px). */
+  shifts: ({ dx: number; dw: number } | null)[];
+}
+
+/** A sheet of paper behind the text: `top` and `left` in the page area, `span` pages tall. */
+export interface Paper {
+  top: number;
+  left: number;
+  g: Geometry;
+  span: number;
+  blank: boolean;
 }
 
 /**
@@ -131,8 +149,12 @@ function measure(view: EditorView): void {
   const s = setup;
   if (!s || s.mode !== "pages") return apply(view, null);
   const g = geometry(s);
+  const sections = sectionsOf(view.state.doc, s);
+  const geos = sections.map((sec, k) => (k === 0 ? g : geometry(sec.page)));
   const sheet = view.dom.closest<HTMLElement>(".page");
-  const scale = sheet ? sheet.getBoundingClientRect().width / g.width || 1 : 1;
+  // The page area is drawn as wide as --page-width says (the widest section's paper once laid out).
+  const drawnWidth = parseFloat(sheet?.style.getPropertyValue("--page-width") ?? "") || g.width;
+  const scale = sheet ? sheet.getBoundingClientRect().width / drawnWidth || 1 : 1;
   const boxes: BlockBox[] = [];
   /** Line starts of the paragraphs asked for their lines, by block index. */
   const lineStarts = new Map<number, { pos: number[]; left: number; right: number }>();
@@ -202,7 +224,9 @@ function measure(view: EditorView): void {
       });
     }
     const layout = (node.attrs.layout ?? null) as { keepNext?: boolean; keepLines?: boolean; breakBefore?: boolean; widows?: boolean } | null;
+    const sec = node.type.name === "sectionBreak" ? sections.findIndex((x) => x.breakAt === i) : -1;
     boxes.push({
+      ...(sec > 0 ? { section: { start: sections[sec]!.start, height: geos[sec]!.content } } : {}),
       height,
       pageBreak: node.type.name === "pageBreak",
       float,
@@ -226,8 +250,39 @@ function measure(view: EditorView): void {
     const pos = l?.pos[sh.startLine];
     return l && pos != null ? { pos, left: l.left, right: l.right } : null;
   });
-  const placed = placeNotes(p.notes, noteIds, noteEls, sheets, g, parseFloat(rootCs.paddingTop) || 0);
-  apply(view, settle(layoutOf(view.state), { pages: p.pages, sheets, pageOf: p.pageOf, fills: p.fills, splits, headings, ...placed }));
+  const sheetGeos = sheets.map((sh) => geos[sectionIndexAt(sections, sh.start)]!);
+  const paper = papersOf(sheets, sheetGeos, Math.max(...geos.map((x) => x.width)));
+  const shifts = boxes.map((_b, i) => shiftOf(geos[sectionIndexAt(sections, i)]!, g, paper.width));
+  const placed = placeNotes(p.notes, noteIds, noteEls, sheets, sheetGeos, paper.papers, parseFloat(rootCs.paddingTop) || 0);
+  apply(view, settle(layoutOf(view.state), { pages: p.pages, sheets, pageOf: p.pageOf, fills: p.fills, splits, headings, ...placed, geos: sheetGeos, ...paper, shifts }));
+}
+
+/** The sheets of paper drawn behind the text, centred in a page area as wide as the widest; a blank page has the paper of the page before. */
+function papersOf(sheets: Sheet[], geos: Geometry[], width: number): { papers: Paper[]; width: number; height: number } {
+  const gap = pageGap();
+  const papers: Paper[] = [];
+  let y = 0;
+  sheets.forEach((sh, k) => {
+    const g = geos[k]!;
+    if (k > 0) {
+      y += gap;
+      const prev = geos[k - 1]!;
+      for (let b = 0; b < sh.blank; b++) {
+        papers.push({ top: y, left: (width - prev.width) / 2, g: prev, span: 1, blank: true });
+        y += prev.top + prev.content + prev.bottom + gap;
+      }
+    }
+    papers.push({ top: y, left: (width - g.width) / 2, g, span: sh.span, blank: false });
+    y += sh.span * g.content + g.top + g.bottom;
+  });
+  return { papers, width, height: y };
+}
+
+/** How a section's text column sits against the page area's (which has the first section's margins). */
+function shiftOf(sec: Geometry, base: Geometry, width: number): { dx: number; dw: number } | null {
+  const dx = (width - sec.width) / 2 + sec.left - base.left;
+  const dw = width - base.left - base.right - (sec.width - sec.left - sec.right);
+  return Math.abs(dx) < 0.5 && Math.abs(dw) < 0.5 ? null : { dx, dw };
 }
 
 /**
@@ -239,19 +294,15 @@ function placeNotes(
   ids: string[],
   els: Map<string, { height: number }>,
   sheets: Sheet[],
-  g: Geometry,
+  geos: Geometry[],
+  papers: Paper[],
   padTop: number,
 ): { notes: PlacedNote[]; rests: PlacedNote[] } {
   const notes: PlacedNote[] = [];
   const rests: PlacedNote[] = [];
   if (!ids.length) return { notes, rests };
-  const gap = pageGap();
-  const tops: number[] = [];
-  let acc = 0;
-  for (const sh of sheets) {
-    tops.push(acc);
-    acc += sh.span * g.height + gap;
-  }
+  // Where each sheet's text starts, from where the first sheet's does.
+  const tops = papers.filter((x) => !x.blank).map((x, k) => x.top + geos[k]!.top - geos[0]!.top);
   const sheetOf = (page: number) => {
     const k = sheets.findIndex((sh) => page >= sh.page && page < sh.page + sh.span);
     return k < 0 ? sheets.length - 1 : k;
@@ -274,6 +325,7 @@ function placeNotes(
   for (const [page, list] of byPage) {
     const k = sheetOf(page);
     const sh = sheets[k]!;
+    const g = geos[k]!;
     const area = list.reduce((sum, x) => sum + x.size, 0);
     let y = (page - sh.page) * g.height + g.content - area;
     list.forEach((x, j) => {
@@ -372,9 +424,14 @@ function sameLayout(a: Layout | null, b: Layout | null): boolean {
     a.fills.every((f, k) => Math.abs(f - b.fills[k]!) < 0.5) &&
     a.pageOf.length === b.pageOf.length &&
     JSON.stringify(a.headings) === JSON.stringify(b.headings) &&
-    notesKey(a) === notesKey(b)
+    notesKey(a) === notesKey(b) &&
+    paperKey(a) === paperKey(b) &&
+    shiftKey(a) === shiftKey(b)
   );
 }
+
+const paperKey = (l: Layout) => l.papers.map((x) => `${x.top.toFixed(0)}:${x.left.toFixed(0)}:${x.g.width}x${x.g.height}:${x.g.top}:${x.g.bottom}:${x.g.left}:${x.g.right}:${x.span}:${x.blank ? 1 : 0}`).join(",");
+const shiftKey = (l: Layout) => `${l.width}|${l.shifts.map((s) => (s ? `${s.dx.toFixed(1)}:${s.dw.toFixed(1)}` : "")).join(",")}`;
 
 const notesKey = (l: Layout) => [...l.notes, ...l.rests].map((n) => `${n.id}:${n.page}:${n.top.toFixed(0)}:${n.height.toFixed(0)}:${n.cut?.toFixed(0) ?? ""}`).join(",");
 
@@ -389,8 +446,9 @@ function apply(view: EditorView, layout: Layout | null): void {
   }
   view.dispatch(view.state.tr.setMeta(pagesKey, layout).setMeta("addToHistory", false));
   pageLayout.set({ layout });
-  // Footnotes moved to (or from) a page foot change their own size and the text's: measure again.
-  if (layout && notesKey(layout) !== (old ? notesKey(old) : "")) schedule();
+  // Footnotes moved to (or from) a page foot change their own size and the text's, and a section's
+  // text column its paragraphs' heights: measure again.
+  if (layout && (notesKey(layout) !== (old ? notesKey(old) : "") || shiftKey(layout) !== (old ? shiftKey(old) : `${geometry(setup!).width}|`))) schedule();
 }
 
 function el(tag: string, cls: string, text?: string): HTMLElement {
@@ -410,9 +468,21 @@ export function hfArea(cls: string, text: string, align: HfAlign, page: number):
   return e;
 }
 
+/** A header or footer on a sheet of `g`'s paper: as tall as its margin, its text inside the side margins. */
+function onPaper(e: HTMLElement, g: Geometry, width: number, height: number): HTMLElement {
+  const off = (width - g.width) / 2;
+  e.style.height = `${height}px`;
+  e.style.paddingLeft = `${off + g.left}px`;
+  e.style.paddingRight = `${off + g.right}px`;
+  return e;
+}
+
 function sheetBreak(s: PageSetup, layout: Layout, k: number): HTMLElement {
   const sh = layout.sheets[k]!;
-  const end = sh.page - 1;
+  const end = sh.page - 1 - sh.blank;
+  const before = layout.geos[k - 1]!;
+  const after = layout.geos[k]!;
+  const W = layout.width;
   const root = el("div", "pd-sheet-break");
   root.contentEditable = "false";
   root.dataset.pageEnd = String(end);
@@ -423,12 +493,16 @@ function sheetBreak(s: PageSetup, layout: Layout, k: number): HTMLElement {
     root.style.setProperty("--inset-left", `${split.left.toFixed(2)}px`);
     root.style.setProperty("--inset-right", `${split.right.toFixed(2)}px`);
   }
-  root.append(
-    el("div", "pd-sheet-fill"),
-    hfArea("pd-sheet-foot", headerFooterText(s, "footer", end, layout.pages), s.footerAlign, end),
-    el("div", "pd-sheet-gap"),
-    hfArea("pd-sheet-head", headerFooterText(s, "header", sh.page, layout.pages), s.headerAlign, sh.page),
-  );
+  const head = (page: number, g: Geometry) => onPaper(hfArea("pd-sheet-head", headerFooterText(s, "header", page, layout.pages), s.headerAlign, page), g, W, g.top);
+  const foot = (page: number, g: Geometry) => onPaper(hfArea("pd-sheet-foot", headerFooterText(s, "footer", page, layout.pages), s.footerAlign, page), g, W, g.bottom);
+  root.append(el("div", "pd-sheet-fill"), foot(end, before), el("div", "pd-sheet-gap"));
+  // An odd or even section that lands on the wrong page leaves a blank page first, with its header and footer.
+  for (let b = 1; b <= sh.blank; b++) {
+    const skip = el("div", "pd-sheet-skip");
+    skip.style.height = `${before.content}px`;
+    root.append(head(end + b, before), skip, foot(end + b, before), el("div", "pd-sheet-gap"));
+  }
+  root.append(head(sh.page, after));
   return root;
 }
 
@@ -440,10 +514,28 @@ function decorations(doc: PMNode, layout: Layout, s: PageSetup): DecorationSet {
     if (k === 0 || offsets[sh.start] == null) return;
     const split = layout.splits[k];
     const at = split ? split.pos : offsets[sh.start]!;
-    const key = ["sheet", k, sh.page, split ? `${split.pos}:${split.left.toFixed(1)}:${split.right.toFixed(1)}` : "", layout.pages, layout.fills[k]!.toFixed(1), s.header, s.footer, s.firstHeader, s.firstFooter, s.differentFirstPage, s.headerAlign, s.footerAlign].join("|");
+    const geo = (x: Geometry) => `${x.width}x${x.height}:${x.top}:${x.bottom}:${x.left}:${x.right}`;
+    const key = ["sheet", k, sh.page, sh.blank, layout.width, geo(layout.geos[k - 1]!), geo(layout.geos[k]!), split ? `${split.pos}:${split.left.toFixed(1)}:${split.right.toFixed(1)}` : "", layout.pages, layout.fills[k]!.toFixed(1), s.header, s.footer, s.firstHeader, s.firstFooter, s.differentFirstPage, s.headerAlign, s.footerAlign].join("|");
     decos.push(Decoration.widget(at, () => sheetBreak(s, layout, k), { side: -1, key, ignoreSelection: true, stopEvent: () => true }));
   });
-  return DecorationSet.create(doc, [...decos, ...tocDecos(doc, layout), ...noteDecos(doc, layout)]);
+  return DecorationSet.create(doc, [...decos, ...shiftDecos(doc, layout), ...tocDecos(doc, layout), ...noteDecos(doc, layout)]);
+}
+
+/**
+ * Blocks of a section whose margins or paper differ from the page area's move to their own text column
+ * (U55): page.css moves them by --sec-dx and sets their right margin to --sec-mr (their own right indent
+ * and the difference in width). Print sets each sheet's margins instead, so it ignores these.
+ */
+function shiftDecos(doc: PMNode, layout: Layout): Decoration[] {
+  const decos: Decoration[] = [];
+  doc.forEach((n, off, i) => {
+    const s = layout.shifts[i];
+    if (!s) return;
+    const l = n.attrs.layout as { right?: number; dir?: string } | null | undefined;
+    const own = l?.dir === "rtl" ? (Number(n.attrs.indent) || 0) * 0.5 : (l?.right ?? 0);
+    decos.push(Decoration.node(off, off + n.nodeSize, { class: "pd-sec-shift", style: `--sec-dx: ${s.dx.toFixed(2)}px; --sec-mr: calc(${own}in + ${s.dw.toFixed(2)}px)` }));
+  });
+  return decos;
 }
 
 /**

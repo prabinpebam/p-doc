@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { digitsFor, paginate, settlePages, sheetsOf, type BlockBox, type Pagination } from "../src/index.ts";
+import { contentToHTML, defaultPage, digitsFor, fromHTML, paginate, sectionIndexAt, sectionsOf, settlePages, sheetsOf, type BlockBox, type Pagination } from "../src/index.ts";
 
 describe("paginate", () => {
   it("keeps blocks that fit on one page", () => {
@@ -30,15 +30,15 @@ describe("paginate", () => {
 
   it("groups blocks into sheets; a sheet a tall block overflows covers several pages", () => {
     expect(sheetsOf(paginate([{ height: 100 }, { height: 1200 }, { height: 100 }], 500))).toEqual([
-      { start: 0, startLine: 0, end: 1, page: 1, span: 1 },
-      { start: 1, startLine: 0, end: 3, page: 2, span: 3 },
+      { start: 0, startLine: 0, end: 1, page: 1, span: 1, blank: 0 },
+      { start: 1, startLine: 0, end: 3, page: 2, span: 3, blank: 0 },
     ]);
     expect(sheetsOf(paginate([{ height: 300 }, { height: 300 }, { height: 300 }], 500))).toEqual([
-      { start: 0, startLine: 0, end: 1, page: 1, span: 1 },
-      { start: 1, startLine: 0, end: 2, page: 2, span: 1 },
-      { start: 2, startLine: 0, end: 3, page: 3, span: 1 },
+      { start: 0, startLine: 0, end: 1, page: 1, span: 1, blank: 0 },
+      { start: 1, startLine: 0, end: 2, page: 2, span: 1, blank: 0 },
+      { start: 2, startLine: 0, end: 3, page: 3, span: 1, blank: 0 },
     ]);
-    expect(sheetsOf(paginate([], 500))).toEqual([{ start: 0, startLine: 0, end: 0, page: 1, span: 1 }]);
+    expect(sheetsOf(paginate([], 500))).toEqual([{ start: 0, startLine: 0, end: 0, page: 1, span: 1, blank: 0 }]);
   });
 
   it("lets text run beside a floated image, and ends the page below it (A9)", () => {
@@ -216,5 +216,69 @@ describe("page numbers settle (A19, 10.6)", () => {
     expect(digitsFor([])).toBe(1);
     expect(digitsFor([3, 9])).toBe(1);
     expect(digitsFor([3, 12, 104])).toBe(3);
+  });
+});
+
+describe("sections (U55, 11.1)", () => {
+  const brk = (start: "next" | "continuous" | "odd" | "even", height: number): BlockBox => ({ height: 0, section: { start, height } });
+
+  it("starts the next section on a new page with its own room for text", () => {
+    // Portrait pages hold 500 px; the landscape section after the break holds 300.
+    const r = paginate([{ height: 100 }, brk("next", 300), { height: 200 }, { height: 200 }], 500);
+    expect(r.pageOf).toEqual([1, 1, 2, 3]);
+    expect(sheetsOf(r).map((s) => [s.start, s.page, s.blank])).toEqual([[0, 1, 0], [2, 2, 0], [3, 3, 0]]);
+  });
+
+  it("adds a blank page before an odd-page section that would start on an even page", () => {
+    const r = paginate([{ height: 100 }, brk("odd", 500), { height: 100 }], 500);
+    expect(r.pageOf).toEqual([1, 1, 3]);
+    expect(r.pages).toBe(3);
+    const sheets = sheetsOf(r);
+    expect(sheets.map((s) => [s.page, s.span, s.blank])).toEqual([[1, 1, 0], [3, 1, 1]]);
+  });
+
+  it("adds no blank page when an even-page section lands on an even page, and one when it doesn't", () => {
+    expect(paginate([{ height: 100 }, brk("even", 500), { height: 100 }], 500).pageOf).toEqual([1, 1, 2]);
+    const r = paginate([{ height: 100 }, { height: 0, pageBreak: true }, { height: 100 }, brk("even", 500), { height: 100 }], 500);
+    expect(r.pageOf).toEqual([1, 1, 2, 2, 4]);
+    expect(r.blanks).toEqual([0, 0, 1]);
+  });
+
+  it("keeps a continuous section on the same page; its room applies from the next page", () => {
+    const r = paginate([{ height: 100 }, brk("continuous", 200), { height: 300 }, { height: 150 }, { height: 100 }], 500);
+    expect(r.pageOf).toEqual([1, 1, 1, 2, 3]);
+  });
+});
+
+describe("sectionsOf (U55)", () => {
+  it("gives each section the geometry of its break, or the one before", () => {
+    const base = defaultPage("en-US");
+    const land = { size: "letter", orientation: "landscape", margins: { top: 1, bottom: 1, left: 0.5, right: 0.5 } };
+    const doc = {
+      type: "doc",
+      content: [
+        { type: "paragraph" },
+        { type: "sectionBreak", attrs: { kind: "next", page: land } },
+        { type: "paragraph" },
+        { type: "sectionBreak", attrs: { kind: "continuous", page: null } },
+        { type: "paragraph" },
+        { type: "sectionBreak", attrs: { kind: "bogus", page: { size: "huge" } } },
+      ],
+    };
+    const s = sectionsOf(doc, base);
+    expect(s.map((x) => [x.from, x.breakAt, x.start, x.page.orientation, x.page.margins.left])).toEqual([
+      [0, null, "next", "portrait", 1],
+      [2, 1, "next", "landscape", 0.5],
+      [4, 3, "continuous", "landscape", 0.5],
+      [6, 5, "next", "landscape", 0.5],
+    ]);
+    expect([0, 1, 2, 3, 4, 6].map((i) => sectionIndexAt(s, i))).toEqual([0, 0, 1, 1, 2, 3]);
+  });
+
+  it("round-trips a section break through HTML", () => {
+    const land = { size: "a4", orientation: "landscape", margins: { top: 1, bottom: 1, left: 1, right: 1 } };
+    const json = { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "A" }] }, { type: "sectionBreak", attrs: { kind: "odd", page: land } }, { type: "paragraph", content: [{ type: "text", text: "B" }] }] };
+    const back = fromHTML(contentToHTML(json));
+    expect(back.content?.[1]).toEqual({ type: "sectionBreak", attrs: { kind: "odd", page: land } });
   });
 });

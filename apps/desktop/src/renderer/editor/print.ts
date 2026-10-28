@@ -8,7 +8,7 @@ import { CSS_PX_PER_INCH, headerFooterText, styleCss, type PDocFile } from "@p-d
 import type { PrintRequest } from "../../shared/api.ts";
 import tokensCss from "@p-doc/tokens/tokens.css?inline";
 import pageCss from "../styles/page.css?inline";
-import { geometry, layoutNow, noteRest, type Layout } from "./pages.ts";
+import { geometry, layoutNow, noteRest, type Geometry, type Layout } from "./pages.ts";
 
 // The editor's own state: selection, find highlights, the empty-document placeholder.
 const EDITOR_ONLY = ["ProseMirror-selectednode", "selectedCell", "pd-match", "pd-match-current", "has-focus", "is-empty", "is-editor-empty", "is-cropping", "is-resizing", "pd-np-space"];
@@ -144,20 +144,32 @@ export function printDocument(doc: PDocFile, view: EditorView): PrintDoc {
   let body: string;
   let at: string;
   let margins: PrintRequest["margins"];
+  let cssPages = false;
   if (layout) {
-    at = `@page { size: ${g.width}px ${g.height}px; margin: 0 }`;
-    margins = { top: 0, bottom: 0, left: 0, right: 0 };
+    // Each sheet prints on its section's paper (U55, A12): one named page per paper size.
+    const names = new Map<string, string>();
+    const nameOf = (x: Geometry) => {
+      const key = `${x.width}px ${x.height}px`;
+      if (!names.has(key)) names.set(key, `p${names.size}`);
+      return names.get(key)!;
+    };
+    const sheet = (x: Geometry, span: number, first: number, content: string) =>
+      `<section class="print-sheet" style="--sheet-height: ${span * x.height}px; --page-width: ${x.width}px; --page-pad-top: ${x.top}px; --page-pad-bottom: ${x.bottom}px; --page-pad-left: ${x.left}px; --page-pad-right: ${x.right}px; page: ${nameOf(x)}">${hf("print-head", "header", headerFooterText(p, "header", first, layout.pages), p.headerAlign)}<div class="pd-content">${content}</div>${hf("print-foot", "footer", headerFooterText(p, "footer", first + span - 1, layout.pages), p.footerAlign)}</section>`;
     body = layout.sheets
       .map((sh, k) => {
-        const last = sh.page + sh.span - 1;
-        return `<section class="print-sheet" style="--sheet-height: ${sh.span * g.height}px">${hf("print-head", "header", headerFooterText(p, "header", sh.page, layout.pages), p.headerAlign)}<div class="pd-content">${Array.from({ length: sh.end - sh.start }, (_, j) => part(sh.start + j)).join("")}${sheetNotes(view, layout, k)}</div>${hf("print-foot", "footer", headerFooterText(p, "footer", last, layout.pages), p.footerAlign)}</section>`;
+        // A blank page before an odd or even section has the paper of the page before it.
+        const blanks = Array.from({ length: sh.blank }, (_, b) => sheet(layout.geos[k - 1]!, 1, sh.page - sh.blank + b, "")).join("");
+        return blanks + sheet(layout.geos[k]!, sh.span, sh.page, `${Array.from({ length: sh.end - sh.start }, (_, j) => part(sh.start + j)).join("")}${sheetNotes(view, layout, k)}`);
       })
       .join("");
+    at = [`@page { size: ${g.width}px ${g.height}px; margin: 0 }`, ...[...names].map(([size, name]) => `@page ${name} { size: ${size}; margin: 0 }`)].join("\n");
+    cssPages = names.size > 1;
+    margins = { top: 0, bottom: 0, left: 0, right: 0 };
   } else {
     at = `@page { size: ${g.width}px ${g.height}px; margin: ${g.top}px ${g.right}px ${g.bottom}px ${g.left}px }`;
     margins = { top: inch(g.top), bottom: inch(g.bottom), left: inch(g.left), right: inch(g.right) };
     body = `<section class="print-flow"><div class="pd-content">${blocks.map((b) => b.join("")).join("")}</div></section>`;
   }
   const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:"><title>${esc(doc.title)}</title><style>${tokensCss}\n${pageCss}\n${styleCss(doc.styles, ".print-doc .pd-content")}\n${at}</style></head><body class="print-body"><main class="print-doc${layout ? " paged" : ""}" style="${vars}">${body}</main></body></html>`;
-  return { request: { html, title: doc.title, size: { width: inch(g.width), height: inch(g.height) }, margins }, pages: layout?.pages ?? null };
+  return { request: { html, title: doc.title, size: { width: inch(g.width), height: inch(g.height) }, margins, ...(cssPages ? { cssPages } : {}) }, pages: layout?.pages ?? null };
 }

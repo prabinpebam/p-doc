@@ -20,11 +20,17 @@ import { ImageBar } from "./ImageBar.tsx";
 import { Ruler } from "./Ruler.tsx";
 
 /** The first page's header and the last page's footer; the ones between are drawn by sheet breaks. */
-function HfOverlay({ cls, which, page, pages }: { cls: string; which: "header" | "footer"; page: number; pages: number }) {
+function HfOverlay({ cls, which, page, layout }: { cls: string; which: "header" | "footer"; page: number; layout: Layout }) {
   const p = app.use((s) => s.doc?.page);
   if (!p) return null;
+  const pages = layout.pages;
+  // On its sheet's paper (U55): the first sheet's header, the last sheet's footer.
+  const paper = which === "header" ? layout.papers[0] : layout.papers[layout.papers.length - 1];
+  const style: CSSProperties | undefined = paper
+    ? { height: which === "header" ? paper.g.top : paper.g.bottom, paddingLeft: paper.left + paper.g.left, paddingRight: layout.width - paper.left - paper.g.width + paper.g.right }
+    : undefined;
   return (
-    <div className={`${cls} pd-hf`} data-hf={which} data-page={page} data-align={which === "header" ? p.headerAlign : p.footerAlign}>
+    <div className={`${cls} pd-hf`} style={style} data-hf={which} data-page={page} data-align={which === "header" ? p.headerAlign : p.footerAlign}>
       <span className="pd-hf-text">{headerFooterText(p, which, page, pages)}</span>
     </div>
   );
@@ -146,9 +152,8 @@ function pageStyle(doc: PDocFile, layout: Layout | null): CSSProperties {
   const pageless = p.mode === "pageless";
   const tw = TEXT_WIDTH[p.textWidth];
   const g = geometry(p);
-  const span = layout ? layout.sheets.reduce((n, s) => n + s.span, 0) : 1;
   return {
-    "--page-width": pageless ? (tw ? `${tw + 2 * CSS_PX_PER_INCH * 0.5}px` : "100%") : `${g.width}px`,
+    "--page-width": pageless ? (tw ? `${tw + 2 * CSS_PX_PER_INCH * 0.5}px` : "100%") : `${layout?.width ?? g.width}px`,
     "--page-height": pageless ? "auto" : `${g.height}px`,
     "--page-pad-top": pageless ? px(0.5) : `${g.top}px`,
     "--page-pad-bottom": pageless ? px(0.5) : `${g.bottom}px`,
@@ -156,8 +161,7 @@ function pageStyle(doc: PDocFile, layout: Layout | null): CSSProperties {
     "--page-pad-right": pageless ? px(0.5) : `${g.right}px`,
     "--page-color": p.color,
     "--doc-font": doc.styles.normal.fontFamily,
-    "--sheets": layout?.sheets.length ?? 1,
-    "--fill-height": `${span * g.content}px`,
+    "--paged-height": `${layout?.height ?? g.height}px`,
   } as CSSProperties;
 }
 
@@ -205,7 +209,7 @@ export function PageArea() {
         <style>{reviewCss(doc.comments, active)}</style>
         <div className="page-stack" style={{ zoom: zoom / 100 }}>
           <article
-            className={`page${paged ? " paged" : " pageless"} markup-${markup}`}
+            className={`page${paged ? " paged" : " pageless"}${shown ? " has-sheets" : ""} markup-${markup}`}
             style={pageStyle(doc, shown)}
             data-testid="page"
             data-pages={shown?.pages}
@@ -216,9 +220,17 @@ export function PageArea() {
               }
             }}
           >
-            {shown && <HfOverlay cls="page-head" which="header" page={1} pages={shown.pages} />}
+            {shown?.papers.map((x, k) => (
+              <div
+                key={k}
+                className={`pd-sheet-bg${x.blank ? " pd-sheet-blank" : ""}`}
+                aria-hidden="true"
+                style={{ top: x.top, left: x.left, width: x.g.width, height: x.span * x.g.content + x.g.top + x.g.bottom }}
+              />
+            ))}
+            {shown && <HfOverlay cls="page-head" which="header" page={1} layout={shown} />}
             <DocEditor key={session} doc={doc} />
-            {shown && <HfOverlay cls="page-foot" which="footer" page={shown.pages} pages={shown.pages} />}
+            {shown && <HfOverlay cls="page-foot" which="footer" page={shown.pages} layout={shown} />}
           </article>
         </div>
       </div>

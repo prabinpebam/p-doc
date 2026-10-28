@@ -45,7 +45,30 @@
 .page.paged {
   position: relative;
   max-width: none;
-  min-height: calc(var(--fill-height) + var(--sheets) * (var(--page-pad-top) + var(--page-pad-bottom)) + (var(--sheets) - 1) * var(--c-page-gap));
+  min-height: var(--paged-height);
+}
+
+/*
+ * Laid out, each sheet's paper is drawn behind the text at its own size (U55): the page area is as wide as
+ * the widest, and a section with other paper or margins moves its blocks to its own text column.
+ */
+.page.paged.has-sheets {
+  background: transparent;
+  box-shadow: none;
+  isolation: isolate;
+}
+
+.pd-sheet-bg {
+  position: absolute;
+  z-index: -1;
+  background: var(--page-color, var(--color-page));
+  box-shadow: var(--shadow-page);
+  pointer-events: none;
+}
+
+.page.paged .pd-content > .pd-sec-shift {
+  translate: var(--sec-dx) 0;
+  margin-right: var(--sec-mr) !important;
 }
 
 .pd-sheet-break {
@@ -541,6 +564,61 @@
   border: 0;
 }
 
+/* A section break (U55): a labelled line drawn over the text; it takes no room, so the pages are the ones that print. */
+.pd-section-break {
+  position: relative;
+  height: 0;
+  margin: 0;
+  cursor: default;
+}
+
+.pageless .pd-section-break {
+  margin: var(--doc-gap) 0;
+}
+
+.pd-section-break::before {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  border-top: var(--border-hairline) dashed var(--color-page-muted);
+}
+
+.pd-section-break::after {
+  content: attr(data-label);
+  position: absolute;
+  inset-inline-start: 50%;
+  top: 0;
+  transform: translate(-50%, -50%);
+  padding: 0 var(--space-1);
+  background: var(--page-color, var(--color-page));
+  color: var(--color-page-muted);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  font-style: normal;
+  font-weight: 400;
+  line-height: var(--leading-ui);
+  white-space: nowrap;
+}
+
+.pd-section-break.ProseMirror-selectednode::after {
+  outline: var(--border-focus) solid var(--color-focus);
+}
+
+.print-doc .pd-section-break {
+  margin: 0;
+}
+
+.print-doc .pd-section-break::before,
+.print-doc .pd-section-break::after {
+  display: none;
+}
+
+/* Pageless prints one flow: a section that starts a page still does. */
+.print-flow .pd-section-break:not([data-kind="continuous"]) {
+  break-after: page;
+}
+
 .pd-toc {
   margin: var(--doc-gap) 0;
 }
@@ -771,6 +849,7 @@
 .print-sheet {
   display: flex;
   flex-direction: column;
+  width: var(--page-width);
   height: var(--sheet-height);
   overflow: hidden;
   break-after: page;

@@ -263,6 +263,10 @@ function blocks(nodes: JSONContent[] | undefined, ctx: Ctx, list?: { ref: string
       case "pageBreak":
         out.push(new Paragraph({ children: [new PageBreak()] }));
         break;
+      case "sectionBreak":
+        // Until sections are written as Word's own (11.3), one that starts a page keeps the page.
+        if (n.attrs?.kind !== "continuous") out.push(new Paragraph({ children: [new PageBreak()] }));
+        break;
       case "notes":
         // Written as Word's own footnotes and endnotes (see toDocx).
         break;

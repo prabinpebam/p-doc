@@ -21,6 +21,7 @@ function check(r: PrintRequest): PrintRequest {
   if (!n(r.size?.width, 1, 50) || !n(r.size?.height, 1, 50)) throw new Error("Unknown page size");
   const m = r.margins;
   if (!m || ![m.top, m.bottom, m.left, m.right].every((v) => n(v, 0, 10))) throw new Error("Unknown margins");
+  if (r.cssPages != null && typeof r.cssPages !== "boolean") throw new Error("Unknown page sizes");
   return r;
 }
 
@@ -103,7 +104,7 @@ export async function savePdf(parent: BrowserWindow | null, req: PrintRequest, l
       pageSize: { width: r.size.width, height: r.size.height },
       margins: { top: r.margins.top, bottom: r.margins.bottom, left: r.margins.left, right: r.margins.right },
       printBackground: true,
-      preferCSSPageSize: false,
+      preferCSSPageSize: r.cssPages === true,
       generateDocumentOutline: false,
     }),
   );
@@ -124,7 +125,8 @@ export async function printDocument(req: PrintRequest, library: Library): Promis
         {
           silent: false,
           printBackground: true,
-          pageSize: { width: microns(r.size.width), height: microns(r.size.height) },
+          // Sections with their own paper: Chromium takes each sheet's size from its CSS.
+          ...(r.cssPages ? {} : { pageSize: { width: microns(r.size.width), height: microns(r.size.height) } }),
           margins: { marginType: "custom", top: px(r.margins.top), bottom: px(r.margins.bottom), left: px(r.margins.left), right: px(r.margins.right) },
         },
         (ok) => resolve(ok),

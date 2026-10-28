@@ -223,12 +223,12 @@ A person can make demanding layouts: sections with their own page setup, columns
 
 | # | Done when | Evidence | Result |
 |---|---|---|---|
-| 11.1 | Section breaks of every kind start where they say; orientation, paper and margins per section show on screen and in the PDF (U55, A12) | e2e `sections`; unit `paginate` | |
+| 11.1 | Section breaks of every kind start where they say; orientation, paper and margins per section show on screen and in the PDF (U55, A12) | e2e `sections`; unit `paginate` | **Pass** 2026-10-28: e2e `sections` 11.1 (Insert > Break ▸ next page, even page and continuous; Page setup Apply to This section, one Undo step; sheets 816 and 1056 px; a blank page before the even section; PDF pages 612×792, 792×612 ×3, page 3 blank, text from 72 pt and 36 pt, past 700 pt on the landscape page); unit `paginate` 6 section tests (odd and even blanks, continuous, each section's page height) |
 | 11.2 | Columns (1–3, spacing, line between, column break) fill and balance the same on screen and in the PDF (U56, A13; balancing needs A10) | e2e `sections` columns fixture | |
 | 11.3 | Odd and even headers, per-section headers with Link to previous, number formats and start at, on screen, in the PDF and in .docx (U57) | e2e `sections`; unit `export-docx` | |
 | 11.4 | Text and picture watermarks show behind every page and print (U58) | e2e `sections` | |
 | 11.5 | Line numbers, offline hyphenation and drop caps show and print (U59, A14) | e2e `sections` with the network off | |
-| 11.6 | Pageless keeps every section setting and shows one flow (U13) | e2e `sections` | |
+| 11.6 | Pageless keeps every section setting and shows one flow (U13) | e2e `sections` | **Pass** 2026-10-28: e2e `sections` (Pageless: no sheets, the three breaks still marked, one width; back to Pages the landscape section and Page 4 of 4 return) |
 | 11.7 | Repagination with sections and columns stays ≤ 16 ms on 50 pages (§7) | `pnpm perf` | |
 
 ### Stage 12: Tables, code and equations
