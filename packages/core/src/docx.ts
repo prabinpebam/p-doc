@@ -38,6 +38,7 @@ import {
   TextRun,
   TextWrappingSide,
   TextWrappingType,
+  VerticalAlign,
   VerticalPositionRelativeFrom,
   WidthType,
   type IParagraphOptions,
@@ -326,6 +327,12 @@ function blocks(nodes: JSONContent[] | undefined, ctx: Ctx, list?: { ref: string
         break;
       }
       case "table": {
+        // Widths dragged or distributed (px at 96 per inch) go to Word in twips; without them the table fills the line.
+        const widths = (n.content?.[0]?.content ?? []).flatMap((c) => {
+          const w = c.attrs?.colwidth as number[] | null | undefined;
+          return Array.from({ length: Number(c.attrs?.colspan ?? 1) }, (_, i) => w?.[i] ?? 0);
+        });
+        const fixed = widths.length > 0 && widths.every((w) => w > 0);
         const rows = (n.content ?? []).map(
           (r) =>
             new TableRow({
@@ -335,12 +342,20 @@ function blocks(nodes: JSONContent[] | undefined, ctx: Ctx, list?: { ref: string
                   new TableCell({
                     columnSpan: Number(c.attrs?.colspan ?? 1) > 1 ? Number(c.attrs?.colspan) : undefined,
                     rowSpan: Number(c.attrs?.rowspan ?? 1) > 1 ? Number(c.attrs?.rowspan) : undefined,
+                    width: fixed && c.attrs?.colwidth ? { size: (c.attrs.colwidth as number[]).reduce((a, b) => a + b, 0) * 15, type: WidthType.DXA } : undefined,
+                    shading: c.attrs?.background ? { fill: hex(c.attrs.background as string), type: ShadingType.CLEAR, color: "auto" } : undefined,
+                    verticalAlign: c.attrs?.valign === "middle" ? VerticalAlign.CENTER : c.attrs?.valign === "bottom" ? VerticalAlign.BOTTOM : undefined,
                     children: blocks(c.content, ctx).filter((b): b is Paragraph => b instanceof Paragraph).concat([]) as Paragraph[],
                   }),
               ),
             }),
         );
-        if (rows.length) out.push(new Table({ rows, width: { size: 100, type: WidthType.PERCENTAGE } }));
+        if (rows.length)
+          out.push(
+            fixed
+              ? new Table({ rows, columnWidths: widths.map((w) => w * 15), width: { size: widths.reduce((a, b) => a + b, 0) * 15, type: WidthType.DXA } })
+              : new Table({ rows, width: { size: 100, type: WidthType.PERCENTAGE } }),
+          );
         break;
       }
       default:

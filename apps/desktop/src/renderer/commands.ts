@@ -10,6 +10,7 @@ import { applyStyle, clearBlockDirectFormatting, currentStyle, indent, insertAto
 import { endCrop, imageUi, selectedImage, startCrop } from "./editor/image.ts";
 import { convertNote, insertNote, noteAt } from "./editor/notes.ts";
 import { contentsAt } from "./editor/refs.ts";
+import { cellAttr, distributeColumns, hasHeaderRow, SHADES } from "./editor/tables.ts";
 import { copyDoc, deleteDoc } from "./ops.ts";
 import { downloadAs, downloadPdf, openFromFile, printDoc } from "./output.ts";
 import { flush, getEditor, newDoc, syncSelection, updateDoc } from "./session.ts";
@@ -406,6 +407,36 @@ const commands: Command[] = [
       ["table.delete", "Delete table", (c) => c.deleteTable()],
     ] as [string, string, (c: ReturnType<Editor["chain"]>) => ReturnType<Editor["chain"]>][]
   ).map(([id, label, fn]): Command => ({ id, label, keywords: "table", run: chain(fn), enabled: () => canEdit() && !!ed()?.isActive("table") })),
+  { id: "table.merge", label: "Merge cells", keywords: "table join combine", run: chain((c) => c.mergeCells()), enabled: () => canEdit() && !!ed()?.can().mergeCells() },
+  { id: "table.split", label: "Split cell", keywords: "table unmerge", run: chain((c) => c.splitCell()), enabled: () => canEdit() && !!ed()?.can().splitCell() },
+  { id: "table.headerRow", label: "Header row", keywords: "table heading repeat title row", run: chain((c) => c.toggleHeaderRow()), checked: () => !!ed() && hasHeaderRow(ed()!), enabled: () => canEdit() && !!ed()?.isActive("table") },
+  { id: "table.distribute", label: "Distribute columns", keywords: "table equal even column widths", run: withEditor((e) => void distributeColumns(e)), enabled: () => canEdit() && !!ed()?.isActive("table") },
+  ...[["", "No shading"] as [string, string], ...SHADES.map(([label, c]): [string, string] => [c, label])].map(
+    ([c, label]): Command => ({
+      id: `table.shade.${c ? label.toLowerCase().replace(/ /g, "-") : "none"}`,
+      label,
+      keywords: "table cell shading background fill colour color",
+      run: chain((ch) => ch.setCellAttribute("background", c || null)),
+      checked: () => !!ed() && (cellAttr(ed()!, "background") ?? "") === c,
+      enabled: () => canEdit() && !!ed()?.isActive("table"),
+    }),
+  ),
+  ...(
+    [
+      ["", "Top"],
+      ["middle", "Middle"],
+      ["bottom", "Bottom"],
+    ] as [string, string][]
+  ).map(
+    ([v, label]): Command => ({
+      id: `table.valign.${label.toLowerCase()}`,
+      label,
+      keywords: "table cell vertical alignment",
+      run: chain((ch) => ch.setCellAttribute("valign", v || null)),
+      checked: () => !!ed() && (cellAttr(ed()!, "valign") ?? "") === v,
+      enabled: () => canEdit() && !!ed()?.isActive("table"),
+    }),
+  ),
 
   // Format > Image (U40)
   ...(
@@ -605,7 +636,26 @@ export const MENUS: Menu[] = [
       { label: "Indent", items: ["indent.more", "indent.less"] },
       { label: "Line spacing", items: [...LINE_SPACINGS.map(([, v]) => `spacing.${v}`), "-", "spacing.before", "spacing.after"] },
       { label: "Lists", items: ["list.bullets", "list.numbers", "list.checklist"] },
-      { label: "Table", items: ["table.rowAbove", "table.rowBelow", "table.colLeft", "table.colRight", "-", "table.deleteRow", "table.deleteCol", "table.delete"] },
+      {
+        label: "Table",
+        items: [
+          "table.rowAbove",
+          "table.rowBelow",
+          "table.colLeft",
+          "table.colRight",
+          "-",
+          "table.merge",
+          "table.split",
+          "table.headerRow",
+          "table.distribute",
+          { label: "Cell shading", items: ["table.shade.none", ...SHADES.map(([l]) => `table.shade.${l.toLowerCase().replace(/ /g, "-")}`)] },
+          { label: "Vertical alignment", items: ["table.valign.top", "table.valign.middle", "table.valign.bottom"] },
+          "-",
+          "table.deleteRow",
+          "table.deleteCol",
+          "table.delete",
+        ],
+      },
       {
         label: "Image",
         items: ["image.inline", "image.wrapLeft", "image.wrapRight", "-", "image.alignLeft", "image.alignCenter", "image.alignRight", "-", "image.crop", "image.resetCrop", "image.resetSize", "-", "image.replace", "image.alt", "image.options"],

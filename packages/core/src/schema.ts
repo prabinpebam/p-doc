@@ -20,6 +20,47 @@ import { Bookmark } from "./refs.ts";
 
 export const TEXTBLOCKS = ["paragraph", "heading"] as const;
 
+const VALIGN = ["middle", "bottom"];
+/** A table cell's shading and vertical alignment (U60); widths are the table's own `colwidth`. */
+export const CellFormat = Extension.create({
+  name: "cellFormat",
+  addGlobalAttributes() {
+    return [
+      {
+        types: ["tableCell", "tableHeader"],
+        attributes: {
+          background: {
+            default: null,
+            parseHTML: (el: HTMLElement) => {
+              const c = el.style.backgroundColor || el.getAttribute("data-background");
+              return c ? colourHex(c) : null;
+            },
+            renderHTML: (a: Record<string, unknown>) => (a.background ? { style: `background-color: ${a.background}` } : {}),
+          },
+          valign: {
+            default: null,
+            parseHTML: (el: HTMLElement) => {
+              const v = el.style.verticalAlign || el.getAttribute("valign") || "";
+              return VALIGN.includes(v) ? v : null;
+            },
+            renderHTML: (a: Record<string, unknown>) => (a.valign ? { style: `vertical-align: ${a.valign}` } : {}),
+          },
+        },
+      },
+    ];
+  },
+});
+
+/** `rgb(…)` (how a browser reports a colour) or `#rgb` as `#rrggbb`. */
+function colourHex(c: string): string | null {
+  const rgb = c.match(/^rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)/i);
+  if (rgb) return "#" + rgb.slice(1, 4).map((n) => Number(n).toString(16).padStart(2, "0")).join("");
+  const h = c.trim().match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+  if (!h) return null;
+  const v = h[1]!.length === 3 ? [...h[1]!].map((x) => x + x).join("") : h[1]!;
+  return "#" + v.toLowerCase();
+}
+
 /** Paragraph-level formatting and identity carried by paragraphs and headings. */
 export const BlockFormat = Extension.create({
   name: "blockFormat",
@@ -232,7 +273,8 @@ export function extensions(options: SchemaOptions = {}): AnyExtension[] {
     Superscript,
     Tab,
     options.image ?? (options.resolveImage ? PImage.configure({ resolve: options.resolveImage }) : PImage),
-    TableKit.configure({ table: { resizable: false } }),
+    TableKit.configure({ table: { resizable: true, cellMinWidth: 32 } }),
+    CellFormat,
     TaskList,
     TaskItem.configure({ nested: true }),
     BlockFormat,

@@ -34,6 +34,12 @@ function screenSheets(page: Page) {
       const s = getComputedStyle(el);
       return { top: r.top - parseFloat(s.marginTop) * scale, bottom: r.bottom + parseFloat(s.marginBottom) * scale };
     };
+    // A block's text as printed: without what shows only on screen (a code block's language picker).
+    const text = (el: Element) => {
+      const c = el.cloneNode(true) as Element;
+      c.querySelectorAll(".pd-code-lang").forEach((x) => x.remove());
+      return (c.textContent ?? "").slice(0, 40);
+    };
     const blockAfter = (el: Element | null) => {
       while (el && el.classList.contains("pd-sheet-break")) el = el.nextElementSibling;
       return el;
@@ -47,7 +53,7 @@ function screenSheets(page: Page) {
     for (const k of root.querySelectorAll<HTMLElement>(".pd-sheet-break")) {
       const end = Number(k.dataset.pageEnd);
       const o = outer(first);
-      sheets.push({ first: split ? "(continued)" : (first.textContent ?? "").slice(0, 40), extent: (k.querySelector(".pd-sheet-fill")!.getBoundingClientRect().top - start) / scale, span: end - pageNo + 1, firstHeight: (o.bottom - o.top) / scale, afterBreak, split });
+      sheets.push({ first: split ? "(continued)" : text(first), extent: (k.querySelector(".pd-sheet-fill")!.getBoundingClientRect().top - start) / scale, span: end - pageNo + 1, firstHeight: (o.bottom - o.top) / scale, afterBreak, split });
       const inside = k.parentElement !== root;
       afterBreak = !inside && !!k.previousElementSibling?.classList.contains("pd-page-break");
       start = k.getBoundingClientRect().bottom;
@@ -57,7 +63,7 @@ function screenSheets(page: Page) {
     }
     const last = [...root.children].filter((c) => !c.classList.contains("pd-sheet-break")).at(-1)!;
     const o = outer(first);
-    sheets.push({ first: split ? "(continued)" : (first.textContent ?? "").slice(0, 40), extent: (outer(last).bottom - start) / scale, span: pages - pageNo + 1, firstHeight: (o.bottom - o.top) / scale, afterBreak, split });
+    sheets.push({ first: split ? "(continued)" : text(first), extent: (outer(last).bottom - start) / scale, span: pages - pageNo + 1, firstHeight: (o.bottom - o.top) / scale, afterBreak, split });
     return { pages, content, sheets };
   });
 }
