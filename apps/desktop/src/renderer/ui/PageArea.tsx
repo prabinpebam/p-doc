@@ -2,7 +2,7 @@
 import { useEffect, type CSSProperties } from "react";
 import { getSchema } from "@tiptap/core";
 import { EditorContent, useEditor } from "@tiptap/react";
-import { FORMAT_VERSION, headerFooterText, knownContent, styleCss, TEXT_WIDTH, CSS_PX_PER_INCH, type PDocFile } from "@p-doc/core";
+import { FORMAT_VERSION, knownContent, styleCss, TEXT_WIDTH, CSS_PX_PER_INCH, type PDocFile } from "@p-doc/core";
 import { editorExtensions } from "../editor/setup.ts";
 import { insertImageFiles, replaceImageFile, selectedImage, type ImageHost } from "../editor/image.ts";
 import { jumpToBlock } from "../editor/blocks.ts";
@@ -23,7 +23,6 @@ import { Ruler } from "./Ruler.tsx";
 function HfOverlay({ cls, which, page, layout }: { cls: string; which: "header" | "footer"; page: number; layout: Layout }) {
   const p = app.use((s) => s.doc?.page);
   if (!p) return null;
-  const pages = layout.pages;
   // On its sheet's paper (U55): the first sheet's header, the last sheet's footer.
   const paper = which === "header" ? layout.papers[0] : layout.papers[layout.papers.length - 1];
   const style: CSSProperties | undefined = paper
@@ -31,7 +30,7 @@ function HfOverlay({ cls, which, page, layout }: { cls: string; which: "header" 
     : undefined;
   return (
     <div className={`${cls} pd-hf`} style={style} data-hf={which} data-page={page} data-align={which === "header" ? p.headerAlign : p.footerAlign}>
-      <span className="pd-hf-text">{headerFooterText(p, which, page, pages)}</span>
+      <span className="pd-hf-text">{layout.faces[page - 1]?.[which] ?? ""}</span>
     </div>
   );
 }

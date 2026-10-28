@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { contentToHTML, defaultPage, digitsFor, fromHTML, paginate, sectionIndexAt, sectionsOf, settlePages, sheetsOf, type BlockBox, type Pagination } from "../src/index.ts";
+import { contentToHTML, defaultPage, digitsFor, fromHTML, headerFooterText, pageFaces, pageNumberText, paginate, sectionIndexAt, sectionsOf, settlePages, sheetsOf, type BlockBox, type Pagination } from "../src/index.ts";
 
 describe("paginate", () => {
   it("keeps blocks that fit on one page", () => {
@@ -277,8 +277,46 @@ describe("sectionsOf (U55)", () => {
 
   it("round-trips a section break through HTML", () => {
     const land = { size: "a4", orientation: "landscape", margins: { top: 1, bottom: 1, left: 1, right: 1 } };
-    const json = { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "A" }] }, { type: "sectionBreak", attrs: { kind: "odd", page: land } }, { type: "paragraph", content: [{ type: "text", text: "B" }] }] };
+    const hf = { header: "H {page}", footer: "F", firstHeader: "", firstFooter: "", evenHeader: "E", evenFooter: "" };
+    const numbering = { format: "I", start: 4 };
+    const json = { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "A" }] }, { type: "sectionBreak", attrs: { kind: "odd", page: land, hf, numbering } }, { type: "paragraph", content: [{ type: "text", text: "B" }] }] };
     const back = fromHTML(contentToHTML(json));
-    expect(back.content?.[1]).toEqual({ type: "sectionBreak", attrs: { kind: "odd", page: land } });
+    expect(back.content?.[1]).toEqual({ type: "sectionBreak", attrs: { kind: "odd", page: land, hf, numbering } });
+  });
+});
+
+describe("page faces (11.3)", () => {
+  it("writes numbers as 1, i, I, a, A", () => {
+    expect([1, 4, 9, 14, 2024].map((n) => pageNumberText(n, "i"))).toEqual(["i", "iv", "ix", "xiv", "mmxxiv"]);
+    expect(pageNumberText(4, "I")).toBe("IV");
+    expect([1, 26, 27, 28].map((n) => pageNumberText(n, "a"))).toEqual(["a", "z", "aa", "bb"]);
+    expect(pageNumberText(3, "A")).toBe("C");
+    expect(pageNumberText(0, "i")).toBe("0");
+  });
+
+  it("gives even pages their own header, the first page its own, and numbers from a start", () => {
+    const base = { ...defaultPage(), header: "Odd {page}", evenHeader: "Even {page}", differentOddEven: true, differentFirstPage: true, firstHeader: "Cover", numStart: 5 };
+    expect([1, 2, 3].map((n) => headerFooterText(base, "header", n, 3))).toEqual(["Cover", "Even 6", "Odd 7"]);
+  });
+
+  it("numbers sections on or from their own start and format; a linked section shows the one before's headers", () => {
+    const base = { ...defaultPage(), header: "Main {page} of {pages}", footer: "f" };
+    const doc = {
+      type: "doc",
+      content: [
+        { type: "paragraph" },
+        { type: "sectionBreak", attrs: { kind: "next", numbering: { format: "i", start: 1 } } },
+        { type: "paragraph" },
+        { type: "sectionBreak", attrs: { kind: "next", hf: { header: "Annex {page}", footer: "", firstHeader: "", firstFooter: "", evenHeader: "", evenFooter: "" } } },
+        { type: "paragraph" },
+        { type: "sectionBreak", attrs: { kind: "next", numbering: { format: "1", start: null } } },
+        { type: "paragraph" },
+      ],
+    };
+    const secs = sectionsOf(doc, base);
+    expect(secs.map((s) => s.ownHf)).toEqual([true, false, true, false]);
+    const faces = pageFaces(base, secs, [0, 0, 1, 1, 2, 3]);
+    expect(faces.map((f) => f.label)).toEqual(["1", "2", "i", "ii", "iii", "4"]);
+    expect(faces.map((f) => f.header)).toEqual(["Main 1 of 6", "Main 2 of 6", "Main i of 6", "Main ii of 6", "Annex iii", "Annex 4"]);
   });
 });

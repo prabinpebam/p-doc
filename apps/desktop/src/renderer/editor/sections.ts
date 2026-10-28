@@ -2,7 +2,7 @@
 import type { Editor } from "@tiptap/core";
 import { closeHistory } from "@tiptap/pm/history";
 import type { EditorState, Transaction } from "@tiptap/pm/state";
-import { sectionIndexAt, sectionPageOf, sectionsOf, type PageSetup, type Section, type SectionPage, type SectionStart } from "@p-doc/core";
+import { sectionIndexAt, sectionPageOf, sectionsOf, type HfTexts, type PageSetup, type Section, type SectionNumbering, type SectionPage, type SectionStart } from "@p-doc/core";
 
 /** The document's sections and the index of the one the cursor is in. */
 export function sectionAtCursor(state: EditorState, base: PageSetup): { sections: Section[]; index: number } {
@@ -53,4 +53,17 @@ export function clearSectionPages(editor: Editor): void {
     if (n.type.name === "sectionBreak" && n.attrs.page) tr.setNodeMarkup(off, undefined, { ...n.attrs, page: null });
   });
   if (tr.docChanged) editor.view.dispatch(tr);
+}
+
+/**
+ * Section `k`'s (k > 0) own headers and footers (null: linked to the previous section's) and page
+ * numbers (null: the previous section's format, continuing its numbers) (U57).
+ */
+export function setSectionHf(editor: Editor, sections: Section[], k: number, hf: HfTexts | null, numbering: SectionNumbering | null): void {
+  const at = sections[k]?.breakAt;
+  if (at == null) return;
+  const pos = offsets(editor.state)[at]!;
+  const node = editor.state.doc.nodeAt(pos);
+  if (!node || (JSON.stringify(node.attrs.hf) === JSON.stringify(hf) && JSON.stringify(node.attrs.numbering) === JSON.stringify(numbering))) return;
+  editor.view.dispatch(closeHistory(editor.state.tr.setNodeMarkup(pos, undefined, { ...node.attrs, hf, numbering })));
 }

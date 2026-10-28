@@ -21,7 +21,9 @@ import {
   LevelFormat,
   LineRuleType,
   PageBreak,
+  NumberFormat,
   PageNumber,
+  SectionType,
   PageOrientation,
   Packer,
   Paragraph,
@@ -40,7 +42,8 @@ import {
   type ParagraphChild,
 } from "docx";
 import mammoth from "mammoth";
-import { PAPER, type PDocFile, type StyleDef } from "./format.ts";
+import { PAPER, type HfAlign, type HfTexts, type NumFormat, type PDocFile, type StyleDef } from "./format.ts";
+import { sectionsOf, type SectionStart } from "./sections.ts";
 import { fromHTML } from "./convert.ts";
 import { nodeText } from "./outline.ts";
 import { notesListOf } from "./notes.ts";
@@ -264,8 +267,7 @@ function blocks(nodes: JSONContent[] | undefined, ctx: Ctx, list?: { ref: string
         out.push(new Paragraph({ children: [new PageBreak()] }));
         break;
       case "sectionBreak":
-        // Until sections are written as Word's own (11.3), one that starts a page keeps the page.
-        if (n.attrs?.kind !== "continuous") out.push(new Paragraph({ children: [new PageBreak()] }));
+        // Each section is written as a Word section of its own (see toDocx).
         break;
       case "notes":
         // Written as Word's own footnotes and endnotes (see toDocx).
@@ -326,7 +328,7 @@ function blocks(nodes: JSONContent[] | undefined, ctx: Ctx, list?: { ref: string
   return out;
 }
 
-function hfParagraph(text: string): Paragraph {
+function hfParagraph(text: string, align: HfAlign): Paragraph {
   const children: (TextRun | string)[] = [];
   const parts = text.split(/(\{page\}|\{pages\})/);
   for (const p of parts) {
@@ -334,7 +336,7 @@ function hfParagraph(text: string): Paragraph {
     else if (p === "{pages}") children.push(new TextRun({ children: [PageNumber.TOTAL_PAGES] }));
     else if (p) children.push(new TextRun(p));
   }
-  return new Paragraph({ alignment: AlignmentType.CENTER, children: children as TextRun[] });
+  return new Paragraph({ alignment: ALIGN[align], children: children as TextRun[] });
 }
 
 function styleRun(s: StyleDef) {
@@ -343,6 +345,9 @@ function styleRun(s: StyleDef) {
 function styleParagraph(s: StyleDef) {
   return { spacing: { before: Math.round(s.spaceBefore * 20), after: Math.round(s.spaceAfter * 20), line: Math.round(s.lineHeight * 240) } };
 }
+
+const SECTION_TYPE: Record<SectionStart, (typeof SectionType)[keyof typeof SectionType]> = { next: SectionType.NEXT_PAGE, continuous: SectionType.CONTINUOUS, odd: SectionType.ODD_PAGE, even: SectionType.EVEN_PAGE };
+const NUMBER_FORMAT: Record<NumFormat, (typeof NumberFormat)[keyof typeof NumberFormat]> = { "1": NumberFormat.DECIMAL, i: NumberFormat.LOWER_ROMAN, I: NumberFormat.UPPER_ROMAN, a: NumberFormat.LOWER_LETTER, A: NumberFormat.UPPER_LETTER };
 
 /** A .docx file of a document, with suggestions as tracked changes. */
 export async function toDocx(doc: PDocFile): Promise<Uint8Array> {
@@ -361,7 +366,20 @@ export async function toDocx(doc: PDocFile): Promise<Uint8Array> {
     const paras = blocks(n.content, ctx).filter((b): b is Paragraph => b instanceof Paragraph);
     (n.kind === "endnote" ? endnotes : footnotes)[String(ctx.noteIds.get(n.id)!.num)] = { children: paras.length ? paras : [new Paragraph({ children: [] })] };
   }
-  const children = blocks(doc.content.content, ctx);
+  // One Word section per section (U55, U57): its own paper, start, numbering, and headers unless linked.
+  const sections = sectionsOf(doc.content, p);
+  const groups: JSONContent[][] = sections.map(() => []);
+  let at = 0;
+  for (const n of doc.content.content ?? []) {
+    if (n.type === "sectionBreak") at++;
+    else groups[at]!.push(n);
+  }
+  const hfs = (t: HfTexts, which: "header" | "footer") => {
+    const make = (s: string) => (which === "header" ? new Header({ children: [hfParagraph(s, p.headerAlign)] }) : new Footer({ children: [hfParagraph(s, p.footerAlign)] }));
+    const [d, first, even] = which === "header" ? [t.header, t.firstHeader, t.evenHeader] : [t.footer, t.firstFooter, t.evenFooter];
+    return { default: make(d), ...(p.differentFirstPage ? { first: make(first) } : {}), ...(p.differentOddEven ? { even: make(even) } : {}) };
+  };
+  const anyHf = (t: HfTexts) => !!(t.header || t.footer || (p.differentFirstPage && (t.firstHeader || t.firstFooter)) || (p.differentOddEven && (t.evenHeader || t.evenFooter)));
   const s = doc.styles;
   const levels = (format: (typeof LevelFormat)[keyof typeof LevelFormat], text: (l: number) => string) =>
     Array.from({ length: 9 }, (_, level) => ({ level, format, text: text(level), alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 720 * (level + 1), hanging: 360 } } } }));
@@ -386,26 +404,27 @@ export async function toDocx(doc: PDocFile): Promise<Uint8Array> {
         { reference: "pd-numbers", levels: levels(LevelFormat.DECIMAL, (l) => `%${l + 1}.`) },
       ],
     },
-    sections: [
-      {
+    evenAndOddHeaderAndFooters: p.differentOddEven,
+    sections: sections.map((sec, k) => {
+      const sp = sec.page;
+      const sz = PAPER[sp.size];
+      const children = blocks(groups[k], ctx);
+      // A section linked to the one before writes no headers of its own: Word carries them on.
+      const own = k === 0 ? anyHf(sec.hf) : sec.ownHf;
+      return {
         properties: {
+          ...(k > 0 ? { type: SECTION_TYPE[sec.start] } : {}),
           titlePage: p.differentFirstPage,
           page: {
-            size: { width: Math.round(paper.width * TWIP), height: Math.round(paper.height * TWIP), orientation: landscape ? PageOrientation.LANDSCAPE : PageOrientation.PORTRAIT },
-            margin: { top: Math.round(p.margins.top * TWIP), bottom: Math.round(p.margins.bottom * TWIP), left: Math.round(p.margins.left * TWIP), right: Math.round(p.margins.right * TWIP) },
+            size: { width: Math.round(sz.width * TWIP), height: Math.round(sz.height * TWIP), orientation: sp.orientation === "landscape" ? PageOrientation.LANDSCAPE : PageOrientation.PORTRAIT },
+            margin: { top: Math.round(sp.margins.top * TWIP), bottom: Math.round(sp.margins.bottom * TWIP), left: Math.round(sp.margins.left * TWIP), right: Math.round(sp.margins.right * TWIP) },
+            pageNumbers: { formatType: NUMBER_FORMAT[sec.format], ...(sec.numStart != null ? { start: sec.numStart } : {}) },
           },
         },
-        headers: {
-          ...(p.header ? { default: new Header({ children: [hfParagraph(p.header)] }) } : {}),
-          ...(p.differentFirstPage ? { first: new Header({ children: [hfParagraph(p.firstHeader)] }) } : {}),
-        },
-        footers: {
-          ...(p.footer ? { default: new Footer({ children: [hfParagraph(p.footer)] }) } : {}),
-          ...(p.differentFirstPage ? { first: new Footer({ children: [hfParagraph(p.firstFooter)] }) } : {}),
-        },
+        ...(own ? { headers: hfs(sec.hf, "header"), footers: hfs(sec.hf, "footer") } : {}),
         children: children.length ? children : [new Paragraph({ children: [] })],
-      },
-    ],
+      };
+    }),
   });
   return new Uint8Array(await Packer.toBuffer(document));
 }

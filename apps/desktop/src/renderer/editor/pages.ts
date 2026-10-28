@@ -7,7 +7,7 @@ import { Extension } from "@tiptap/core";
 import { Plugin, PluginKey, type EditorState, type Transaction } from "@tiptap/pm/state";
 import { Decoration, DecorationSet, type EditorView, type NodeView } from "@tiptap/pm/view";
 import { DOMSerializer, type Node as PMNode } from "@tiptap/pm/model";
-import { CSS_PX_PER_INCH, headerFooterText, notesOf, pageInches, paginate, sectionIndexAt, sectionsOf, sheetsOf, type BlockBox, type HfAlign, type NoteBox, type PageSetup, type Sheet, type TocEntry, digitsFor } from "@p-doc/core";
+import { CSS_PX_PER_INCH, notesOf, pageFaces, pageInches, paginate, sectionIndexAt, sectionsOf, sheetsOf, type BlockBox, type HfAlign, type NoteBox, type PageFace, type PageSetup, type Sheet, type TocEntry, digitsFor } from "@p-doc/core";
 import { createStore } from "../lib/store.ts";
 
 /** A page's geometry in CSS pixels, rounded as the page is drawn. */
@@ -56,6 +56,8 @@ export interface Layout {
   height: number;
   /** For a block in a section whose text column is not the page area's: how far it moves right and how much narrower it is (px). */
   shifts: ({ dx: number; dw: number } | null)[];
+  /** Each page's number, header and footer (U57), blank pages included; page n is faces[n - 1]. */
+  faces: PageFace[];
 }
 
 /** A sheet of paper behind the text: `top` and `left` in the page area, `span` pages tall. */
@@ -254,7 +256,15 @@ function measure(view: EditorView): void {
   const paper = papersOf(sheets, sheetGeos, Math.max(...geos.map((x) => x.width)));
   const shifts = boxes.map((_b, i) => shiftOf(geos[sectionIndexAt(sections, i)]!, g, paper.width));
   const placed = placeNotes(p.notes, noteIds, noteEls, sheets, sheetGeos, paper.papers, parseFloat(rootCs.paddingTop) || 0);
-  apply(view, settle(layoutOf(view.state), { pages: p.pages, sheets, pageOf: p.pageOf, fills: p.fills, splits, headings, ...placed, geos: sheetGeos, ...paper, shifts }));
+  // A blank page before an odd or even section is the last page of the section before it.
+  const sectionOfPage: number[] = [];
+  for (const sh of sheets) {
+    const k = sectionIndexAt(sections, sh.start);
+    for (let b = 0; b < sh.blank; b++) sectionOfPage.push(Math.max(0, k - 1));
+    for (let j = 0; j < sh.span; j++) sectionOfPage.push(k);
+  }
+  const faces = pageFaces(s, sections, sectionOfPage);
+  apply(view, settle(layoutOf(view.state), { pages: p.pages, sheets, pageOf: p.pageOf, fills: p.fills, splits, headings, ...placed, geos: sheetGeos, ...paper, shifts, faces }));
 }
 
 /** The sheets of paper drawn behind the text, centred in a page area as wide as the widest; a blank page has the paper of the page before. */
@@ -426,7 +436,8 @@ function sameLayout(a: Layout | null, b: Layout | null): boolean {
     JSON.stringify(a.headings) === JSON.stringify(b.headings) &&
     notesKey(a) === notesKey(b) &&
     paperKey(a) === paperKey(b) &&
-    shiftKey(a) === shiftKey(b)
+    shiftKey(a) === shiftKey(b) &&
+    JSON.stringify(a.faces) === JSON.stringify(b.faces)
   );
 }
 
@@ -493,8 +504,8 @@ function sheetBreak(s: PageSetup, layout: Layout, k: number): HTMLElement {
     root.style.setProperty("--inset-left", `${split.left.toFixed(2)}px`);
     root.style.setProperty("--inset-right", `${split.right.toFixed(2)}px`);
   }
-  const head = (page: number, g: Geometry) => onPaper(hfArea("pd-sheet-head", headerFooterText(s, "header", page, layout.pages), s.headerAlign, page), g, W, g.top);
-  const foot = (page: number, g: Geometry) => onPaper(hfArea("pd-sheet-foot", headerFooterText(s, "footer", page, layout.pages), s.footerAlign, page), g, W, g.bottom);
+  const head = (page: number, g: Geometry) => onPaper(hfArea("pd-sheet-head", layout.faces[page - 1]?.header ?? "", s.headerAlign, page), g, W, g.top);
+  const foot = (page: number, g: Geometry) => onPaper(hfArea("pd-sheet-foot", layout.faces[page - 1]?.footer ?? "", s.footerAlign, page), g, W, g.bottom);
   root.append(el("div", "pd-sheet-fill"), foot(end, before), el("div", "pd-sheet-gap"));
   // An odd or even section that lands on the wrong page leaves a blank page first, with its header and footer.
   for (let b = 1; b <= sh.blank; b++) {
@@ -515,7 +526,7 @@ function decorations(doc: PMNode, layout: Layout, s: PageSetup): DecorationSet {
     const split = layout.splits[k];
     const at = split ? split.pos : offsets[sh.start]!;
     const geo = (x: Geometry) => `${x.width}x${x.height}:${x.top}:${x.bottom}:${x.left}:${x.right}`;
-    const key = ["sheet", k, sh.page, sh.blank, layout.width, geo(layout.geos[k - 1]!), geo(layout.geos[k]!), split ? `${split.pos}:${split.left.toFixed(1)}:${split.right.toFixed(1)}` : "", layout.pages, layout.fills[k]!.toFixed(1), s.header, s.footer, s.firstHeader, s.firstFooter, s.differentFirstPage, s.headerAlign, s.footerAlign].join("|");
+    const key = ["sheet", k, sh.page, sh.blank, layout.width, geo(layout.geos[k - 1]!), geo(layout.geos[k]!), split ? `${split.pos}:${split.left.toFixed(1)}:${split.right.toFixed(1)}` : "", layout.pages, layout.fills[k]!.toFixed(1), JSON.stringify(layout.faces.slice(sh.page - 2 - sh.blank, sh.page)), s.headerAlign, s.footerAlign].join("|");
     decos.push(Decoration.widget(at, () => sheetBreak(s, layout, k), { side: -1, key, ignoreSelection: true, stopEvent: () => true }));
   });
   return DecorationSet.create(doc, [...decos, ...shiftDecos(doc, layout), ...tocDecos(doc, layout), ...noteDecos(doc, layout)]);

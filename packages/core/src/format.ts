@@ -47,6 +47,34 @@ export interface PageSetup {
   differentFirstPage: boolean;
   firstHeader: string;
   firstFooter: string;
+  /** Even pages have their own header and footer (U57). */
+  differentOddEven: boolean;
+  evenHeader: string;
+  evenFooter: string;
+  /** How page numbers are written, and the first page's number. */
+  numFormat: NumFormat;
+  numStart: number;
+}
+
+/** Page number formats: 1, 2, 3 · i, ii · I, II · a, b · A, B. */
+export type NumFormat = "1" | "i" | "I" | "a" | "A";
+export const NUM_FORMATS: readonly NumFormat[] = ["1", "i", "I", "a", "A"];
+export const NUM_FORMAT_LABEL: Record<NumFormat, string> = { "1": "1, 2, 3", i: "i, ii, iii", I: "I, II, III", a: "a, b, c", A: "A, B, C" };
+export const cleanNumFormat = (v: unknown, def: NumFormat = "1"): NumFormat => (NUM_FORMATS.includes(v as NumFormat) ? (v as NumFormat) : def);
+
+function roman(n: number): string {
+  const r: [number, string][] = [[1000, "m"], [900, "cm"], [500, "d"], [400, "cd"], [100, "c"], [90, "xc"], [50, "l"], [40, "xl"], [10, "x"], [9, "ix"], [5, "v"], [4, "iv"], [1, "i"]];
+  let out = "";
+  for (const [v, s] of r) while (n >= v) (out += s), (n -= v);
+  return out;
+}
+
+/** A page number as written in a format; letters go a…z, then aa…zz, as Word writes them. */
+export function pageNumberText(n: number, f: NumFormat): string {
+  if (f === "1" || n < 1) return String(n);
+  if (f === "i" || f === "I") return f === "I" ? roman(n).toUpperCase() : roman(n);
+  const s = String.fromCharCode(97 + ((n - 1) % 26)).repeat(Math.floor((n - 1) / 26) + 1);
+  return f === "A" ? s.toUpperCase() : s;
 }
 
 export interface StyleDef {
@@ -138,6 +166,11 @@ export function defaultPage(locale?: string): PageSetup {
     differentFirstPage: false,
     firstHeader: "",
     firstFooter: "",
+    differentOddEven: false,
+    evenHeader: "",
+    evenFooter: "",
+    numFormat: "1",
+    numStart: 1,
   };
 }
 
@@ -214,6 +247,11 @@ export function cleanPage(raw: unknown): PageSetup {
     differentFirstPage: typeof p.differentFirstPage === "boolean" ? p.differentFirstPage : d.differentFirstPage,
     firstHeader: text(p.firstHeader, d.firstHeader),
     firstFooter: text(p.firstFooter, d.firstFooter),
+    differentOddEven: typeof p.differentOddEven === "boolean" ? p.differentOddEven : d.differentOddEven,
+    evenHeader: text(p.evenHeader, d.evenHeader),
+    evenFooter: text(p.evenFooter, d.evenFooter),
+    numFormat: cleanNumFormat(p.numFormat, d.numFormat),
+    numStart: typeof p.numStart === "number" && Number.isInteger(p.numStart) && p.numStart >= 0 && p.numStart <= 9999 ? p.numStart : d.numStart,
   };
 }
 
@@ -293,8 +331,29 @@ export function pageInches(page: PageSetup): { width: number; height: number } {
   return page.orientation === "landscape" ? { width: p.height, height: p.width } : { width: p.width, height: p.height };
 }
 
-/** Header or footer text for a page, with tokens filled. */
+/** The header and footer texts of a page setup or a section (U57). */
+export interface HfTexts {
+  header: string;
+  footer: string;
+  firstHeader: string;
+  firstFooter: string;
+  evenHeader: string;
+  evenFooter: string;
+}
+export const HF_FIELDS = ["header", "footer", "firstHeader", "firstFooter", "evenHeader", "evenFooter"] as const;
+export const hfTextsOf = (p: HfTexts): HfTexts => ({ header: p.header, footer: p.footer, firstHeader: p.firstHeader, firstFooter: p.firstFooter, evenHeader: p.evenHeader, evenFooter: p.evenFooter });
+
+/**
+ * The header or footer of a page, with {page} and {pages} filled: the first page's (of its section) when
+ * the first page differs, the even one's on an even page number when odd and even differ.
+ */
+export function hfFor(page: PageSetup, texts: HfTexts, which: "header" | "footer", o: { number: number; label: string; first: boolean; count: number }): string {
+  const key = page.differentFirstPage && o.first ? (which === "header" ? "firstHeader" : "firstFooter") : page.differentOddEven && o.number % 2 === 0 ? (which === "header" ? "evenHeader" : "evenFooter") : which;
+  return texts[key].replaceAll("{page}", o.label).replaceAll("{pages}", String(o.count));
+}
+
+/** Header or footer text for page `n` of a document of one section, with tokens filled. */
 export function headerFooterText(page: PageSetup, which: "header" | "footer", n: number, count: number): string {
-  const t = page.differentFirstPage && n === 1 ? (which === "header" ? page.firstHeader : page.firstFooter) : page[which];
-  return t.replaceAll("{page}", String(n)).replaceAll("{pages}", String(count));
+  const number = page.numStart + n - 1;
+  return hfFor(page, page, which, { number, label: pageNumberText(number, page.numFormat), first: n === 1, count });
 }

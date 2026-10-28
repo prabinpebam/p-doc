@@ -4,7 +4,7 @@
  * Pageless prints as one flow on the chosen paper. The HTML runs with no script in a hidden window.
  */
 import type { EditorView } from "@tiptap/pm/view";
-import { CSS_PX_PER_INCH, headerFooterText, styleCss, type PDocFile } from "@p-doc/core";
+import { CSS_PX_PER_INCH, styleCss, type PDocFile } from "@p-doc/core";
 import type { PrintRequest } from "../../shared/api.ts";
 import tokensCss from "@p-doc/tokens/tokens.css?inline";
 import pageCss from "../styles/page.css?inline";
@@ -154,7 +154,7 @@ export function printDocument(doc: PDocFile, view: EditorView): PrintDoc {
       return names.get(key)!;
     };
     const sheet = (x: Geometry, span: number, first: number, content: string) =>
-      `<section class="print-sheet" style="--sheet-height: ${span * x.height}px; --page-width: ${x.width}px; --page-pad-top: ${x.top}px; --page-pad-bottom: ${x.bottom}px; --page-pad-left: ${x.left}px; --page-pad-right: ${x.right}px; page: ${nameOf(x)}">${hf("print-head", "header", headerFooterText(p, "header", first, layout.pages), p.headerAlign)}<div class="pd-content">${content}</div>${hf("print-foot", "footer", headerFooterText(p, "footer", first + span - 1, layout.pages), p.footerAlign)}</section>`;
+      `<section class="print-sheet" style="--sheet-height: ${span * x.height}px; --page-width: ${x.width}px; --page-pad-top: ${x.top}px; --page-pad-bottom: ${x.bottom}px; --page-pad-left: ${x.left}px; --page-pad-right: ${x.right}px; page: ${nameOf(x)}">${hf("print-head", "header", layout.faces[first - 1]?.header ?? "", p.headerAlign)}<div class="pd-content">${content}</div>${hf("print-foot", "footer", layout.faces[first + span - 2]?.footer ?? "", p.footerAlign)}</section>`;
     body = layout.sheets
       .map((sh, k) => {
         // A blank page before an odd or even section has the paper of the page before it.

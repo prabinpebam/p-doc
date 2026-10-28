@@ -139,3 +139,75 @@ test("11.1 section breaks start where they say; each section's paper, orientatio
   await expect(indicator(page)).toHaveText("Page 4 of 4");
   await quit(l);
 });
+
+/** Every header (or footer) on screen, in page order. */
+const hfs = (page: Page, which: "header" | "footer") =>
+  page.locator(`.pd-hf[data-hf="${which}"]`).evaluateAll((els) =>
+    els
+      .map((e) => [Number((e as HTMLElement).dataset.page), e.querySelector(".pd-hf-text")?.textContent ?? ""] as const)
+      .sort((a, b) => a[0] - b[0])
+      .map((x) => x[1]),
+  );
+
+test("11.3 odd and even headers, a section's own headers (Link to previous off) and page numbers i, ii on screen and in the PDF", async () => {
+  const saveDir = mkdtempSync(join(tmpdir(), "pdoc-sections-hf-"));
+  const l = await launch({ env: { PDOC_SAVE_DIR: saveDir } });
+  const { page } = l;
+  await page.locator("#doc-title").fill("Numbered");
+  await page.keyboard.press("Enter");
+  const pb = { type: "pageBreak" };
+  await load(page, { type: "doc", content: [para("One"), pb, para("Two"), pb, para("Three"), { type: "sectionBreak", attrs: { kind: "next" } }, para("Annex A"), pb, para("Annex B")] });
+  expect(await settled(page)).toBe(5);
+
+  // Header and footer for the document: odd and even pages differ.
+  await caretAt(page, "One");
+  await menu(page, "Insert", /^Header and footer/);
+  const d = page.getByRole("dialog", { name: "Header and footer" });
+  await expect(d.getByText("Section 1 of 2")).toBeVisible();
+  await expect(d.getByLabel("Link to previous")).toHaveCount(0);
+  await d.locator('input[name="hf-header"]').fill("Report {page}");
+  await d.locator('input[name="hf-footer"]').fill("{page} of {pages}");
+  await d.getByLabel("Different odd and even pages").check();
+  await d.locator('input[name="hf-evenHeader"]').fill("Even {page}");
+  await d.locator('input[name="hf-evenFooter"]').fill("{page} of {pages}");
+  await d.getByRole("button", { name: "Apply" }).click();
+  await expect.poll(() => hfs(page, "header")).toEqual(["Report 1", "Even 2", "Report 3", "Even 4", "Report 5"]);
+
+  // The second section: linked at first (the text shows but can't be edited); unlinked it has its own, numbered i, ii.
+  await caretAt(page, "Annex A");
+  await menu(page, "Insert", /^Header and footer/);
+  await expect(d.getByText("Section 2 of 2")).toBeVisible();
+  await expect(d.getByLabel("Link to previous")).toBeChecked();
+  await expect(d.locator('input[name="hf-header"]')).toHaveValue("Report {page}");
+  await expect(d.locator('input[name="hf-header"]')).toHaveJSProperty("readOnly", true);
+  await d.getByLabel("Link to previous").uncheck();
+  await d.locator('input[name="hf-header"]').fill("Annex {page}");
+  await d.locator('input[name="hf-evenHeader"]').fill("Annex even {page}");
+  await d.getByLabel("Format").selectOption("i");
+  await d.getByLabel("Numbering").selectOption("start");
+  await d.getByRole("spinbutton", { name: "Start at" }).fill("1");
+  await d.getByRole("button", { name: "Apply" }).click();
+  await expect.poll(() => hfs(page, "header")).toEqual(["Report 1", "Even 2", "Report 3", "Annex i", "Annex even ii"]);
+  await expect.poll(() => hfs(page, "footer")).toEqual(["1 of 5", "2 of 5", "3 of 5", "i of 5", "ii of 5"]);
+  await expect.poll(() => diskText(l.dirs), PROMPTLY).toContain("Annex even {page}");
+  // One Undo step takes the section back to linked.
+  await page.keyboard.press("Control+z");
+  await expect.poll(() => hfs(page, "header")).toEqual(["Report 1", "Even 2", "Report 3", "Even 4", "Report 5"]);
+  await page.keyboard.press("Control+y");
+  await expect.poll(() => hfs(page, "header")).toEqual(["Report 1", "Even 2", "Report 3", "Annex i", "Annex even ii"]);
+
+  // The PDF has the same headers and footers on the same pages.
+  await menu(page, "File", /^Download/, /^PDF document/);
+  await expect(page.getByText(/^Saved Numbered\.pdf/)).toBeVisible({ timeout: 20_000 });
+  const task = getDocument({ data: new Uint8Array(readFileSync(join(saveDir, "Numbered.pdf"))), useSystemFonts: false });
+  const pdf = await task.promise;
+  const texts: string[] = [];
+  for (let i = 1; i <= pdf.numPages; i++) texts.push(((await (await pdf.getPage(i)).getTextContent()).items as { str?: string }[]).map((it) => it.str ?? "").join(" "));
+  expect(texts).toHaveLength(5);
+  expect(texts[1]).toContain("Even 2");
+  expect(texts[3]).toContain("Annex i");
+  expect(texts[4]).toContain("Annex even ii");
+  expect(texts[4]).toContain("ii of 5");
+  await task.destroy();
+  await quit(l);
+});

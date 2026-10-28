@@ -194,3 +194,46 @@ describe("import-docx", () => {
     expect(content.content!.some((n) => n.type === "bulletList")).toBe(true);
   });
 });
+
+describe("export-docx sections (11.1, 11.3)", () => {
+  it("writes each section as a Word section: start, paper, numbering, odd and even headers, Link to previous", async () => {
+    const p = (text: string): JSONContent => ({ type: "paragraph", content: [{ type: "text", text }] });
+    const doc = createDocument({
+      content: {
+        type: "doc",
+        content: [
+          p("One"),
+          { type: "sectionBreak", attrs: { kind: "odd", page: { size: "letter", orientation: "landscape", margins: { top: 0.5, bottom: 0.5, left: 0.5, right: 0.5 } }, numbering: { format: "i", start: 1 } } },
+          p("Two"),
+          { type: "sectionBreak", attrs: { kind: "continuous", hf: { header: "Annex {page}", footer: "", firstHeader: "", firstFooter: "", evenHeader: "Annex even", evenFooter: "" } } },
+          p("Three"),
+        ],
+      },
+    });
+    doc.page = { ...doc.page, header: "Report", evenHeader: "Report even", differentOddEven: true, numFormat: "A", numStart: 3 };
+    const bytes = await toDocx(doc);
+    const xml = await unzip(bytes, "word/document.xml");
+    const sects = [...xml.matchAll(/<w:sectPr[\s\S]*?<\/w:sectPr>/g)].map((m) => m[0]);
+    expect(sects).toHaveLength(3);
+    // Section 1: the document's paper, numbers A, B, C from 3, its own header and even header.
+    expect(sects[0]).toMatch(/w:pgNumType[^>]*w:fmt="upperLetter"/);
+    expect(sects[0]).toMatch(/w:pgNumType[^>]*w:start="3"/);
+    expect((sects[0]!.match(/w:headerReference/g) ?? []).length).toBe(2);
+    // Section 2: an odd page, landscape, i, ii from 1, linked (no headers of its own).
+    expect(sects[1]).toMatch(/<w:type w:val="oddPage"\/>/);
+    expect(sects[1]).toMatch(/w:orient="landscape"/);
+    expect(sects[1]).toMatch(/w:fmt="lowerRoman"/);
+    expect(sects[1]).toMatch(/w:start="1"/);
+    expect(sects[1]).not.toMatch(/w:headerReference/);
+    // Section 3: continuous, numbers carry on, its own header.
+    expect(sects[2]).toMatch(/<w:type w:val="continuous"\/>/);
+    expect(sects[2]).not.toMatch(/w:start=/);
+    expect(sects[2]).toMatch(/w:headerReference/);
+    const settings = await unzip(bytes, "word/settings.xml");
+    expect(settings).toMatch(/w:evenAndOddHeaders/);
+    const files = Object.keys((await (await import("jszip")).default.loadAsync(bytes)).files).filter((f) => /word\/header\d*\.xml/.test(f));
+    const heads = await Promise.all(files.map((f) => unzip(bytes, f)));
+    expect(heads.some((h) => h.includes("Annex even"))).toBe(true);
+    expect(heads.some((h) => h.includes("Report even"))).toBe(true);
+  });
+});

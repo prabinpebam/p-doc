@@ -6,7 +6,7 @@
  */
 import { Node, type JSONContent } from "@tiptap/core";
 import type { Node as PMNode } from "@tiptap/pm/model";
-import { PAPER, type Margins, type Orientation, type PageSetup, type PaperSize } from "./format.ts";
+import { cleanNumFormat, pageNumberText, HF_FIELDS, hfFor, hfTextsOf, PAPER, type HfTexts, type Margins, type NumFormat, type Orientation, type PageSetup, type PaperSize } from "./format.ts";
 
 export type SectionStart = "next" | "continuous" | "odd" | "even";
 export const SECTION_STARTS: readonly SectionStart[] = ["next", "continuous", "odd", "even"];
@@ -39,6 +39,41 @@ export function cleanSectionPage(raw: unknown): SectionPage | null {
 
 export const sectionPageOf = (p: PageSetup): SectionPage => ({ size: p.size, orientation: p.orientation, margins: { ...p.margins } });
 
+/** A section's own headers and footers; null when it is linked to the previous section's (U57). */
+export function cleanHfTexts(raw: unknown): HfTexts | null {
+  if (!raw || typeof raw !== "object") return null;
+  const p = raw as Record<string, unknown>;
+  const out = {} as HfTexts;
+  for (const k of HF_FIELDS) out[k] = typeof p[k] === "string" ? (p[k] as string).slice(0, 500) : "";
+  return out;
+}
+
+/** A section's page numbers: its format (null: the previous section's) and start (null: continue). */
+export interface SectionNumbering {
+  format: NumFormat | null;
+  start: number | null;
+}
+
+export function cleanNumbering(raw: unknown): SectionNumbering | null {
+  if (!raw || typeof raw !== "object") return null;
+  const p = raw as Record<string, unknown>;
+  const start = typeof p.start === "number" && Number.isInteger(p.start) && p.start >= 0 && p.start <= 9999 ? p.start : null;
+  const format = p.format == null ? null : cleanNumFormat(p.format);
+  return format == null && start == null ? null : { format, start };
+}
+
+const jsonAttr = <T>(name: string, clean: (v: unknown) => T | null) => ({
+  default: null,
+  parseHTML: (el: HTMLElement) => {
+    try {
+      return clean(JSON.parse(el.getAttribute(`data-${name}`) ?? "null"));
+    } catch {
+      return null;
+    }
+  },
+  renderHTML: (a: Record<string, unknown>) => (a[name] ? { [`data-${name}`]: JSON.stringify(a[name]) } : {}),
+});
+
 const cleanStart = (v: unknown): SectionStart => (SECTION_STARTS.includes(v as SectionStart) ? (v as SectionStart) : "next");
 
 /** A section break: a labelled line on screen that takes no room and doesn't print. */
@@ -54,17 +89,9 @@ export const SectionBreak = Node.create({
         parseHTML: (el) => cleanStart(el.getAttribute("data-kind")),
         renderHTML: (a) => ({ "data-kind": a.kind, "data-label": SECTION_LABEL[cleanStart(a.kind)] }),
       },
-      page: {
-        default: null,
-        parseHTML: (el) => {
-          try {
-            return cleanSectionPage(JSON.parse(el.getAttribute("data-page") ?? "null"));
-          } catch {
-            return null;
-          }
-        },
-        renderHTML: (a) => (a.page ? { "data-page": JSON.stringify(a.page) } : {}),
-      },
+      page: jsonAttr("page", cleanSectionPage),
+      hf: jsonAttr("hf", cleanHfTexts),
+      numbering: jsonAttr("numbering", cleanNumbering),
     };
   },
   parseHTML: () => [{ tag: 'div[data-type="section-break"]' }],
@@ -79,6 +106,12 @@ export interface Section {
   start: SectionStart;
   /** The page setup the section's pages use. */
   page: PageSetup;
+  /** The headers and footers its pages show, and whether they are its own (not linked to the previous). */
+  hf: HfTexts;
+  ownHf: boolean;
+  /** Its page number format, and the number it starts at (null: continues from the previous section). */
+  format: NumFormat;
+  numStart: number | null;
 }
 
 type Top = { type: string; attrs?: Record<string, unknown> };
@@ -88,12 +121,52 @@ export function sectionsOf(doc: PMNode | JSONContent, base: PageSetup): Section[
   const tops: Top[] = [];
   if ("forEach" in doc && typeof (doc as PMNode).forEach === "function") (doc as PMNode).forEach((n) => void tops.push({ type: n.type.name, attrs: n.attrs }));
   else for (const n of (doc as JSONContent).content ?? []) tops.push({ type: n.type ?? "", attrs: n.attrs });
-  const out: Section[] = [{ from: 0, breakAt: null, start: "next", page: base }];
+  const out: Section[] = [{ from: 0, breakAt: null, start: "next", page: base, hf: hfTextsOf(base), ownHf: true, format: base.numFormat, numStart: base.numStart }];
   tops.forEach((n, i) => {
     if (n.type !== "sectionBreak") return;
-    const prev = out[out.length - 1]!.page;
+    const before = out[out.length - 1]!;
+    const prev = before.page;
     const own = cleanSectionPage(n.attrs?.page);
-    out.push({ from: i + 1, breakAt: i, start: cleanStart(n.attrs?.kind), page: own ? { ...prev, ...own, margins: { ...own.margins } } : prev });
+    const hf = cleanHfTexts(n.attrs?.hf);
+    const num = cleanNumbering(n.attrs?.numbering);
+    out.push({
+      from: i + 1,
+      breakAt: i,
+      start: cleanStart(n.attrs?.kind),
+      page: own ? { ...prev, ...own, margins: { ...own.margins } } : prev,
+      hf: hf ?? before.hf,
+      ownHf: !!hf,
+      format: num?.format ?? before.format,
+      numStart: num?.start ?? null,
+    });
+  });
+  return out;
+}
+
+/** What a page shows: its section, its number (and as written), its header and footer (U57). */
+export interface PageFace {
+  section: number;
+  number: number;
+  label: string;
+  header: string;
+  footer: string;
+}
+
+/**
+ * The faces of a document's pages, given each page's section in order (blank pages included): numbers
+ * run on from section to section unless a section starts at its own; the first page of each section is
+ * its first page for "Different first page".
+ */
+export function pageFaces(base: PageSetup, sections: readonly Section[], sectionOfPage: readonly number[]): PageFace[] {
+  const out: PageFace[] = [];
+  const count = sectionOfPage.length;
+  let number = 0;
+  sectionOfPage.forEach((k, i) => {
+    const sec = sections[k] ?? sections[0]!;
+    const first = i === 0 || sectionOfPage[i - 1] !== k;
+    number = first && sec.numStart != null ? sec.numStart : number + 1;
+    const o = { number, label: pageNumberText(number, sec.format), first, count };
+    out.push({ section: k, number, label: o.label, header: hfFor(base, sec.hf, "header", o), footer: hfFor(base, sec.hf, "footer", o) });
   });
   return out;
 }
