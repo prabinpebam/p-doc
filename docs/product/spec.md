@@ -188,7 +188,7 @@ Waits name their class from the perceived-performance skill: *instant* (< 100 ms
 
 **Branches:** the disk is full or the folder is gone → save state "Couldn't save. Retrying…" in the error colour and a banner "P-Doc can't write to *folder*. Your text is kept; free space or choose another folder." with **Choose folder**; P-Doc keeps a recovery copy of unsaved text in its data folder and restores it on the next start with "Recovered unsaved changes to *title*."
 
-**Defaults:** Normal style: system sans (Aptos, Calibri, Segoe UI) 11 pt, line spacing 1.15, 8 pt after; Letter paper in en-US, A4 elsewhere; 1 in (25.4 mm) margins; Pages mode.
+**Defaults:** Normal style: system sans (Aptos, Calibri, Segoe UI) 11 pt, line spacing 1.15, 8 pt after; paper from the region set in the operating system (Letter in the countries and regions that use it: the United States, Canada, Mexico, the Philippines, Puerto Rico, Belize, Chile, Colombia, Costa Rica, Guatemala, Nicaragua, Panama, El Salvador and Venezuela; A4 everywhere else), until **Set as default** chooses one; 1 in (25.4 mm) margins; Pages mode.
 
 **Agent path:** `pdoc new "Title" [--public] --json` → `{"id","path"}`; `pdoc list --json`.
 

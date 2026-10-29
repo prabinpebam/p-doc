@@ -9,6 +9,7 @@ import { readFileSync, statSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, isAbsolute, join, resolve } from "node:path";
 import { Library, localTime } from "../main/library.ts";
+import { nodeSystemLocale, paperLocale } from "../main/region.ts";
 import { SettingsStore } from "../main/state.ts";
 import { EXPORTS, exportBytes, importInto, isExportKind, MAX_IMPORT, ImportError } from "../main/files.ts";
 import type { DocSummary, Space } from "../shared/api.ts";
@@ -141,7 +142,7 @@ export async function run(argv: string[], io: Io): Promise<number> {
       const id = settings.get().identity;
       return { name: id.name || "P-Doc", email: id.email || "p-doc@localhost" };
     };
-    const open = () => Library.open(libraryRoot(io.env, settings), { identity });
+    const open = () => Library.open(libraryRoot(io.env, settings), { identity, locale: paperLocale(nodeSystemLocale(), io.env) });
     const one = (usage: string) => {
       const v = rest[0];
       if (!v || rest.length > 1) throw new CliError(`Usage: pdoc ${command} ${usage}`, EXIT.usage);

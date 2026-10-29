@@ -67,6 +67,8 @@ export async function launch(o: LaunchOptions = {}): Promise<Launched> {
     PDOC_USER_DATA: dirs.userData,
     PDOC_LIBRARY: dirs.library,
     PDOC_E2E: "1",
+    // Letter, as the fixtures are measured in; a test can set another region.
+    PDOC_LOCALE: "en-US",
     GIT_CONFIG_GLOBAL: dirs.gitConfig,
     GIT_CONFIG_NOSYSTEM: "1",
     GIT_TERMINAL_PROMPT: "0",

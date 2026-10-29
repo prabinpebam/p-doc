@@ -15,6 +15,7 @@ import {
   dataImageParts,
   dataImageUrl,
   declaredVersion,
+  defaultPage,
   documentPath,
   FORMAT_VERSION,
   hasDataImages,
@@ -99,12 +100,15 @@ export interface LibraryOptions {
   git?: string | null;
   /** Called after a repository gets a new version or version name (sync follows). */
   changed?: (space: Space) => void;
+  /** The operating system's locale; its region picks the paper of new documents without a page setup. */
+  locale?: string;
 }
 
 export class Library {
   private queues = new Map<Space, Promise<unknown>>();
   /** Called after a repository gets a new version or version name. */
   changed: (space: Space) => void = () => undefined;
+  private locale: string | undefined;
 
   private constructor(
     readonly root: string,
@@ -116,6 +120,7 @@ export class Library {
     const v = o.git === undefined ? await gitVersion() : o.git;
     const lib = new Library(root, gitSupported(v) ? v : null, o.identity);
     if (o.changed) lib.changed = o.changed;
+    lib.locale = o.locale;
     return lib;
   }
 
@@ -314,7 +319,7 @@ export class Library {
 
   async create(req: CreateRequest = {}): Promise<Opened> {
     const space = req.space ?? "private";
-    const doc = createDocument({ title: req.title, content: req.content, page: req.page, styles: req.styles, comments: req.comments });
+    const doc = createDocument({ title: req.title, content: req.content, page: req.page ?? defaultPage(this.locale), styles: req.styles, comments: req.comments });
     const ref = { space, path: this.freePath(space, doc) };
     this.write(ref, doc);
     await this.commit(space, [ref.path], `Create ${doc.title}`);

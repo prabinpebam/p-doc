@@ -8,6 +8,7 @@ import { pathToFileURL } from "node:url";
 import { basename, join } from "node:path";
 import { ASSET_SCHEME, assetOfUrl, cleanPage, cleanStyles, importKind, parseDocument, type PDocFile } from "@p-doc/core";
 import { Library } from "./library.ts";
+import { paperLocale } from "./region.ts";
 import { exported, exportDocument, printDocument, savePdf } from "./output.ts";
 import { ImportError, importInto, isExportKind, MAX_IMPORT, readFile as readDocFile } from "./files.ts";
 import { RecoveryStore, SettingsStore } from "./state.ts";
@@ -465,7 +466,7 @@ void app.whenReady().then(async () => {
   nativeTheme.themeSource = settings.get().theme;
   // Recorded so the pdoc CLI finds the same folder when Documents is redirected (OneDrive, a policy).
   if (!process.env.PDOC_LIBRARY && !settings.get().library) settings.setLibrary(libraryRoot());
-  library = await Library.open(libraryRoot(), { identity, changed: () => sync.soonAfterVersion() });
+  library = await Library.open(libraryRoot(), { identity, changed: () => sync.soonAfterVersion(), locale: paperLocale(app.getSystemLocale()) });
   log("start", { version: app.getVersion(), library: library.root, git: library.gitVersion });
   if (library.ready) recovered = applyRecovery();
   handlers();
