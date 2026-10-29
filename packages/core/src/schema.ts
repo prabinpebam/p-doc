@@ -17,6 +17,7 @@ import { TaskList, TaskItem } from "@tiptap/extension-list";
 import { cleanLayout, layoutCss, lineHeightCss, Tab } from "./paragraph.ts";
 import { Note, NoteRef, Notes, NotesDoc } from "./notes.ts";
 import { Bookmark } from "./refs.ts";
+import { cleanListFormat, listStyleType, type ListFormat } from "./lists.ts";
 
 export const TEXTBLOCKS = ["paragraph", "heading"] as const;
 
@@ -124,6 +125,27 @@ function colourHex(c: string): string | null {
   const v = h[1]!.length === 3 ? [...h[1]!].map((x) => x + x).join("") : h[1]!;
   return "#" + v.toLowerCase();
 }
+
+/** A list's number format or bullet (U43); none means the level's default (1, a, i / •, ◦, ▪). */
+export const ListFormatAttr = Extension.create({
+  name: "listFormatAttr",
+  addGlobalAttributes() {
+    const html: Record<string, ListFormat> = { "1": "decimal", a: "lower-alpha", A: "upper-alpha", i: "lower-roman", I: "upper-roman" };
+    return ["orderedList", "bulletList"].map((kind) => ({
+      types: [kind],
+      attributes: {
+        listFormat: {
+          default: null,
+          parseHTML: (el: HTMLElement) => cleanListFormat(kind, el.getAttribute("data-format") ?? (kind === "orderedList" ? html[el.getAttribute("type") ?? ""] : null)),
+          renderHTML: (a: Record<string, unknown>) => {
+            const f = cleanListFormat(kind, a.listFormat);
+            return f ? { "data-format": f, style: `list-style-type: ${listStyleType(f)}` } : {};
+          },
+        },
+      },
+    }));
+  },
+});
 
 /** Paragraph-level formatting and identity carried by paragraphs and headings. */
 export const BlockFormat = Extension.create({
@@ -364,6 +386,7 @@ export function extensions(options: SchemaOptions = {}): AnyExtension[] {
     TaskList,
     TaskItem.configure({ nested: true }),
     BlockFormat,
+    ListFormatAttr,
     BlockChangeAttr,
     Insertion,
     Deletion,

@@ -1,5 +1,6 @@
 /** CSS for a document's paragraph styles, shared by the editor, print and HTML export. */
 import { defaultStyles, SANS, STYLE_KEYS, STYLE_LABELS, type BuiltinStyleKey, type StyleDef, type Styles, type StyleKey } from "./format.ts";
+import { listCss } from "./lists.ts";
 
 const SELECTORS: Record<BuiltinStyleKey, string> = {
   normal: "p",
@@ -43,6 +44,7 @@ export function styleCss(styles: Styles, scope: string): string {
   for (const k of customStyleKeys(styles)) rules.push(`${scope} p[data-style="${k}"] { ${decl(styles[k], false)} }`);
   rules.push(`${scope} pre code { font: inherit; color: inherit; font-variant-caps: inherit }`);
   rules.push(`${scope} li > p { margin: 0; padding-top: 0 }`);
+  rules.push(listCss(scope));
   rules.push(`${scope} td > p, ${scope} th > p { margin: 0; padding-top: 0 }`);
   // Note text is smaller than body text (Word's Footnote Text is 10pt beside 11pt Normal).
   rules.push(`${scope} .pd-note > p { font-size: ${Math.round(n.fontSize * 8) / 10}pt; margin: 0; padding-top: 0 }`);

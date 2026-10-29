@@ -13,6 +13,7 @@ import { NotesKeys, textEnd } from "./notes.ts";
 import { Equations } from "./equations.ts";
 import { LiveCodeBlock } from "./code.ts";
 import { StyleHistory } from "./styles.ts";
+import { ListLimit } from "./lists.ts";
 
 /**
  * TipTap's `focus` waits a frame before focusing, so keys pressed straight after a toolbar or menu
@@ -62,6 +63,7 @@ export function editorExtensions(o: { author: string; images: () => ImageHost; s
       SyncFocus,
       DocEnds,
       StyleHistory.configure({ styles: o.styles }),
+      ListLimit,
       // As in Word and Google Docs, a table, rule, break, image or code block is never the last block.
       TrailingNode.configure({ node: "paragraph", notAfter: ["paragraph", "heading", "blockquote", "bulletList", "orderedList", "taskList", "notes"] }),
       Placeholder.configure({ placeholder: "Start writing" }),

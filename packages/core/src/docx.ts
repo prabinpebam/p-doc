@@ -62,6 +62,7 @@ import { anchorsOfJSON, wordBookmarkName } from "./refs.ts";
 import { BORDER_SIDES, cleanLayout } from "./paragraph.ts";
 import { cleanCrop, dataImageParts, imageInfo } from "./image.ts";
 import { followingStyle, isStyleKey, styleKeys, styleLabel, wordStyleId } from "./styles.ts";
+import { cleanListFormat, cleanStart, defaultListFormat, wordLevel, type ListFormat, type ListKind } from "./lists.ts";
 
 type Mark = NonNullable<JSONContent["marks"]>[number];
 
@@ -85,6 +86,8 @@ export function imageSize(buf: Uint8Array): { width: number; height: number; typ
 interface Ctx {
   doc: PDocFile;
   listInstance: number;
+  /** The Word numbering each list format and start needs, by reference. */
+  lists: Map<string, { format: ListFormat; start: number }>;
   revision: number;
   maxImageWidth: number;
   /** Word's id of each note (footnotes and endnotes count separately). */
@@ -390,9 +393,18 @@ function blocks(nodes: JSONContent[] | undefined, ctx: Ctx, list?: { ref: string
       case "bulletList":
       case "orderedList":
       case "taskList": {
-        const ref = n.type === "orderedList" ? "pd-numbers" : "pd-bullets";
         const level = list ? list.level + 1 : 0;
-        const instance = n.type === "orderedList" ? ++ctx.listInstance : 0;
+        let ref = "pd-bullets";
+        let instance = 0;
+        if (n.type !== "taskList") {
+          // One Word numbering per format and start; each numbered list counts on its own.
+          const kind = n.type as ListKind;
+          const format = cleanListFormat(kind, n.attrs?.listFormat) ?? defaultListFormat(kind, level);
+          const start = kind === "orderedList" ? cleanStart(n.attrs?.start) : 1;
+          ref = `pd-list-${format}-${start}`;
+          ctx.lists.set(ref, { format, start });
+          if (kind === "orderedList") instance = ++ctx.listInstance;
+        }
         for (const item of n.content ?? []) {
           const [first, ...rest] = item.content ?? [];
           const prefix = n.type === "taskList" ? [new TextRun(item.attrs?.checked ? "☒ " : "☐ ")] : [];
@@ -480,7 +492,7 @@ export async function toDocx(doc: PDocFile): Promise<Uint8Array> {
   const p = doc.page;
   const paper = PAPER[p.size];
   const landscape = p.orientation === "landscape";
-  const ctx: Ctx = { doc, listInstance: 0, revision: 1, maxImageWidth: Math.round((((landscape ? paper.height : paper.width) - p.margins.left - p.margins.right) * 96)), noteIds: new Map(), anchors: new Map(), commentStarts: new Map(), commentEnds: new Map() };
+  const ctx: Ctx = { doc, listInstance: 0, lists: new Map(), revision: 1, maxImageWidth: Math.round((((landscape ? paper.height : paper.width) - p.margins.left - p.margins.right) * 96)), noteIds: new Map(), anchors: new Map(), commentStarts: new Map(), commentEnds: new Map() };
   const comments = wordComments(doc, ctx);
   const taken = new Set<string>();
   for (const a of anchorsOfJSON(doc.content)) if (!ctx.anchors.has(a.id)) ctx.anchors.set(a.id, wordBookmarkName(a, taken));
@@ -508,8 +520,10 @@ export async function toDocx(doc: PDocFile): Promise<Uint8Array> {
   };
   const anyHf = (t: HfTexts) => !!(t.header || t.footer || (p.differentFirstPage && (t.firstHeader || t.firstFooter)) || (p.differentOddEven && (t.evenHeader || t.evenFooter)));
   const s = doc.styles;
-  const levels = (format: (typeof LevelFormat)[keyof typeof LevelFormat], text: (l: number) => string) =>
-    Array.from({ length: 9 }, (_, level) => ({ level, format, text: text(level), alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 720 * (level + 1), hanging: 360 } } } }));
+  // Lists are found while writing the body, so it is written before the numbering they need is defined.
+  const bodies = groups.map((g) => blocks(g, ctx));
+  const levels = (format: (typeof LevelFormat)[keyof typeof LevelFormat], text: (l: number) => string, start = 1) =>
+    Array.from({ length: 9 }, (_, level) => ({ level, format, text: text(level), start, alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 720 * (level + 1), hanging: 360 } } } }));
   const document = new Document({
     creator: "P-Doc",
     title: doc.title,
@@ -530,14 +544,17 @@ export async function toDocx(doc: PDocFile): Promise<Uint8Array> {
     numbering: {
       config: [
         { reference: "pd-bullets", levels: levels(LevelFormat.BULLET, (l) => ["•", "◦", "▪"][l % 3]!) },
-        { reference: "pd-numbers", levels: levels(LevelFormat.DECIMAL, (l) => `%${l + 1}.`) },
+        ...[...ctx.lists].map(([reference, { format, start }]) => ({
+          reference,
+          levels: levels(wordLevel(format, 0).format as (typeof LevelFormat)[keyof typeof LevelFormat], (l) => wordLevel(format, l).text, start),
+        })),
       ],
     },
     evenAndOddHeaderAndFooters: p.differentOddEven,
     sections: sections.map((sec, k) => {
       const sp = sec.page;
       const sz = PAPER[sp.size];
-      const children = blocks(groups[k], ctx);
+      const children = bodies[k]!;
       // A section linked to the one before writes no headers of its own: Word carries them on.
       const own = k === 0 ? anyHf(sec.hf) : sec.ownHf;
       return {

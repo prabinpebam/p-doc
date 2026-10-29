@@ -6,6 +6,7 @@ import type { Editor } from "@tiptap/core";
 import { NodeSelection } from "@tiptap/pm/state";
 import { cleanCrop, customStyleKeys, defaultStyles, SECTION_LABEL, STYLE_KEYS, STYLE_LABELS, STYLE_SETS, styleLabel, stylesForSet, TEXT_WIDTH, type PageSetup, type SectionStart, type StyleKey, type TextWidth } from "@p-doc/core";
 import { setDocumentStyles } from "./editor/styles.ts";
+import { canContinue, canRestart, continueNumbering, restartNumbering } from "./editor/lists.ts";
 import type { Theme } from "../shared/api.ts";
 import { applyStyle, clearBlockDirectFormatting, currentStyle, indent, insertAtomBlock, setBlockAttrs, currentBlock, styleFromSelection } from "./editor/blocks.ts";
 import { endCrop, imageUi, selectedImage, startCrop } from "./editor/image.ts";
@@ -425,6 +426,9 @@ const commands: Command[] = [
   { id: "list.bullets", label: "Bulleted list", keys: ["Ctrl+Shift+8"], run: chain((c) => c.toggleBulletList()), checked: () => !!ed()?.isActive("bulletList"), enabled: canEdit },
   { id: "list.numbers", label: "Numbered list", keys: ["Ctrl+Shift+7"], run: chain((c) => c.toggleOrderedList()), checked: () => !!ed()?.isActive("orderedList"), enabled: canEdit },
   { id: "list.checklist", label: "Checklist", keys: ["Ctrl+Shift+9"], run: chain((c) => c.toggleTaskList()), checked: () => !!ed()?.isActive("taskList"), enabled: canEdit },
+  { id: "list.options", label: "List options…", keywords: "number format bullet start level roman letters", run: () => openDialog({ kind: "listOptions" }), enabled: () => canEdit() && (!!ed()?.isActive("bulletList") || !!ed()?.isActive("orderedList")) },
+  { id: "list.restart", label: "Restart numbering", keywords: "list start 1", run: withEditor(restartNumbering), enabled: () => canEdit() && canRestart(ed()!) },
+  { id: "list.continue", label: "Continue numbering", keywords: "list previous", run: withEditor(continueNumbering), enabled: () => canEdit() && canContinue(ed()!) },
 
   // Format > Table
   ...(
@@ -672,7 +676,7 @@ export const MENUS: Menu[] = [
       { label: "Align", items: ["align.left", "align.center", "align.right", "align.justify"] },
       { label: "Indent", items: ["indent.more", "indent.less"] },
       { label: "Line spacing", items: [...LINE_SPACINGS.map(([, v]) => `spacing.${v}`), "-", "spacing.before", "spacing.after"] },
-      { label: "Lists", items: ["list.bullets", "list.numbers", "list.checklist"] },
+      { label: "Lists", items: ["list.bullets", "list.numbers", "list.checklist", "-", "list.options", "list.restart", "list.continue"] },
       {
         label: "Table",
         items: [

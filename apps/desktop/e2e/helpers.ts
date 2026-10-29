@@ -100,6 +100,18 @@ export async function quit(l: Launched): Promise<void> {
 /** The page's editable text. */
 export const editor = (page: Page) => page.locator(".pd-content");
 
+/** Clicks into a block, retrying if a re-flow moved it or reset the caret before the editor read the click. */
+export async function caretIn(block: Locator): Promise<void> {
+  const text = (await block.textContent()) ?? "";
+  const page = block.page();
+  const at = () => page.evaluate(() => (window as unknown as { __pdoc: { getEditor(): { state: { selection: { $from: { parent: { textContent: string } } } } } } }).__pdoc.getEditor().state.selection.$from.parent.textContent);
+  await expect(async () => {
+    await block.click();
+    await page.waitForTimeout(100);
+    expect(await at()).toBe(text);
+  }).toPass({ timeout: 5_000 });
+}
+
 /** Every document file in a space, parsed. */
 export function filesIn(dirs: Dirs, space: "private" | "public", folder = "docs"): { name: string; doc: { title: string; content: unknown } }[] {
   const dir = join(dirs.library, space, folder);

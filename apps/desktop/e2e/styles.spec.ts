@@ -1,18 +1,5 @@
-import { diskText, editor, expect, filesIn, launch, PROMPTLY, quit, test } from "./helpers.ts";
+import { caretIn, diskText, editor, expect, filesIn, launch, PROMPTLY, quit, test } from "./helpers.ts";
 import { load } from "./fixtures.ts";
-import type { Locator } from "@playwright/test";
-
-/** Clicks into a block, retrying if a re-flow moved it or reset the caret before the editor read the click. */
-async function caretIn(block: Locator): Promise<void> {
-  const text = (await block.textContent()) ?? "";
-  const page = block.page();
-  const at = () => page.evaluate(() => (window as unknown as { __pdoc: { getEditor(): { state: { selection: { $from: { parent: { textContent: string } } } } } } }).__pdoc.getEditor().state.selection.$from.parent.textContent);
-  await expect(async () => {
-    await block.click();
-    await page.waitForTimeout(100);
-    expect(await at()).toBe(text);
-  }).toPass({ timeout: 5_000 });
-}
 
 test("8.1 Heading 5 and 6 have distinct styles, shortcuts and commands; outline and contents follow after reopen", async () => {
   const l = await launch();

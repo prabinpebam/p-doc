@@ -32,6 +32,7 @@ export type Dialog =
   | { kind: "table" }
   | { kind: "compare" }
   | { kind: "styles" }
+  | { kind: "listOptions" }
   | { kind: "turnOffSuggest" };
 
 /** The Paragraph dialog's tabs (spec §4.11). */

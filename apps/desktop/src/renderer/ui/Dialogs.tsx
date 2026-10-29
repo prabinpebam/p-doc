@@ -19,6 +19,7 @@ import { ParagraphDialog } from "./ParagraphDialog.tsx";
 import { SortDialog } from "./SortDialog.tsx";
 import { NotesDialog } from "./NotesDialog.tsx";
 import { TableDialog } from "./TableDialog.tsx";
+import { ListOptionsDialog } from "./ListOptionsDialog.tsx";
 import { BookmarkDialog } from "./BookmarkDialog.tsx";
 import { ContentsDialog } from "./ContentsDialog.tsx";
 import { EquationDialog } from "./EquationDialog.tsx";
@@ -83,6 +84,8 @@ export function Dialogs() {
       return <EquationDialog />;
     case "styles":
       return <StylesDialog />;
+    case "listOptions":
+      return <ListOptionsDialog />;
   }
 }
 

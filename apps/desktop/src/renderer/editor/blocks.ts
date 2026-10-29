@@ -4,6 +4,7 @@ import { Node as PMNode } from "@tiptap/pm/model";
 import { closeHistory } from "@tiptap/pm/history";
 import { TextSelection } from "@tiptap/pm/state";
 import { moveSection, patchLayout, styleKeyOf, TEXTBLOCKS, type StyleDef, type StyleKey, type Styles } from "@p-doc/core";
+import { atDeepest } from "./lists.ts";
 
 const isTextblockType = (name: string) => (TEXTBLOCKS as readonly string[]).includes(name);
 
@@ -149,6 +150,7 @@ export function clearBlockDirectFormatting(editor: Editor): void {
 export function indent(editor: Editor, dir: 1 | -1): void {
   if (editor.isActive("listItem") || editor.isActive("taskItem")) {
     const type = editor.isActive("taskItem") ? "taskItem" : "listItem";
+    if (dir > 0 && atDeepest(editor)) return;
     if (dir > 0) editor.chain().focus().sinkListItem(type).run();
     else editor.chain().focus().liftListItem(type).run();
     return;
