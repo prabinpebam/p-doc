@@ -203,9 +203,22 @@ export function defaultStyles(): Styles {
   };
 }
 
-/** Letter in the United States and nearby, A4 elsewhere. */
+/** Countries and regions where Letter is the usual paper (CLDR's `paperSize` "US-Letter" territories). */
+export const LETTER_REGIONS: ReadonlySet<string> = new Set(["US", "CA", "MX", "PH", "PR", "BZ", "CL", "CO", "CR", "GT", "NI", "PA", "SV", "VE"]);
+
+/** The region of a locale, filled in from its language when left out ("en" → US), or null. Takes POSIX forms ("en_GB.UTF-8"). */
+export function localeRegion(locale: string): string | null {
+  try {
+    return new Intl.Locale(locale.replace(/[.@].*$/, "").replace(/_/g, "-")).maximize().region ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** Letter in the countries and regions that use it, A4 elsewhere. */
 export function defaultPaper(locale = "en-US"): PaperSize {
-  return /-(US|CA|MX|PH|CL|CO|VE|GT|PR)$/i.test(locale) || locale === "en" ? "letter" : "a4";
+  const r = localeRegion(locale);
+  return r && LETTER_REGIONS.has(r) ? "letter" : "a4";
 }
 
 export function defaultPage(locale?: string): PageSetup {

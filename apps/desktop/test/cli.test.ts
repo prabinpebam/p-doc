@@ -29,7 +29,7 @@ let env: NodeJS.ProcessEnv;
 beforeEach(() => {
   dir = join(home, `case-${++n}`);
   mkdirSync(dir, { recursive: true });
-  env = { PDOC_USER_DATA: join(dir, "data"), PDOC_LIBRARY: join(dir, "lib") };
+  env = { PDOC_USER_DATA: join(dir, "data"), PDOC_LIBRARY: join(dir, "lib"), PDOC_LOCALE: "en-US" };
 });
 
 async function pdoc(...argv: string[]) {

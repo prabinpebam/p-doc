@@ -107,7 +107,7 @@ test("6.1 6.2 6.3 6.4 download as Word, Markdown, web page and text; open a Word
   await quit(l);
 
   // The pdoc CLI sees the same library (U38).
-  const env = { ...process.env, PDOC_USER_DATA: l.dirs.userData, PDOC_LIBRARY: l.dirs.library, GIT_CONFIG_GLOBAL: l.dirs.gitConfig, GIT_CONFIG_NOSYSTEM: "1" };
+  const env = { ...process.env, PDOC_LOCALE: "en-US", PDOC_USER_DATA: l.dirs.userData, PDOC_LIBRARY: l.dirs.library, GIT_CONFIG_GLOBAL: l.dirs.gitConfig, GIT_CONFIG_NOSYSTEM: "1" };
   const listed = JSON.parse(execFileSync(process.execPath, [cli, "list", "--json"], { env, encoding: "utf8" })) as { title: string }[];
   expect(listed.map((d) => d.title).sort()).toEqual(["Meeting notes", "Quarterly plan", "Quarterly plan"]);
 });

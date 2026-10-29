@@ -73,3 +73,14 @@ test("2.6 page setup changes paper, orientation, margins and colour, checks the 
   await expect.poll(padLeft).toBe(192);
   await quit(l);
 });
+
+test("2.7 new documents take the paper of the computer's region", async () => {
+  // A region that uses A4 (India); the other tests run as the United States, so they cover Letter.
+  const l = await launch({ env: { PDOC_LOCALE: "en-IN" } });
+  const { page } = l;
+  await page.keyboard.press("Control+n");
+  await expect.poll(() => filesIn(l.dirs, "private").map((f) => (f.doc as unknown as Saved).page.size), PROMPTLY).toContain("a4");
+  expect(filesIn(l.dirs, "private").every((f) => (f.doc as unknown as Saved).page.size === "a4")).toBe(true);
+  await expect.poll(async () => Math.round((await page.getByTestId("page").boundingBox())?.width ?? 0)).toBe(794);
+  await quit(l);
+});

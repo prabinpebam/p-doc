@@ -61,10 +61,23 @@ describe("format", () => {
     expect(documentPath({ id: "12345678-aaaa-bbbb-cccc-dddddddddddd", title: "My Plan" })).toBe("docs/my-plan-12345678.pdoc.json");
   });
 
-  it("chooses Letter in the US and A4 elsewhere", () => {
+  it("chooses Letter where the region uses it and A4 elsewhere", () => {
     expect(defaultPaper("en-US")).toBe("letter");
     expect(defaultPaper("en-GB")).toBe("a4");
     expect(defaultPaper("de-DE")).toBe("a4");
+    expect(defaultPaper("en-IN")).toBe("a4");
+    expect(defaultPaper("fr-CA")).toBe("letter");
+    expect(defaultPaper("es-MX")).toBe("letter");
+    expect(defaultPaper("es-ES")).toBe("a4");
+    expect(defaultPaper("fil-PH")).toBe("letter");
+    expect(defaultPaper("zh-Hans-CN")).toBe("a4");
+    // No region: the language's likely one.
+    expect(defaultPaper("en")).toBe("letter");
+    expect(defaultPaper("ja")).toBe("a4");
+    // POSIX forms, and anything unreadable falls back to A4.
+    expect(defaultPaper("en_US.UTF-8")).toBe("letter");
+    expect(defaultPaper("en_GB.UTF-8@euro")).toBe("a4");
+    expect(defaultPaper("not a locale")).toBe("a4");
   });
 
   it("fills page number tokens and honours a different first page", () => {
