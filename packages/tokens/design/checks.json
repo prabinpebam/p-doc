@@ -42,11 +42,6 @@
       "min": 4.5
     },
     {
-      "fg": "color.on-accent",
-      "bg": "color.accent",
-      "min": 4.5
-    },
-    {
       "fg": "color.negative",
       "bg": "color.bg-raised",
       "min": 4.5
@@ -65,11 +60,6 @@
       "fg": "color.focus",
       "bg": "color.canvas",
       "min": 3
-    },
-    {
-      "fg": "color.rule",
-      "bg": "color.bg-raised",
-      "min": 1.5
     },
     {
       "fg": "color.page-text",
@@ -141,11 +131,70 @@
       "bg": "color.page-code",
       "min": 4.5
     },
-    { "fg": "color.code-keyword", "bg": "color.page-code", "min": 4.5 },
-    { "fg": "color.code-string", "bg": "color.page-code", "min": 4.5 },
-    { "fg": "color.code-comment", "bg": "color.page-code", "min": 4.5 },
-    { "fg": "color.code-number", "bg": "color.page-code", "min": 4.5 },
-    { "fg": "color.code-name", "bg": "color.page-code", "min": 4.5 },
-    { "fg": "color.code-attr", "bg": "color.page-code", "min": 4.5 }
+    {
+      "fg": "color.code-keyword",
+      "bg": "color.page-code",
+      "min": 4.5
+    },
+    {
+      "fg": "color.code-string",
+      "bg": "color.page-code",
+      "min": 4.5
+    },
+    {
+      "fg": "color.code-comment",
+      "bg": "color.page-code",
+      "min": 4.5
+    },
+    {
+      "fg": "color.code-number",
+      "bg": "color.page-code",
+      "min": 4.5
+    },
+    {
+      "fg": "color.code-name",
+      "bg": "color.page-code",
+      "min": 4.5
+    },
+    {
+      "fg": "color.code-attr",
+      "bg": "color.page-code",
+      "min": 4.5
+    },
+    {
+      "fg": "color.on-accent",
+      "bg": "color.accent-fill",
+      "min": 4.5
+    },
+    {
+      "fg": "color.on-accent",
+      "bg": "color.accent-hover",
+      "min": 4.5
+    },
+    {
+      "fg": "color.text",
+      "bg": "color.field",
+      "min": 4.5
+    },
+    {
+      "fg": "color.text-muted",
+      "bg": "color.field",
+      "min": 4.5
+    },
+    {
+      "fg": "color.text",
+      "bg": "color.canvas",
+      "min": 4.5
+    },
+    {
+      "fg": "color.accent",
+      "bg": "color.selected",
+      "min": 3
+    },
+    {
+      "fg": "color.rule",
+      "bg": "color.bg-raised",
+      "min": 1.5
+    }
   ]
 }

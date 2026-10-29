@@ -7,58 +7,88 @@
     },
     "text-muted": {
       "$type": "color",
-      "$value": "{p.ink.700}",
-      "$description": "Secondary text: hints, captions, shortcuts"
+      "$value": "{p.ink.500}",
+      "$description": "Secondary text: hints, captions, shortcuts, labels"
     },
     "bg": {
       "$type": "color",
-      "$value": "{p.ink.50}",
-      "$description": "The window: title bar, menus bar, toolbar"
+      "$value": "{p.ink.0}",
+      "$description": "The chrome: title bar, menu bar, toolbar, panels, status bar"
     },
     "bg-raised": {
       "$type": "color",
       "$value": "{p.ink.0}",
-      "$description": "Menus, dialogs, panels and fields"
+      "$description": "Menus, popovers and dialogs"
+    },
+    "field": {
+      "$type": "color",
+      "$value": "{p.ink.100}",
+      "$description": "The fill of fields, selects and segmented controls"
     },
     "canvas": {
       "$type": "color",
-      "$value": "{p.ink.100}",
+      "$value": "{p.ink.150}",
       "$description": "Behind the pages"
     },
     "hover": {
       "$type": "color",
-      "$value": "{p.ink.200}",
-      "$description": "A hovered button or menu item"
+      "$value": "{p.ink.100}",
+      "$description": "A hovered button, row or menu item"
     },
     "selected": {
       "$type": "color",
-      "$value": "{p.blue.100}",
-      "$description": "A toggled-on button; the selected list row"
+      "$value": "{p.blue.50}",
+      "$description": "A toggled-on button; the selected row or tab"
+    },
+    "divider": {
+      "$type": "color",
+      "$value": "{p.ink.200}",
+      "$description": "Separators between regions and sections (decorative)"
     },
     "rule": {
       "$type": "color",
       "$value": "{p.ink.300}",
-      "$description": "Rules and outlines"
+      "$description": "Outlines of controls: fields, buttons, checkboxes"
     },
     "accent": {
       "$type": "color",
       "$value": "{p.blue.500}",
-      "$description": "Primary actions and links"
+      "$description": "Links, active marks and accent text"
+    },
+    "accent-fill": {
+      "$type": "color",
+      "$value": "{p.blue.500}",
+      "$description": "Primary buttons, checked boxes, the selected option"
     },
     "accent-hover": {
       "$type": "color",
       "$value": "{p.blue.600}",
-      "$description": "Primary actions, hovered or pressed"
+      "$description": "The accent fill, hovered or pressed"
     },
     "on-accent": {
       "$type": "color",
       "$value": "{p.ink.0}",
-      "$description": "Text on an accent fill"
+      "$description": "Text and marks on the accent fill"
     },
     "focus": {
       "$type": "color",
       "$value": "{p.blue.500}",
       "$description": "The focus ring"
+    },
+    "scrollbar": {
+      "$type": "color",
+      "$value": "#00000033",
+      "$description": "The scrollbar thumb"
+    },
+    "scrollbar-hover": {
+      "$type": "color",
+      "$value": "#00000059",
+      "$description": "The scrollbar thumb, hovered"
+    },
+    "backdrop": {
+      "$type": "color",
+      "$value": "#00000033",
+      "$description": "Behind a modal dialog"
     },
     "positive": {
       "$type": "color",
