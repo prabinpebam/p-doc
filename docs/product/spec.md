@@ -274,7 +274,9 @@ Waits name their class from the perceived-performance skill: *instant* (< 100 ms
 
 **Implementation order (I8):** first make Heading 5 and 6 distinct paragraph styles everywhere (including older files that have no definitions for them), without changing existing Heading 1–4. Then build editable and personal styles, reusable defaults and undoable style sets; list and character formatting and Markdown follow. A partial slice does not close its DoD row.
 
-**As built, first I8 slice:** Heading 5 and 6 are independent styles, selectable from the toolbar, Paragraph styles menu, command search and Ctrl+Alt+5/6. Older documents gain missing definitions without changing existing styles or content attributes. The outline, six-level contents, HTML/print and Markdown keep their levels; Word writes Heading5/Heading6 with their style definitions and bookmarks. The remainder of U41–U45 is still in progress.
+**As built, first I8 slice:** Heading 5 and 6 are independent styles, selectable from the toolbar, Paragraph styles menu, command search and Ctrl+Alt+5/6. Older documents gain missing definitions without changing existing styles or content attributes. The outline, six-level contents, HTML/print and Markdown keep their levels; Word writes Heading5/Heading6 with their style definitions and bookmarks.
+
+**As built, second I8 slice (U41, U42):** the Styles dialog edits any style live; each change, a new style, a rename, a delete and a style set is its own Undo step (the styles travel in the editor's history, not as text changes, so Suggesting mode doesn't turn them into suggestions). Own styles are saved under keys `custom-…` with their name, and Word writes them as `PDcustom-…` with their following style; Markdown writes them as plain paragraphs, and Word import doesn't map them back yet. Styles read from a file are cleaned (known fields, safe font names and colours, bounded numbers) before they reach the page's CSS. The personal default styles live in settings and new documents start with them. Lists, character formatting and Markdown (U43–U45) are still in progress.
 
 ### 4.11 Paragraph layout (U46–U50)
 

@@ -86,11 +86,15 @@ export function applyStyle(editor: Editor, key: StyleKey | "quote" | "code"): vo
   if (key === "quote") return void chain.toggleBlockquote().run();
   if (key === "code") return void chain.toggleCodeBlock().run();
   if (editor.isActive("codeBlock")) chain.toggleCodeBlock();
+  if (editor.isActive("blockquote")) chain.lift("blockquote");
   if (key.startsWith("heading")) {
     chain.setHeading({ level: Number(key.slice(7)) as 1 | 2 | 3 | 4 | 5 | 6 }).run();
     return setBlockAttrs(editor, { textStyle: null });
   }
-  chain.setParagraph().run();
+  // TipTap's setParagraph on a paragraph falls back to clearNodes, which this schema's notes can't take;
+  // a code block or quote is already a paragraph once the commands above run.
+  if (editor.isActive("heading")) chain.setParagraph();
+  chain.run();
   setBlockAttrs(editor, { textStyle: key === "normal" ? null : key });
 }
 
@@ -106,9 +110,9 @@ const pt = (v: unknown): number | null => {
 export function styleFromSelection(editor: Editor, styles: Styles): { key: StyleKey; def: StyleDef } | null {
   const block = currentBlock(editor);
   if (!block) return null;
-  const key = styleKeyOf(block.type.name, block.attrs);
+  const key = currentStyle(editor);
   if (!key) return null;
-  const base = styles[key];
+  const base = styles[key] ?? styles.normal;
   const ts = editor.getAttributes("textStyle") as Record<string, unknown>;
   const def: StyleDef = {
     ...base,

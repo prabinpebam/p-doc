@@ -6,7 +6,7 @@ import { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, net, protocol, 
 import { appendFileSync, existsSync, mkdirSync, readFileSync, statSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { basename, join } from "node:path";
-import { ASSET_SCHEME, assetOfUrl, cleanPage, importKind, parseDocument, type PDocFile } from "@p-doc/core";
+import { ASSET_SCHEME, assetOfUrl, cleanPage, cleanStyles, importKind, parseDocument, type PDocFile } from "@p-doc/core";
 import { Library } from "./library.ts";
 import { exported, exportDocument, printDocument, savePdf } from "./output.ts";
 import { ImportError, importInto, isExportKind, MAX_IMPORT, readFile as readDocFile } from "./files.ts";
@@ -242,6 +242,7 @@ function handlers(): void {
       content: r.content ? asDoc({ format: "p-doc", version: 1, id: "x", content: r.content }).content : undefined,
       // Checked and completed like a file's page setup (older defaults lack newer fields).
       page: page ? cleanPage(page) : undefined,
+      styles: r.styles ? cleanStyles(r.styles) : settings.get().styleDefault ?? undefined,
     });
   });
   h("library:open", (ref: DocRef) => {

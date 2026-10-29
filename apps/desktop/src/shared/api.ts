@@ -1,5 +1,5 @@
 /** The contract between the renderer and the main process (the preload exposes it as `window.pdoc`). */
-import type { PageSetup, PDocFile } from "@p-doc/core";
+import type { PageSetup, PDocFile, Styles } from "@p-doc/core";
 
 export type Space = "private" | "public";
 
@@ -47,6 +47,8 @@ export interface Settings {
   marks: boolean;
   /** "Set as default" in Page setup. */
   pageDefault: PageSetup | null;
+  /** Personal paragraph styles for new documents (U41). */
+  styleDefault: Styles | null;
   /** The document open when P-Doc last closed. */
   last: DocRef | null;
   /** The GitHub connection: no token, only who and where (the token stays in Git's helper). */
@@ -169,6 +171,7 @@ export interface CreateRequest {
   space?: Space;
   content?: PDocFile["content"];
   page?: PageSetup;
+  styles?: Styles;
   comments?: PDocFile["comments"];
 }
 

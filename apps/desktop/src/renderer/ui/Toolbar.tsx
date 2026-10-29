@@ -34,8 +34,8 @@ import {
   TextStrikethrough20Regular,
   TextUnderline20Regular,
 } from "@fluentui/react-icons";
-import { SANS } from "@p-doc/core";
-import { COMMANDS, fontSizeAt, runCommand, setFontSize, shownChord, STYLE_NAMES, ZOOMS } from "../commands.ts";
+import { isStyleKey, SANS, styleKeys, styleLabel } from "@p-doc/core";
+import { COMMANDS, fontSizeAt, runCommand, setFontSize, shownChord, ZOOMS } from "../commands.ts";
 import { currentStyle, applyStyle } from "../editor/blocks.ts";
 import { getEditor, focusEditor } from "../session.ts";
 import { app, updateSettings } from "../state.ts";
@@ -57,7 +57,7 @@ export const FONTS: [string, string][] = [
   ["Courier New", "'Courier New', Courier, monospace"],
 ];
 
-const TEXT_COLOURS: [string, string][] = [
+export const TEXT_COLOURS: [string, string][] = [
   ["Black", "#000000"],
   ["Dark grey", "#434343"],
   ["Grey", "#666666"],
@@ -301,6 +301,7 @@ export function Toolbar() {
   history.use((s) => s.viewing);
   const ref = useRef<HTMLDivElement>(null);
   const editor = getEditor();
+  const styles = app.use((s) => s.doc?.styles);
   const editable = !!editor?.isEditable;
   const style = editor ? currentStyle(editor) : null;
   const size = editor ? fontSizeAt(editor) : 11;
@@ -392,13 +393,13 @@ export function Toolbar() {
           value={style ?? ""}
           disabled={!editable}
           onChange={(e) => {
-            if (editor) applyStyle(editor, e.target.value as never);
+            if (editor && isStyleKey(e.target.value)) applyStyle(editor, e.target.value);
           }}
         >
           {style == null ? <option value="">—</option> : null}
-          {(Object.keys(STYLE_NAMES) as (keyof typeof STYLE_NAMES)[]).map((k) => (
+          {(styles ? styleKeys(styles) : []).map((k) => (
             <option key={k} value={k}>
-              {STYLE_NAMES[k]}
+              {styleLabel(k, styles!)}
             </option>
           ))}
         </select>

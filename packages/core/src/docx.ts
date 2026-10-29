@@ -61,6 +61,7 @@ import { notesListOf } from "./notes.ts";
 import { anchorsOfJSON, wordBookmarkName } from "./refs.ts";
 import { BORDER_SIDES, cleanLayout } from "./paragraph.ts";
 import { cleanCrop, dataImageParts, imageInfo } from "./image.ts";
+import { followingStyle, isStyleKey, styleKeys, styleLabel, wordStyleId } from "./styles.ts";
 
 type Mark = NonNullable<JSONContent["marks"]>[number];
 
@@ -213,7 +214,7 @@ function runFormat(marks: Mark[], extra: { font?: string }) {
 function paraStyle(n: JSONContent): Partial<IParagraphOptions> {
   if (n.type === "heading") return { heading: HEADING[Number(n.attrs?.level ?? 1) - 1] };
   const ts = n.attrs?.textStyle;
-  return ts === "title" ? { heading: HeadingLevel.TITLE } : ts === "subtitle" ? { style: "Subtitle" } : {};
+  return isStyleKey(ts) ? { style: wordStyleId(ts) } : {};
 }
 
 /** A paragraph's formatting suggestion as Word's tracked paragraph change, holding its old style and layout (U67). */
@@ -325,11 +326,10 @@ function blocks(nodes: JSONContent[] | undefined, ctx: Ctx, list?: { ref: string
   for (const n of nodes ?? []) {
     switch (n.type) {
       case "paragraph": {
-        const ts = n.attrs?.textStyle;
         out.push(
           new Paragraph({
+            ...paraStyle(n),
             ...paraOptions(n),
-            ...(ts === "title" ? { heading: HeadingLevel.TITLE } : ts === "subtitle" ? { style: "Subtitle" } : {}),
             ...(list ? { numbering: { reference: list.ref, level: list.level, instance: list.instance } } : {}),
             ...paraRevision(n, ctx),
             children: runs(n.content, ctx),
@@ -345,12 +345,12 @@ function blocks(nodes: JSONContent[] | undefined, ctx: Ctx, list?: { ref: string
         break;
       }
       case "blockquote":
-        for (const c of blocks(n.content, ctx)) {
+        for (const c of blocks(n.content?.map((c) => c.type === "paragraph" && !c.attrs?.textStyle ? { ...c, attrs: { ...c.attrs, textStyle: "quote" } } : c), ctx)) {
           out.push(c);
         }
         break;
       case "codeBlock":
-        for (const line of nodeText(n).split("\n")) out.push(new Paragraph({ style: "Code", children: [new TextRun({ text: line, font: "Consolas" })] }));
+        for (const line of nodeText(n).split("\n")) out.push(new Paragraph({ style: "Code", children: [new TextRun({ text: line })] }));
         break;
       case "horizontalRule":
         out.push(new Paragraph({ border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: "999999", space: 1 } }, children: [] }));
@@ -460,10 +460,10 @@ function hfParagraph(text: string, align: HfAlign): Paragraph {
 }
 
 function styleRun(s: StyleDef) {
-  return { font: s.fontFamily.split(",")[0]!.replace(/['"]/g, "").trim(), size: Math.round(s.fontSize * 2), bold: s.bold, italics: s.italic, color: hex(s.color) };
+  return { font: s.fontFamily.split(",")[0]!.replace(/['"]/g, "").trim(), size: Math.round(s.fontSize * 2), bold: s.bold, italics: s.italic, color: hex(s.color), smallCaps: s.smallCaps };
 }
 function styleParagraph(s: StyleDef) {
-  return { spacing: { before: Math.round(s.spaceBefore * 20), after: Math.round(s.spaceAfter * 20), line: Math.round(s.lineHeight * 240) } };
+  return { spacing: { before: Math.round(s.spaceBefore * 20), after: Math.round(s.spaceAfter * 20), line: Math.round(s.lineHeight * 240) }, ...(s.indent ? { indent: { left: Math.round(s.indent * 720) } } : {}) };
 }
 
 const SECTION_TYPE: Record<SectionStart, (typeof SectionType)[keyof typeof SectionType]> = { next: SectionType.NEXT_PAGE, continuous: SectionType.CONTINUOUS, odd: SectionType.ODD_PAGE, even: SectionType.EVEN_PAGE };
@@ -520,10 +520,11 @@ export async function toDocx(doc: PDocFile): Promise<Uint8Array> {
     styles: {
       default: { document: { run: styleRun(s.normal), paragraph: styleParagraph(s.normal) } },
       paragraphStyles: [
-        ...(["heading1", "heading2", "heading3", "heading4", "heading5", "heading6"] as const).map((k, i) => ({ id: `Heading${i + 1}`, name: `Heading ${i + 1}`, basedOn: "Normal", next: "Normal", quickFormat: true, run: styleRun(s[k]), paragraph: styleParagraph(s[k]) })),
-        { id: "Title", name: "Title", basedOn: "Normal", next: "Normal", quickFormat: true, run: styleRun(s.title), paragraph: styleParagraph(s.title) },
-        { id: "Subtitle", name: "Subtitle", basedOn: "Normal", next: "Normal", quickFormat: true, run: styleRun(s.subtitle), paragraph: styleParagraph(s.subtitle) },
-        { id: "Code", name: "Code", basedOn: "Normal", run: { font: "Consolas", size: 20 }, paragraph: { spacing: { after: 0 } } },
+        ...styleKeys(s).map((k) => ({
+          id: wordStyleId(k), name: styleLabel(k, s), ...(k === "normal" ? {} : { basedOn: "Normal" }),
+          next: wordStyleId(followingStyle(k, s)), quickFormat: true, run: styleRun(s[k]),
+          paragraph: { ...styleParagraph(s[k]), ...(k.startsWith("heading") ? { outlineLevel: Number(k.slice(7)) - 1 } : {}) },
+        })),
       ],
     },
     numbering: {

@@ -2,7 +2,7 @@
 import { commands, Extension, type AnyExtension } from "@tiptap/core";
 import { Selection, TextSelection } from "@tiptap/pm/state";
 import { Placeholder, TrailingNode } from "@tiptap/extensions";
-import { extensions, NotesSync, Suggest, TocSync } from "@p-doc/core";
+import { extensions, NotesSync, Suggest, TocSync, type Styles } from "@p-doc/core";
 import { FindHighlight } from "./find.ts";
 import { ImageFiles, LiveImage, type ImageHost } from "./image.ts";
 import { Pages } from "./pages.ts";
@@ -12,6 +12,7 @@ import { CommentDraft } from "./review.ts";
 import { NotesKeys, textEnd } from "./notes.ts";
 import { Equations } from "./equations.ts";
 import { LiveCodeBlock } from "./code.ts";
+import { StyleHistory } from "./styles.ts";
 
 /**
  * TipTap's `focus` waits a frame before focusing, so keys pressed straight after a toolbar or menu
@@ -53,13 +54,14 @@ const DocEnds = Extension.create({
   },
 });
 
-export function editorExtensions(o: { author: string; images: () => ImageHost }): AnyExtension[] {
+export function editorExtensions(o: { author: string; images: () => ImageHost; styles: Styles }): AnyExtension[] {
   return extensions({
     image: LiveImage,
     codeBlock: LiveCodeBlock,
     extra: [
       SyncFocus,
       DocEnds,
+      StyleHistory.configure({ styles: o.styles }),
       // As in Word and Google Docs, a table, rule, break, image or code block is never the last block.
       TrailingNode.configure({ node: "paragraph", notAfter: ["paragraph", "heading", "blockquote", "bulletList", "orderedList", "taskList", "notes"] }),
       Placeholder.configure({ placeholder: "Start writing" }),

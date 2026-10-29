@@ -1,5 +1,6 @@
 /** The P-Doc file format (`*.pdoc.json`): readable JSON, pretty-printed so Git diffs read well. */
 import type { JSONContent } from "@tiptap/core";
+import { cleanStyles } from "./styles.ts";
 
 export const FORMAT = "p-doc";
 /** 2: images live beside the document as `assets/<sha256>.<ext>` (stage 7); 1 kept them inline. */
@@ -117,6 +118,8 @@ export function pageNumberText(n: number, f: NumFormat): string {
 }
 
 export interface StyleDef {
+  /** The person's name for a custom style; built-in labels are fixed. */
+  name?: string;
   fontFamily: string;
   /** Points. */
   fontSize: number;
@@ -127,13 +130,18 @@ export interface StyleDef {
   /** Points. */
   spaceBefore: number;
   spaceAfter: number;
+  /** Half-inch steps, as for paragraph indent. */
+  indent?: number;
+  next?: StyleKey;
+  smallCaps?: boolean;
 }
 
-export const STYLE_KEYS = ["normal", "title", "subtitle", "heading1", "heading2", "heading3", "heading4", "heading5", "heading6"] as const;
-export type StyleKey = (typeof STYLE_KEYS)[number];
+export const STYLE_KEYS = ["normal", "title", "subtitle", "heading1", "heading2", "heading3", "heading4", "heading5", "heading6", "quote", "code"] as const;
+export type BuiltinStyleKey = (typeof STYLE_KEYS)[number];
+export type StyleKey = BuiltinStyleKey | `custom-${string}`;
 export type Styles = Record<StyleKey, StyleDef>;
 
-export const STYLE_LABELS: Record<StyleKey, string> = {
+export const STYLE_LABELS: Record<BuiltinStyleKey, string> = {
   normal: "Normal text",
   title: "Title",
   subtitle: "Subtitle",
@@ -143,6 +151,8 @@ export const STYLE_LABELS: Record<StyleKey, string> = {
   heading4: "Heading 4",
   heading5: "Heading 5",
   heading6: "Heading 6",
+  quote: "Quote",
+  code: "Code",
 };
 
 export interface CommentReply {
@@ -188,6 +198,8 @@ export function defaultStyles(): Styles {
     heading4: base({ fontSize: 12, color: "#666666", spaceBefore: 14, spaceAfter: 4 }),
     heading5: base({ fontSize: 11, bold: true, color: "#666666", spaceBefore: 12, spaceAfter: 4 }),
     heading6: base({ fontSize: 11, italic: true, color: "#666666", spaceBefore: 12, spaceAfter: 4 }),
+    quote: base({ italic: true }),
+    code: base({ fontFamily: "Consolas, 'Courier New', monospace", fontSize: 10, lineHeight: 1.4, spaceAfter: 0 }),
   };
 }
 
@@ -324,8 +336,7 @@ export function parseDocument(text: string, o: { allowNewer?: boolean } = {}): P
   if (d.version > FORMAT_VERSION && !o.allowNewer) throw new NewerFormatError(d.version, typeof d.title === "string" && d.title.trim() ? d.title : "Untitled document");
   if (typeof d.id !== "string" || !d.id) throw new FormatError("No document id");
   if (!d.content || (d.content as JSONContent).type !== "doc") throw new FormatError("No content");
-  const styles = defaultStyles();
-  for (const k of STYLE_KEYS) if (d.styles?.[k]) styles[k] = { ...styles[k], ...d.styles[k] };
+  const styles = cleanStyles(d.styles);
   return {
     format: FORMAT,
     version: Math.max(FORMAT_VERSION, d.version),

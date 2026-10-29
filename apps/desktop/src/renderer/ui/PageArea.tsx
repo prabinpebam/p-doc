@@ -10,7 +10,8 @@ import { showMarks } from "../editor/marks.ts";
 import { textEnd } from "../editor/notes.ts";
 import { followAnchor } from "../editor/refs.ts";
 import { geometry, pageLayout, setPageSetup, watermarkStyle, type Layout } from "../editor/pages.ts";
-import { attachEditor, changed, detachEditor, getEditor } from "../session.ts";
+import { attachEditor, changed, detachEditor, getEditor, updateDoc } from "../session.ts";
+import { documentStyles } from "../editor/styles.ts";
 import { app, openDialog, toast } from "../state.ts";
 import { history } from "../versions.ts";
 import { applyMode, review, reviewCss } from "../review.ts";
@@ -66,7 +67,7 @@ function DocEditor({ doc }: { doc: PDocFile }) {
   const author = app.use((s) => s.settings?.identity.name || "Me");
   const spelling = app.use((s) => s.settings?.spelling ?? true);
   const marks = app.use((s) => !!s.settings?.marks);
-  const extensions = editorExtensions({ author, images: imageHost });
+  const extensions = editorExtensions({ author, images: imageHost, styles: doc.styles });
   const editor = useEditor(
     {
       extensions,
@@ -116,7 +117,11 @@ function DocEditor({ doc }: { doc: PDocFile }) {
         if (transaction.getMeta("pdoc-toc") || transaction.getMeta("pdoc-quiet")) return;
         changed();
       },
-      onTransaction: () => bumpTick(),
+      onTransaction: ({ editor }) => {
+        const styles = documentStyles.getState(editor.state);
+        if (styles && styles !== app.get().doc?.styles) updateDoc({ styles });
+        bumpTick();
+      },
     },
     [],
   );

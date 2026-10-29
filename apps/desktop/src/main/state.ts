@@ -2,7 +2,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { isAbsolute, join } from "node:path";
 import { userInfo } from "node:os";
-import { cleanPage, parseDocument, serializeDocument, type PDocFile } from "@p-doc/core";
+import { cleanPage, cleanStyles, parseDocument, serializeDocument, type PDocFile } from "@p-doc/core";
 import { writeAtomic, SPACES } from "./library.ts";
 import { DEFAULT_REPOS, isDocRef, isRepoName, type DocRef, type FirstRunStep, type GitHubLink, type Recovered, type Settings } from "../shared/api.ts";
 
@@ -13,7 +13,7 @@ export function defaultSettings(): Settings {
   } catch {
     // No user name on this system.
   }
-  return { version: 1, firstRun: "pending", firstRunStep: "welcome", theme: "system", zoom: 100, identity: { name, email: "" }, spelling: true, leftPanel: "outline", compact: false, ruler: false, marks: false, pageDefault: null, last: null, github: null, library: null };
+  return { version: 1, firstRun: "pending", firstRunStep: "welcome", theme: "system", zoom: 100, identity: { name, email: "" }, spelling: true, leftPanel: "outline", compact: false, ruler: false, marks: false, pageDefault: null, styleDefault: null, last: null, github: null, library: null };
 }
 
 const STEPS: FirstRunStep[] = ["welcome", "git", "signIn", "identity", "repos", "done"];
@@ -42,7 +42,7 @@ export class SettingsStore {
     } catch {
       // A damaged settings file: start from the defaults.
     }
-    this.value = { ...d, ...read, version: 1, identity: { ...d.identity, ...(read.identity ?? {}) }, github: cleanLink(read.github), firstRunStep: STEPS.includes(read.firstRunStep as FirstRunStep) ? read.firstRunStep! : "welcome", library: cleanLibrary(read.library) };
+    this.value = { ...d, ...read, version: 1, identity: { ...d.identity, ...(read.identity ?? {}) }, github: cleanLink(read.github), firstRunStep: STEPS.includes(read.firstRunStep as FirstRunStep) ? read.firstRunStep! : "welcome", library: cleanLibrary(read.library), styleDefault: read.styleDefault ? cleanStyles(read.styleDefault) : null };
   }
 
   get(): Settings {
@@ -68,6 +68,7 @@ export class SettingsStore {
     if (typeof patch.ruler === "boolean") next.ruler = patch.ruler;
     if (typeof patch.marks === "boolean") next.marks = patch.marks;
     if (patch.pageDefault === null || (patch.pageDefault && typeof patch.pageDefault === "object")) next.pageDefault = patch.pageDefault ? cleanPage(patch.pageDefault) : null;
+    if (patch.styleDefault === null || (patch.styleDefault && typeof patch.styleDefault === "object")) next.styleDefault = patch.styleDefault ? cleanStyles(patch.styleDefault) : null;
     if (patch.last === null || isDocRef(patch.last)) next.last = patch.last;
     if (STEPS.includes(patch.firstRunStep as FirstRunStep)) next.firstRunStep = patch.firstRunStep!;
     if (patch.github === null) next.github = null;

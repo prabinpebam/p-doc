@@ -314,7 +314,7 @@ export class Library {
 
   async create(req: CreateRequest = {}): Promise<Opened> {
     const space = req.space ?? "private";
-    const doc = createDocument({ title: req.title, content: req.content, page: req.page, comments: req.comments });
+    const doc = createDocument({ title: req.title, content: req.content, page: req.page, styles: req.styles, comments: req.comments });
     const ref = { space, path: this.freePath(space, doc) };
     this.write(ref, doc);
     await this.commit(space, [ref.path], `Create ${doc.title}`);

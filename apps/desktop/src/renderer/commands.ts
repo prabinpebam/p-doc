@@ -4,7 +4,8 @@
  */
 import type { Editor } from "@tiptap/core";
 import { NodeSelection } from "@tiptap/pm/state";
-import { cleanCrop, defaultStyles, SECTION_LABEL, STYLE_LABELS, TEXT_WIDTH, type PageSetup, type SectionStart, type StyleKey, type TextWidth } from "@p-doc/core";
+import { cleanCrop, customStyleKeys, defaultStyles, SECTION_LABEL, STYLE_KEYS, STYLE_LABELS, STYLE_SETS, styleLabel, stylesForSet, TEXT_WIDTH, type PageSetup, type SectionStart, type StyleKey, type TextWidth } from "@p-doc/core";
+import { setDocumentStyles } from "./editor/styles.ts";
 import type { Theme } from "../shared/api.ts";
 import { applyStyle, clearBlockDirectFormatting, currentStyle, indent, insertAtomBlock, setBlockAttrs, currentBlock, styleFromSelection } from "./editor/blocks.ts";
 import { endCrop, imageUi, selectedImage, startCrop } from "./editor/image.ts";
@@ -101,11 +102,10 @@ export function fontSizeAt(e: Editor): number {
   if (m) return m[2] === "px" ? Number(m[1]) * 0.75 : Number(m[1]);
   const key = styleKeyAt(e);
   const doc = app.get().doc;
-  return key && doc ? doc.styles[key].fontSize : 11;
+  return key && doc ? (doc.styles[key] ?? doc.styles.normal).fontSize : 11;
 }
 const styleKeyAt = (e: Editor): StyleKey | null => {
-  const s = currentStyle(e);
-  return s === "quote" || s === "code" ? "normal" : s;
+  return currentStyle(e);
 };
 
 export function setFontSize(e: Editor, size: number): void {
@@ -145,8 +145,8 @@ const spaceAt = (e: Editor, which: "spaceBefore" | "spaceAfter"): number => {
   return b?.attrs[which] != null ? Number(b.attrs[which]) : key && doc ? doc.styles[key][which] : 0;
 };
 
-const STYLE_KEYS_MENU: (StyleKey | "quote" | "code")[] = ["normal", "title", "subtitle", "heading1", "heading2", "heading3", "heading4", "heading5", "heading6", "quote", "code"];
-export const STYLE_NAMES: Record<StyleKey | "quote" | "code", string> = { ...STYLE_LABELS, quote: "Quote", code: "Code" };
+const STYLE_KEYS_MENU = STYLE_KEYS;
+export const STYLE_NAMES = STYLE_LABELS;
 
 function updateStyleToMatch(): void {
   const e = ed();
@@ -154,9 +154,28 @@ function updateStyleToMatch(): void {
   if (!e || !doc) return;
   const r = styleFromSelection(e, doc.styles);
   if (!r) return;
-  updateDoc({ styles: { ...doc.styles, [r.key]: r.def } });
+  setDocumentStyles(e, { ...doc.styles, [r.key]: r.def });
   clearBlockDirectFormatting(e);
-  toast(`Updated ${STYLE_LABELS[r.key]} to match`);
+  toast(`Updated ${styleLabel(r.key, doc.styles)} to match`);
+}
+
+export async function saveDefaultStyles(): Promise<void> {
+  const styles = app.get().doc?.styles;
+  if (!styles) return;
+  try {
+    await updateSettings({ styleDefault: structuredClone(styles) });
+    toast("New documents will use these styles.");
+  } catch (error) {
+    console.error(error);
+    toast("Could not save your default styles. Try again.", { tone: "error" });
+  }
+}
+
+export function useDefaultStyles(): void {
+  const e = ed();
+  const styles = app.get().settings?.styleDefault;
+  const current = app.get().doc?.styles;
+  if (e && styles && current) setDocumentStyles(e, { ...current, ...structuredClone(styles) });
 }
 
 const commands: Command[] = [
@@ -341,11 +360,23 @@ const commands: Command[] = [
     },
   },
   {
+    id: "style.edit", label: "Edit styles…", keywords: "paragraph new rename delete custom personal following",
+    run: () => openDialog({ kind: "styles" }), enabled: canEdit,
+  },
+  { id: "style.saveDefaults", label: "Save as my default styles", keywords: "personal paragraph new documents", run: () => void saveDefaultStyles(), enabled: canEdit },
+  { id: "style.useDefaults", label: "Use my default styles", keywords: "personal paragraph", run: useDefaultStyles, enabled: () => canEdit() && !!app.get().settings?.styleDefault },
+  ...STYLE_SETS.map((set): Command => ({
+    id: `style.set.${set}`, label: set, keywords: "style set restyle",
+    run: withEditor((e) => { const doc = app.get().doc; if (doc) setDocumentStyles(e, stylesForSet(set, doc.styles)); }), enabled: canEdit,
+  })),
+  {
     id: "style.reset",
     label: "Reset styles",
     keywords: "paragraph style default",
     run: () => {
-      updateDoc({ styles: defaultStyles() });
+      const e = ed();
+      const doc = app.get().doc;
+      if (e && doc) setDocumentStyles(e, { ...doc.styles, ...defaultStyles() });
       toast("Styles reset");
     },
     enabled: () => !!app.get().doc && canEdit(),
@@ -559,7 +590,8 @@ export function labelOf(c: Command): string {
   if (c.id === "style.update") {
     const e = ed();
     const k = e ? styleKeyAt(e) : null;
-    return k ? `Update ${STYLE_LABELS[k]} to match` : c.label;
+    const styles = app.get().doc?.styles;
+    return k && styles ? `Update ${styleLabel(k, styles)} to match` : c.label;
   }
   if (c.id === "spacing.before") {
     const e = ed();
@@ -635,7 +667,8 @@ export const MENUS: Menu[] = [
     key: "O",
     items: [
       { label: "Text", items: ["format.bold", "format.italic", "format.underline", "format.strike", "format.sup", "format.sub", "-", "format.sizeUp", "format.sizeDown"] },
-      { label: "Paragraph styles", items: [...STYLE_KEYS_MENU.map((k) => `style.${k}`), "-", "style.update", "style.reset"] },
+      { label: "Paragraph styles", items: [...STYLE_KEYS_MENU.map((k) => `style.${k}`), "-", "style.edit", "style.update", "style.reset", "-", "style.saveDefaults", "style.useDefaults"] },
+      { label: "Style set", items: STYLE_SETS.map((set) => `style.set.${set}`) },
       { label: "Align", items: ["align.left", "align.center", "align.right", "align.justify"] },
       { label: "Indent", items: ["indent.more", "indent.less"] },
       { label: "Line spacing", items: [...LINE_SPACINGS.map(([, v]) => `spacing.${v}`), "-", "spacing.before", "spacing.after"] },
@@ -698,6 +731,22 @@ for (const m of MENUS) {
 
 const BY_CHORD = new Map<string, Command>();
 for (const c of commands) for (const k of c.keys ?? []) BY_CHORD.set(k, c);
+
+let lastStyles = app.get().doc?.styles;
+app.subscribe(() => {
+  const styles = app.get().doc?.styles;
+  if (styles === lastStyles) return;
+  lastStyles = styles;
+  for (const id of COMMANDS.keys()) if (id.startsWith("style.custom-")) { COMMANDS.delete(id); MENU_PATH.delete(id); }
+  const custom = styles ? customStyleKeys(styles) : [];
+  for (const key of custom) {
+    const id = `style.${key}`;
+    COMMANDS.set(id, { id, label: styleLabel(key, styles!), keywords: "paragraph custom style", enabled: canEdit, run: withEditor((e) => applyStyle(e, key)), checked: () => !!ed() && currentStyle(ed()!) === key });
+    MENU_PATH.set(id, "Format › Paragraph styles");
+  }
+  const menu = MENUS.find((m) => m.id === "format")?.items.find((m) => typeof m !== "string" && m.label === "Paragraph styles");
+  if (menu && typeof menu !== "string") menu.items = [...STYLE_KEYS_MENU.map((k) => `style.${k}`), ...custom.map((k) => `style.${k}`), "-", "style.edit", "style.update", "style.reset", "-", "style.saveDefaults", "style.useDefaults"];
+});
 
 export const commandForChord = (chord: string) => BY_CHORD.get(chord);
 

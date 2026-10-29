@@ -23,6 +23,7 @@ import { BookmarkDialog } from "./BookmarkDialog.tsx";
 import { ContentsDialog } from "./ContentsDialog.tsx";
 import { EquationDialog } from "./EquationDialog.tsx";
 import { CompareDialog } from "./CompareDialog.tsx";
+import { StylesDialog } from "./StylesDialog.tsx";
 
 export function Dialogs() {
   const d = app.use((s) => s.dialog);
@@ -80,6 +81,8 @@ export function Dialogs() {
       return <ContentsDialog />;
     case "equation":
       return <EquationDialog />;
+    case "styles":
+      return <StylesDialog />;
   }
 }
 

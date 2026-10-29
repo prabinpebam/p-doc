@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createDocument, defaultStyles, fromHTML, headings, parseDocument, schema, serializeDocument, styleCss, styleKeyOf, toHTML, toMarkdown, tocEntriesOf } from "../src/index.ts";
+import { cleanStyles, createDocument, defaultStyles, followingStyle, fromHTML, headings, parseDocument, schema, serializeDocument, STYLE_KEYS, STYLE_SETS, styleCss, styleKeyOf, styleKeys, styleLabel, stylesForSet, toHTML, tocEntriesOf, toMarkdown } from "../src/index.ts";
 import { fromDocx, toDocx } from "../src/docx.ts";
 
 const deepHeadings = () => ({
@@ -62,5 +62,70 @@ describe("styles (8.1)", () => {
     expect(styles.match(/<w:style [^>]*w:styleId="Heading5"[\s\S]*?<\/w:style>/)?.[0]).toContain('<w:sz w:val="34"/>');
     const imported = await fromDocx(bytes);
     expect(imported.content.content?.map((n) => n.attrs?.level)).toEqual([4, 5, 6]);
+  });
+});
+
+describe("own styles, defaults and style sets (8.1, 8.2)", () => {
+  const custom = () => {
+    const styles = defaultStyles();
+    styles["custom-callout"] = { ...defaultStyles().normal, name: "Callout", fontSize: 14, bold: true, indent: 1, next: "custom-callout" };
+    styles.heading2 = { ...styles.heading2, next: "custom-callout" };
+    return styles;
+  };
+  const callout = { type: "doc", content: [{ type: "paragraph", attrs: { textStyle: "custom-callout" }, content: [{ type: "text", text: "Mind the gap" }] }] };
+
+  it("keeps an own style through save and reopen, with its name, label and following style", () => {
+    const doc = createDocument({ content: callout, styles: custom() });
+    const back = parseDocument(serializeDocument(doc));
+    expect(back.styles["custom-callout"]).toMatchObject({ name: "Callout", fontSize: 14, bold: true, next: "custom-callout" });
+    expect(styleKeys(back.styles)).toEqual([...STYLE_KEYS, "custom-callout"]);
+    expect(styleLabel("custom-callout", back.styles)).toBe("Callout");
+    expect(followingStyle("heading2", back.styles)).toBe("custom-callout");
+    expect(followingStyle("heading1", back.styles)).toBe("normal");
+    expect(styleKeyOf("paragraph", { textStyle: "custom-callout" })).toBe("custom-callout");
+  });
+
+  it("cleans settings input: unknown keys dropped, unsafe CSS values replaced, numbers bounded", () => {
+    const s = cleanStyles({
+      "custom-ok": { name: "  Mine  ", fontFamily: "Arial; } body { display:none", fontSize: 9999, color: "red;x", next: "nope" },
+      "evil key": { fontSize: 12 },
+      heading1: { bold: true, lineHeight: "2" },
+    });
+    expect(Object.keys(s)).not.toContain("evil key");
+    expect(s["custom-ok"]).toMatchObject({ name: "Mine", fontFamily: defaultStyles().normal.fontFamily, fontSize: defaultStyles().normal.fontSize, color: defaultStyles().normal.color });
+    expect(s["custom-ok"]!.next).toBeUndefined();
+    expect(followingStyle("custom-ok", s)).toBe("custom-ok");
+    expect(s.heading1.bold).toBe(true);
+    expect(s.heading1.lineHeight).toBe(defaultStyles().heading1.lineHeight);
+  });
+
+  it("writes own styles to CSS (screen, print, HTML) and Word, with their following style", async () => {
+    const styles = custom();
+    const css = styleCss(styles, ".page");
+    expect(css.match(/\.page p\[data-style="custom-callout"\] \{[^}]+/)?.[0]).toMatch(/font-size: 14pt.*font-weight: 700.*margin-inline-start: 0.5in/);
+    const doc = createDocument({ content: callout, styles });
+    expect(toHTML(doc)).toContain('data-style="custom-callout"');
+    const zip = await (await import("jszip")).default.loadAsync(await toDocx(doc));
+    const xml = await zip.file("word/document.xml")!.async("string");
+    const word = await zip.file("word/styles.xml")!.async("string");
+    expect(xml).toContain('<w:pStyle w:val="PDcustom-callout"/>');
+    const def = word.match(/<w:style [^>]*w:styleId="PDcustom-callout"[\s\S]*?<\/w:style>/)?.[0] ?? "";
+    expect(def).toContain('w:val="Callout"');
+    expect(def).toContain('<w:sz w:val="28"/>');
+    expect(word.match(/<w:style [^>]*w:styleId="Heading2"[\s\S]*?<\/w:style>/)?.[0]).toContain('<w:next w:val="PDcustom-callout"/>');
+  });
+
+  it("each style set restyles built-in styles and leaves own styles alone", () => {
+    const styles = custom();
+    const classic = stylesForSet("Classic", styles);
+    expect(classic.normal.fontFamily).toContain("Times New Roman");
+    expect(classic.heading1.smallCaps).toBe(true);
+    expect(classic.code.fontFamily).toContain("Consolas");
+    expect(stylesForSet("Modern", styles).heading3.color).toBe("#174ea6");
+    const compact = stylesForSet("Compact", styles);
+    expect(compact.normal.lineHeight).toBe(1);
+    expect(compact.heading1.spaceBefore).toBe(defaultStyles().heading1.spaceBefore / 2);
+    expect(stylesForSet("Default", styles).heading1).toEqual(defaultStyles().heading1);
+    for (const set of STYLE_SETS) expect(stylesForSet(set, styles)["custom-callout"]).toEqual(styles["custom-callout"]);
   });
 });
