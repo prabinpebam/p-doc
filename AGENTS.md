@@ -45,7 +45,7 @@ This project uses the [agentic-craft](https://github.com/prabinpebam/agentic-cra
 ### Project facts (fill in; the skills read these)
 
 - **Product artifacts:** `docs/product/spec.md` (assumptions register in its "Assumptions" section) · `docs/product/definition-of-done.md`
-- **Design system:** tokens `packages/tokens/src/` (DTCG JSON), built with `pnpm tokens` (agentic-craft `tools/build-tokens.mjs` → `packages/tokens/dist/tokens.css`) · checks `pnpm lint:design` (check-tokens, lint-styles, lint-copy) · components by tier `apps/desktop/src/renderer/ui/{primitives,components,patterns}` · library at the in-app "Design system" view (`Ctrl+Alt+Shift+D` in dev) · glossary `docs/design/copy-glossary.md`
+- **Design system:** tokens `packages/tokens/src/` (DTCG JSON), built with `pnpm tokens` (agentic-craft `tools/build-tokens.mjs` → `packages/tokens/dist/tokens.css`) · checks `pnpm lint:design` (check-tokens, lint-styles, lint-copy) · components by tier `apps/desktop/src/renderer/ui/{primitives,components,patterns}` · library at the in-app "Design system" view (`Ctrl+Alt+Shift+D`, or "Design system" in command search) · glossary `docs/design/copy-glossary.md`
 - **Performance:** benchmark `pnpm perf` (opens, types into and saves a 50-page document in the built app) · baseline `docs/product/perf-baseline.json` · budgets in the spec's "Waits" section
 <!-- agentic-craft:end -->
 

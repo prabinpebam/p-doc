@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Locator, Page } from "@playwright/test";
-import { diskText, editor, expect, launch, PROMPTLY, quit, test } from "./helpers.ts";
+import { diskText, editor, expect, launch, PROMPTLY, quit, test, choose } from "./helpers.ts";
 import { zipText } from "./fixtures.ts";
 
 /** Opens a menu and follows its path; the last item may be a plain, check or radio item. */
@@ -102,8 +102,8 @@ test("12.1 tables: merge and split, a header row, drag and distribute widths, sh
   await expect(dlg.getByRole("button", { name: "Apply" })).toBeDisabled();
   await dlg.getByLabel("Column width (in)").fill("1.5");
   await dlg.getByLabel("Cell padding (pt)").fill("6");
-  await dlg.getByLabel("Border", { exact: true }).selectOption({ label: "1½ pt" });
-  await dlg.getByLabel("Border colour").selectOption({ label: "Blue" });
+  await choose(dlg.getByLabel("Border", { exact: true }), { label: "1½ pt" });
+  await choose(dlg.getByLabel("Border colour"), { label: "Blue" });
   await dlg.getByRole("button", { name: "Apply" }).click();
   await expect(dlg).toHaveCount(0);
   await expect.poll(async () => (await widths(page)).slice(1, 3)).toEqual([144, 144]);

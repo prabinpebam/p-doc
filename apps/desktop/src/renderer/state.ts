@@ -8,6 +8,7 @@ export type SaveState = "saved" | "saving" | "error";
 export type Dialog =
   | { kind: "wordCount" }
   | { kind: "shortcuts" }
+  | { kind: "designLibrary" }
   | { kind: "link" }
   | { kind: "specialChars" }
   | { kind: "settings" }

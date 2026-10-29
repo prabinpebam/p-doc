@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 import type { JSONContent } from "@tiptap/core";
 import { BULLET_FORMATS, NUMBER_FORMATS, fromMarkdown, listMarker } from "@p-doc/core";
-import { caretIn, editor, expect, filesIn, launch, PROMPTLY, quit, test } from "./helpers.ts";
+import { caretIn, editor, expect, filesIn, launch, PROMPTLY, quit, test, choose } from "./helpers.ts";
 import { load } from "./fixtures.ts";
 
 const item = (text: string) => ({ type: "listItem", content: [{ type: "paragraph", content: [{ type: "text", text }] }] });
@@ -35,7 +35,7 @@ test("8.3 list options set each level's format and start; restart and continue n
   await caretIn(p("First"));
   await lists("List options…");
   let dialog = page.getByRole("dialog", { name: "List options" });
-  await dialog.locator('select[name="list-format-1"]').selectOption({ label: "a, b, c" });
+  await choose(dialog.locator('[role=combobox][name="list-format-1"]'), { label: "a, b, c" });
   await dialog.locator('input[name="list-start-1"]').fill("abc");
   await expect(dialog.getByText("Enter a whole number from 0 to 32767.")).toBeVisible();
   await expect(dialog.getByRole("button", { name: "Apply" })).toBeDisabled();
@@ -88,9 +88,9 @@ test("8.3 list options set each level's format and start; restart and continue n
   await palette.getByRole("combobox").fill("List options");
   await page.keyboard.press("Enter");
   dialog = page.getByRole("dialog", { name: "List options" });
-  await expect(dialog.locator("select")).toHaveCount(9);
+  await expect(dialog.getByRole("combobox")).toHaveCount(9);
   await expect(dialog.locator('input[name^="list-start"]')).toHaveCount(0);
-  await dialog.locator('select[name="list-format-2"]').selectOption({ label: "– Dash" });
+  await choose(dialog.locator('[role=combobox][name="list-format-2"]'), { label: "– Dash" });
   await page.screenshot({ path: test.info().outputPath("list-options-light.png") });
   await page.emulateMedia({ colorScheme: "dark" });
   await page.waitForTimeout(400);

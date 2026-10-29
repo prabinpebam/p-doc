@@ -8,6 +8,9 @@ import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
 import { common, createLowlight } from "lowlight";
 import { closeHistory } from "@tiptap/pm/history";
 import type { Node as PMNode } from "@tiptap/pm/model";
+import { createElement } from "react";
+import { createRoot } from "react-dom/client";
+import { Select } from "../ui/primitives/Select.tsx";
 
 export const lowlight = createLowlight(common);
 
@@ -56,29 +59,27 @@ export const LiveCodeBlock = CodeBlockLowlight.extend({
       const bar = document.createElement("span");
       bar.className = "pd-code-lang";
       bar.contentEditable = "false";
-      const pick = document.createElement("select");
-      pick.setAttribute("aria-label", "Code language");
-      bar.append(pick);
       dom.append(bar, code);
+      // The app's own Select, in its own React root inside the block.
+      const root = createRoot(bar);
+      const change = (value: string) => {
+        const pos = typeof getPos === "function" ? getPos() : undefined;
+        if (pos == null || !editor.isEditable) return;
+        // Its own Undo step, never merged with the typing before it.
+        editor.view.dispatch(closeHistory(editor.state.tr.setNodeMarkup(pos, undefined, { ...current.attrs, language: value || null })));
+        editor.view.focus();
+      };
       const show = (n: PMNode) => {
         const lang = languageName(n.attrs.language as string | null);
         const options = LANGUAGES.some(([id]) => id === lang) ? LANGUAGES : [...LANGUAGES, [lang, lang] as [string, string]];
-        if (pick.options.length !== options.length) pick.replaceChildren(...options.map(([id, label]) => new Option(label, id)));
-        pick.value = lang;
         code.className = lang ? `language-${lang}` : "";
-        pick.disabled = !editor.isEditable;
+        const items = options.map(([id, label]) => createElement("option", { key: id, value: id }, label));
+        root.render(createElement(Select, { "aria-label": "Code language", variant: "toolbar", value: lang, disabled: !editor.isEditable, onValueChange: change, children: items }));
       };
       show(node);
       // Viewing (and a version on show) can't change the language; setEditable sets the root's contenteditable.
-      const watch = new MutationObserver(() => void (pick.disabled = !editor.isEditable));
+      const watch = new MutationObserver(() => show(current));
       watch.observe(editor.view.dom, { attributes: true, attributeFilter: ["contenteditable"] });
-      pick.addEventListener("change", () => {
-        const pos = typeof getPos === "function" ? getPos() : undefined;
-        if (pos == null || !editor.isEditable) return show(current);
-        // Its own Undo step, never merged with the typing before it.
-        editor.view.dispatch(closeHistory(editor.state.tr.setNodeMarkup(pos, undefined, { ...current.attrs, language: pick.value || null })));
-        editor.view.focus();
-      });
       return {
         dom,
         contentDOM: code,
@@ -89,7 +90,11 @@ export const LiveCodeBlock = CodeBlockLowlight.extend({
           return true;
         },
         stopEvent: (e: Event) => bar.contains(e.target as Node),
-        destroy: () => watch.disconnect(),
+        destroy: () => {
+          watch.disconnect();
+          // Unmounting while ProseMirror updates the view would warn; the next tick is safe.
+          queueMicrotask(() => root.unmount());
+        },
         ignoreMutation: (m) => bar.contains(m.target as Node) || (m.type === "attributes" && m.target === code),
       };
     };

@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Page } from "@playwright/test";
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
-import { dialogStep, diskText, expect, launch, PROMPTLY, quit, test } from "./helpers.ts";
+import { dialogStep, diskText, expect, launch, PROMPTLY, quit, test, choose } from "./helpers.ts";
 import { load, prose, settled } from "./fixtures.ts";
 
 const h = (level: number, text: string) => ({ type: "heading", attrs: { level }, content: [{ type: "text", text }] });
@@ -63,7 +63,7 @@ test("11.1 section breaks start where they say; each section's paper, orientatio
     open: () => menu(page, "File", /^Page setup/),
     name: "Page setup",
     fill: async (d) => {
-      await expect(d.getByLabel("Apply to")).toHaveValue("section");
+      await expect(d.getByLabel("Apply to")).toHaveAttribute("data-value", "section");
       await d.getByRole("radio", { name: "Landscape" }).check();
       await d.getByLabel("Left (in)").fill("0.5");
       await d.getByLabel("Right (in)").fill("0.5");
@@ -183,8 +183,8 @@ test("11.3 odd and even headers, a section's own headers (Link to previous off) 
   await d.getByLabel("Link to previous").uncheck();
   await d.locator('input[name="hf-header"]').fill("Annex {page}");
   await d.locator('input[name="hf-evenHeader"]').fill("Annex even {page}");
-  await d.getByLabel("Format").selectOption("i");
-  await d.getByLabel("Numbering").selectOption("start");
+  await choose(d.getByLabel("Format"), "i");
+  await choose(d.getByLabel("Numbering"), "start");
   await d.getByRole("spinbutton", { name: "Start at" }).fill("1");
   await d.getByRole("button", { name: "Apply" }).click();
   await expect.poll(() => hfs(page, "header")).toEqual(["Report 1", "Even 2", "Report 3", "Annex i", "Annex even ii"]);
@@ -248,7 +248,7 @@ test("11.4 a text watermark shows behind every page, blank ones too, prints, and
   await expect(d.getByRole("alert")).toHaveText("Enter the words to show behind the text.");
   await expect(d.getByRole("button", { name: "Apply" })).toBeDisabled();
   await d.getByLabel("Text").fill("CONFIDENTIAL");
-  await d.getByLabel("Colour").selectOption({ label: "Red" });
+  await choose(d.getByLabel("Colour"), { label: "Red" });
   await d.getByRole("button", { name: "Apply" }).click();
   // One on each of the four pages, the blank page 3 included, turned corner to corner, behind the text.
   await expect(marks).toHaveCount(4);

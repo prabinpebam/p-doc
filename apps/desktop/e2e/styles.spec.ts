@@ -1,4 +1,4 @@
-import { caretIn, diskText, editor, expect, filesIn, launch, PROMPTLY, quit, test } from "./helpers.ts";
+import { caretIn, diskText, editor, expect, filesIn, launch, PROMPTLY, quit, test, choose } from "./helpers.ts";
 import { load } from "./fixtures.ts";
 
 test("8.1 Heading 5 and 6 have distinct styles, shortcuts and commands; outline and contents follow after reopen", async () => {
@@ -12,12 +12,12 @@ test("8.1 Heading 5 and 6 have distinct styles, shortcuts and commands; outline 
   await ed.locator("p").first().click();
   await page.keyboard.press("Control+Alt+5");
   await expect(ed.locator("h5")).toHaveText("Deep five");
-  await expect(page.getByRole("combobox", { name: "Paragraph style", exact: true })).toHaveValue("heading5");
+  await expect(page.getByRole("combobox", { name: "Paragraph style", exact: true })).toHaveAttribute("data-value", "heading5");
 
   await ed.locator("p").click();
   await page.keyboard.press("Control+Alt+6");
   await expect(ed.locator("h6")).toHaveText("Deep six");
-  await expect(page.getByRole("combobox", { name: "Paragraph style", exact: true })).toHaveValue("heading6");
+  await expect(page.getByRole("combobox", { name: "Paragraph style", exact: true })).toHaveAttribute("data-value", "heading6");
   await expect(ed.locator("h5")).toHaveCSS("font-weight", "700");
   await expect(ed.locator("h6")).toHaveCSS("font-style", "italic");
 
@@ -42,7 +42,7 @@ test("8.1 Heading 5 and 6 have distinct styles, shortcuts and commands; outline 
   await page.getByRole("menuitem", { name: "Insert", exact: true }).click();
   await page.getByRole("menuitem", { name: "Contents options…", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Contents options" });
-  await dialog.getByLabel("Levels").selectOption("6");
+  await choose(dialog.getByLabel("Levels"), "6");
   await dialog.getByRole("button", { name: "Apply", exact: true }).click();
   const toc = ed.locator(".pd-toc");
   await expect(toc.getByRole("link")).toHaveText(["Deep five", "Deep six"]);
@@ -73,7 +73,7 @@ test("1.3 a paragraph style is updated from a formatted heading, applies to ever
   await page.keyboard.press("Control+Alt+1");
   await page.keyboard.type("Second heading");
   await expect(ed.locator("h1")).toHaveCount(2);
-  await expect(page.getByRole("combobox", { name: "Paragraph style" })).toHaveValue("heading1");
+  await expect(page.getByRole("combobox", { name: "Paragraph style" })).toHaveAttribute("data-value", "heading1");
   const second = ed.locator("h1").nth(1);
   const before = await second.evaluate((el) => Number.parseFloat(getComputedStyle(el).fontSize));
 
@@ -137,7 +137,7 @@ test("8.1 Edit styles changes a style at once with Undo, makes, follows, renames
   await expect(list.getByRole("option")).toHaveCount(11);
 
   // A built-in style: the page changes while the dialog is open.
-  await list.selectOption({ label: "Heading 1" });
+  await choose(list, { label: "Heading 1" });
   await dialog.locator('input[name="style-size"]').fill("30");
   await dialog.getByLabel("Bold").check();
   await expect.poll(h1Size).toBeCloseTo(40, 0);
@@ -150,17 +150,17 @@ test("8.1 Edit styles changes a style at once with Undo, makes, follows, renames
   await expect(dialog.getByText("A style with this name already exists.")).toBeVisible();
   await expect(dialog.getByRole("button", { name: "Create" })).toBeVisible();
   await dialog.locator('input[name="style-new-name"]').fill("Callout");
-  await dialog.locator('select[name="style-new-from"]').selectOption({ label: "Normal text" });
+  await choose(dialog.locator('[role=combobox][name="style-new-from"]'), { label: "Normal text" });
   await dialog.getByRole("button", { name: "Create" }).click();
-  await expect(list).toHaveValue(/^custom-/);
-  const key = await list.inputValue();
+  await expect(list).toHaveAttribute("data-value", /^custom-/);
+  const key = (await list.getAttribute("data-value"))!;
   await dialog.locator('input[name="style-size"]').fill("15");
   await dialog.getByLabel("Italic").check();
-  await dialog.locator('select[name="style-colour"]').selectOption({ label: "Teal" });
+  await choose(dialog.locator('[role=combobox][name="style-colour"]'), { label: "Teal" });
 
   // Heading 2 is followed by the own style.
-  await list.selectOption({ label: "Heading 2" });
-  await dialog.locator('select[name="style-next"]').selectOption({ label: "Callout" });
+  await choose(list, { label: "Heading 2" });
+  await choose(dialog.locator('[role=combobox][name="style-next"]'), { label: "Callout" });
   await dialog.getByRole("button", { name: "Done" }).click();
   await expect(dialog).toBeHidden();
   await expect.poll(() => styles()?.[key], PROMPTLY).toMatchObject({ name: "Callout", fontSize: 15 });
@@ -175,12 +175,12 @@ test("8.1 Edit styles changes a style at once with Undo, makes, follows, renames
   await expect(callout).toHaveText("Note well");
   await expect(callout).toHaveCSS("font-style", "italic");
   await expect(callout).toHaveCSS("color", "rgb(18, 133, 138)");
-  await expect(page.getByRole("combobox", { name: "Paragraph style", exact: true })).toHaveValue(key);
+  await expect(page.getByRole("combobox", { name: "Paragraph style", exact: true })).toHaveAttribute("data-value", key);
   // Applied from the toolbar and found by command search.
   await caretIn(ed.locator("p", { hasText: "Plain body" }));
-  await page.getByRole("combobox", { name: "Paragraph style", exact: true }).selectOption({ label: "Title" });
+  await choose(page.getByRole("combobox", { name: "Paragraph style", exact: true }), { label: "Title" });
   await expect(ed.locator("p.pd-style-title")).toHaveText("Plain body");
-  await page.getByRole("combobox", { name: "Paragraph style", exact: true }).selectOption({ label: "Callout" });
+  await choose(page.getByRole("combobox", { name: "Paragraph style", exact: true }), { label: "Callout" });
   await expect(ed.locator(`p[data-style="${key}"]`)).toHaveCount(2);
   await page.keyboard.press("Alt+/");
   const palette = page.getByRole("dialog", { name: "Command search" });
@@ -190,7 +190,7 @@ test("8.1 Edit styles changes a style at once with Undo, makes, follows, renames
 
   // Undo a style change on its own: Heading 1's edit is still there.
   dialog = await openStyles();
-  await list.selectOption({ label: "Heading 1" });
+  await choose(list, { label: "Heading 1" });
   await dialog.locator('input[name="style-size"]').fill("12");
   await expect.poll(h1Size).toBeCloseTo(16, 0);
   await dialog.getByRole("button", { name: "Done" }).click();
@@ -203,14 +203,14 @@ test("8.1 Edit styles changes a style at once with Undo, makes, follows, renames
 
   // Rename, then keep these styles as defaults.
   dialog = await openStyles();
-  await list.selectOption({ label: "Callout" });
+  await choose(list, { label: "Callout" });
   await dialog.locator('input[name="style-name"]').fill("Aside");
   await expect(list.getByRole("option", { name: "Aside" })).toHaveCount(1);
   await dialog.getByRole("button", { name: "Save as my default styles" }).click();
   await expect(page.getByText("New documents will use these styles.")).toBeVisible();
 
   // Delete: its text becomes Normal text, and Heading 2 is followed by Normal text again.
-  await list.selectOption({ label: "Aside" });
+  await choose(list, { label: "Aside" });
   await dialog.getByRole("button", { name: "Delete style" }).click();
   await expect(list.getByRole("option", { name: "Aside" })).toHaveCount(0);
   await dialog.getByRole("button", { name: "Done" }).click();
@@ -233,7 +233,7 @@ test("8.1 Edit styles changes a style at once with Undo, makes, follows, renames
   await dialog.getByRole("button", { name: "Done" }).click();
   await page.emulateMedia({ colorScheme: "dark" });
   dialog = await openStyles();
-  await list.selectOption({ label: "Aside" });
+  await choose(list, { label: "Aside" });
   await page.screenshot({ path: test.info().outputPath("styles-dialog-dark.png") });
   await dialog.getByRole("button", { name: "Done" }).click();
   expect(errors).toEqual([]);

@@ -1,0 +1,165 @@
+/* Fundamentals (tier 1): Select and ListBox. Tokens only. */
+
+/* Select: the app's own control and popup list, so every theme reads the tokens. */
+.select {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+  height: var(--size-control-dense);
+  padding: 0 var(--space-1) 0 var(--space-2);
+  border: var(--border-hairline) solid transparent;
+  border-radius: var(--radius-sm);
+  background: var(--color-field);
+  text-align: start;
+  cursor: default;
+}
+
+.select[data-variant="toolbar"] {
+  flex: none;
+  background: transparent;
+}
+
+.select[data-width="style"],
+.select[data-width="font"] {
+  width: var(--c-toolbar-select);
+}
+
+.select:focus-visible,
+.select[aria-expanded="true"] {
+  outline: none;
+  border-color: var(--color-focus);
+  box-shadow: inset 0 0 0 var(--border-hairline) var(--color-focus);
+}
+
+.select:disabled {
+  opacity: var(--opacity-disabled);
+}
+
+.select-value {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.select-chevron {
+  flex: none;
+  color: var(--color-text-muted);
+  transition: rotate var(--duration-fast) var(--ease-standard);
+}
+
+.select[aria-expanded="true"] .select-chevron {
+  rotate: 180deg;
+}
+
+/* The popup list: in the top layer, placed against its control by the component. */
+.select-list {
+  position: fixed;
+  inset: auto;
+  left: var(--select-left);
+  top: var(--select-top);
+  min-width: var(--select-min-width);
+  max-width: var(--size-popover);
+  max-height: min(var(--select-max-height), var(--size-popover));
+  margin: 0;
+  padding: var(--space-1);
+  overflow-x: hidden;
+  overflow-y: auto;
+  border: var(--border-hairline) solid var(--color-divider);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-raised);
+  color: var(--color-text);
+  box-shadow: var(--shadow-popup);
+}
+
+.select-group {
+  padding: var(--space-2) var(--space-2) var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  text-transform: uppercase;
+}
+
+.select-option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: var(--size-control-tiny);
+  padding: 0 var(--space-3) 0 var(--space-1);
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+  cursor: default;
+}
+
+.select-check {
+  flex: none;
+  visibility: hidden;
+}
+
+.select-option[aria-selected="true"] .select-check {
+  visibility: visible;
+}
+
+.select-option[data-active] {
+  background: var(--color-accent-fill);
+  color: var(--color-on-accent);
+}
+
+.select-option[aria-disabled="true"] {
+  opacity: var(--opacity-disabled);
+}
+
+/* ListBox: an always-visible list; the chosen row fills with the accent while the list has the keyboard. */
+.listbox {
+  height: calc(var(--listbox-rows) * var(--size-control-tiny) + var(--space-1) * 2);
+  padding: var(--space-1);
+  overflow-x: hidden;
+  overflow-y: auto;
+  border: var(--border-hairline) solid transparent;
+  border-radius: var(--radius-sm);
+  background: var(--color-field);
+}
+
+.listbox:focus-visible {
+  outline: none;
+  border-color: var(--color-focus);
+}
+
+.listbox[aria-disabled="true"] {
+  opacity: var(--opacity-disabled);
+}
+
+.listbox-option {
+  min-height: var(--size-control-tiny);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-sm);
+  line-height: var(--size-control-tiny);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.listbox-option[aria-selected="true"] {
+  background: var(--color-selected);
+}
+
+.listbox:focus .listbox-option[aria-selected="true"] {
+  background: var(--color-accent-fill);
+  color: var(--color-on-accent);
+}
+
+@media (hover: hover) {
+  .select:hover:not(:disabled, :focus-visible, [aria-expanded="true"]) {
+    border-color: var(--color-rule);
+  }
+
+  .select[data-variant="toolbar"]:hover:not(:disabled) {
+    background: var(--color-hover);
+  }
+
+  .listbox-option:hover:not([aria-selected="true"]) {
+    background: var(--color-hover);
+  }
+}

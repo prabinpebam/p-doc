@@ -1,4 +1,4 @@
-import { expect, filesIn, launch, PROMPTLY, quit, test } from "./helpers.ts";
+import { expect, filesIn, launch, PROMPTLY, quit, test, choose } from "./helpers.ts";
 import { load, longDocument, settled } from "./fixtures.ts";
 
 type Saved = { id: string; page: { orientation: string; size: string; color: string; margins: Record<string, number> } };
@@ -46,7 +46,7 @@ test("2.6 page setup changes paper, orientation, margins and colour, checks the 
   // A4, a 2 inch left margin and a cream page.
   await open();
   await dialog.getByLabel("Portrait").check();
-  await dialog.getByLabel("Paper size").selectOption("a4");
+  await choose(dialog.getByLabel("Paper size"), "a4");
   await dialog.locator('input[name="margin-left"]').fill("2");
   await dialog.getByLabel("Page colour").fill("#fff8e1");
   await dialog.getByRole("button", { name: "Apply" }).click();

@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, filesIn, launch, PROMPTLY, quit, test } from "./helpers.ts";
+import { expect, filesIn, launch, PROMPTLY, quit, test, choose } from "./helpers.ts";
 import { headedDocument, load, settled } from "./fixtures.ts";
 
 const texts = (page: Page, sel: string) => page.locator(sel).allTextContents();
@@ -18,7 +18,7 @@ test("2.3 headers and footers show on every page with page numbers, alignment an
   await expect(dialog).toBeVisible();
   await expect(dialog.locator('input[name="hf-header"]')).toBeFocused();
   await dialog.locator('input[name="hf-header"]').fill("Quarterly report");
-  await dialog.locator('select[name="hf-headerAlign"]').selectOption("right");
+  await choose(dialog.locator('[role=combobox][name="hf-headerAlign"]'), "right");
   const footer = dialog.locator('input[name="hf-footer"]');
   await footer.click();
   await footer.pressSequentially("Page ");

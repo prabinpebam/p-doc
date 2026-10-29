@@ -404,27 +404,14 @@
   position: absolute;
   top: var(--space-1);
   right: var(--space-1);
+  color: var(--color-page-muted);
+  font: var(--text-sm) / 1.5 var(--font-ui);
   user-select: none;
 }
 
-.pd-code-lang select {
-  padding: 0 var(--space-1);
-  border: var(--border-hairline) solid transparent;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--color-page-muted);
-  font: var(--text-sm) / 1.5 var(--font-ui);
-  cursor: pointer;
-}
-
-.pd-code-lang select:hover:not(:disabled),
-.pd-code-lang select:focus-visible {
-  border-color: var(--color-page-muted);
-}
-
-.pd-code-lang select:disabled {
-  cursor: default;
-  appearance: none;
+/* The picker sits on the paper, which stays light in every theme; its list follows the app. */
+.pd-code-lang .select {
+  color-scheme: light;
 }
 
 /* Highlighted code (U61): highlight.js classes, coloured from the code tokens. */

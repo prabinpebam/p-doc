@@ -569,6 +569,7 @@ const commands: Command[] = [
   // Help
   { id: "help.shortcuts", label: "Keyboard shortcuts", keys: ["Ctrl+/"], global: true, run: () => openDialog({ kind: "shortcuts" }) },
   { id: "help.about", label: "About P-Doc", global: true, run: () => openDialog({ kind: "about" }) },
+  { id: "help.designSystem", label: "Design system", keys: ["Ctrl+Alt+Shift+D"], keywords: "components tokens library colours", global: true, run: () => openDialog({ kind: "designLibrary" }) },
   { id: "help.logs", label: "Open logs folder", global: true, run: () => void window.pdoc.app.openLogs() },
 ];
 

@@ -162,3 +162,29 @@ export async function dialogStep<T>(page: Page, o: { open: () => Promise<void>; 
 }
 
 export { expect };
+
+/** The popup list of an app Select (it sits in the top layer, not inside the control). */
+export async function listOf(select: Locator): Promise<Locator> {
+  const id = await select.getAttribute("aria-controls");
+  return select.page().locator(`[id="${id}"]`);
+}
+
+/** The options of an app Select or ListBox, shown or not. */
+export async function optionsIn(select: Locator): Promise<Locator> {
+  const list = (await select.getAttribute("role")) === "listbox" ? select : await listOf(select);
+  return list.locator('[role="option"]');
+}
+
+/**
+ * Picks an option in an app Select (opens it, clicks the option, checks it closed) or a ListBox, by
+ * value or by `{ label }`, as a person does.
+ */
+export async function choose(select: Locator, option: string | { label: string }): Promise<void> {
+  const isList = (await select.getAttribute("role")) === "listbox";
+  if (!isList) await select.click();
+  const list = isList ? select : await listOf(select);
+  if (!isList) await expect(list).toBeVisible();
+  const opt = typeof option === "string" ? list.locator(`[role="option"][data-value="${option}"]`) : list.getByRole("option", { name: option.label, exact: true });
+  await opt.click();
+  if (!isList) await expect(list).toBeHidden();
+}

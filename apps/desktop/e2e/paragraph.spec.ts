@@ -4,7 +4,7 @@ import { join } from "node:path";
 import type { Locator, Page } from "@playwright/test";
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 import { load, prose, zipText } from "./fixtures.ts";
-import { editor, expect, launch, quit, test } from "./helpers.ts";
+import { editor, expect, launch, quit, test, choose } from "./helpers.ts";
 
 async function menu(page: Page, top: string, item: RegExp): Promise<void> {
   await page.getByRole("menuitem", { name: top, exact: true }).click();
@@ -84,8 +84,8 @@ test("9.1 9.4 9.5 paragraph layout: indents, exact spacing, tab leaders, borders
   const cm = (await tabs.getByText("Position (cm)").count()) > 0;
   const per = cm ? 2.54 : 1;
   await tabs.locator('[name="tab-pos"]').fill(String(5 * per));
-  await tabs.locator('[name="tab-align"]').selectOption("right");
-  await tabs.locator('[name="tab-leader"]').selectOption("dots");
+  await choose(tabs.locator('[name="tab-align"]'), "right");
+  await choose(tabs.locator('[name="tab-leader"]'), "dots");
   await tabs.locator('[name="tab-pos"]').press("Enter");
   await expect(tabs.getByRole("list", { name: "Tab stops" }).getByRole("listitem")).toHaveCount(1);
   await tabs.getByRole("button", { name: "Apply" }).click();
@@ -104,10 +104,10 @@ test("9.1 9.4 9.5 paragraph layout: indents, exact spacing, tab leaders, borders
   let dlg = await paragraphDialog(page, "Indents and spacing");
   await dlg.locator('[name="indent-left"]').fill(String(1 * per));
   await dlg.locator('[name="indent-right"]').fill(String(0.5 * per));
-  await dlg.locator('[name="special"]').selectOption("hanging");
+  await choose(dlg.locator('[name="special"]'), "hanging");
   await dlg.locator('[name="indent-by"]').fill(String(0.5 * per));
   await dlg.locator('[name="space-before"]').fill("12");
-  await dlg.locator('[name="line-spacing"]').selectOption("exact");
+  await choose(dlg.locator('[name="line-spacing"]'), "exact");
   await dlg.locator('[name="line-at"]').fill("18");
   await dlg.getByRole("button", { name: "Apply" }).click();
   const hang = ed.locator("p", { hasText: /^Hanging/ });
@@ -123,8 +123,8 @@ test("9.1 9.4 9.5 paragraph layout: indents, exact spacing, tab leaders, borders
   await page.keyboard.press("Enter");
   dlg = await paragraphDialog(page, "Indents and spacing");
   await dlg.locator('[name="indent-left"]').fill("0");
-  await dlg.locator('[name="special"]').selectOption("none");
-  await dlg.locator('[name="line-spacing"]').selectOption("1.15");
+  await choose(dlg.locator('[name="special"]'), "none");
+  await choose(dlg.locator('[name="line-spacing"]'), "1.15");
   await dlg.getByRole("button", { name: "Apply" }).click();
   await page.keyboard.type("Boxed note");
   dlg = await paragraphDialog(page, "Borders and direction");
@@ -249,7 +249,7 @@ test("9.6 sort orders paragraphs, list items and table rows, numbers in number o
   dlg = page.getByRole("dialog", { name: "Sort" });
   await expect(dlg).toContainText("Sorts 3 table rows.");
   await expect(dlg.locator('[name="sort-header"]')).toBeChecked();
-  await dlg.locator('[name="sort-column"]').selectOption({ label: "Count" });
+  await choose(dlg.locator('[name="sort-column"]'), { label: "Count" });
   await dlg.getByRole("button", { name: "Sort" }).click();
   const firstColumn = () => ed.locator("tr").evaluateAll((rows) => rows.map((r) => r.firstElementChild?.textContent));
   await expect.poll(firstColumn).toEqual(["Name", "Zed", "Bob", "Amy"]);

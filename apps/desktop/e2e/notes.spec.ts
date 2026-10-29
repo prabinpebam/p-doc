@@ -4,7 +4,7 @@ import { join } from "node:path";
 import type { Page } from "@playwright/test";
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 import { load, prose, settled } from "./fixtures.ts";
-import { dialogStep, diskText, editor, expect, launch, PROMPTLY, quit, test } from "./helpers.ts";
+import { dialogStep, diskText, editor, expect, launch, PROMPTLY, quit, test, choose, optionsIn } from "./helpers.ts";
 import { zipText } from "./fixtures.ts";
 
 async function menu(page: Page, top: string, ...path: RegExp[]): Promise<void> {
@@ -107,7 +107,7 @@ test("10.1 footnotes and endnotes: numbered in order, at the page foot, renumber
   // Format > Notes…: letters for footnotes, and all to endnotes; focus returns and one Undo undoes it.
   await menu(page, "Format", /^Notes$/, /^Notes…/);
   const dlg = page.getByRole("dialog", { name: "Notes" });
-  await dlg.locator('[name="foot-format"]').selectOption("a");
+  await choose(dlg.locator('[name="foot-format"]'), "a");
   await dlg.getByRole("button", { name: "Apply" }).click();
   await expect(dlg).toBeHidden();
   await expect(ed).toBeFocused();
@@ -252,15 +252,15 @@ test("10.2 bookmarks and links to headings and bookmarks: in the page, the PDF, 
     name: "Insert link",
     fill: async (d) => {
       const list = d.getByLabel("Headings and bookmarks");
-      await expect(list.locator("option")).toHaveText(["Choose…", "Chapter one", "Results", "Key figure"]);
-      await list.selectOption({ label: "Key figure" });
+      await expect(await optionsIn(list)).toHaveText(["Choose…", "Chapter one", "Results", "Key figure"]);
+      await choose(list, { label: "Key figure" });
       await expect(d.getByLabel("Link", { exact: true })).toHaveValue(`#${bm}`);
     },
     read: links,
   });
   await selectText(page, "details");
   await page.keyboard.press("Control+K");
-  await page.getByRole("dialog", { name: "Insert link" }).getByLabel("Headings and bookmarks").selectOption({ label: "Results" });
+  await choose(page.getByRole("dialog", { name: "Insert link" }).getByLabel("Headings and bookmarks"), { label: "Results" });
   await page.getByRole("dialog", { name: "Insert link" }).getByRole("button", { name: "Apply" }).click();
   expect(await links()).toEqual([`key result>#${bm}`, "details>#results"]);
 

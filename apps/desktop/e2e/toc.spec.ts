@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Page } from "@playwright/test";
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
-import { dialogStep, diskText, expect, filesIn, launch, PROMPTLY, quit, test } from "./helpers.ts";
+import { dialogStep, diskText, expect, filesIn, launch, PROMPTLY, quit, test, choose } from "./helpers.ts";
 import { headedDocument, load, prose, settled } from "./fixtures.ts";
 
 test("2.5 the table of contents lists the headings with their pages, stays current, and jumps to them", async () => {
@@ -119,9 +119,9 @@ test("10.4 contents options: levels 1–6, page numbers with dotted leaders or l
     open: () => menu(page, "Insert", /^Contents options/),
     name: "Contents options",
     fill: async (d) => {
-      await expect(d.getByLabel("Levels")).toHaveValue("3");
+      await expect(d.getByLabel("Levels")).toHaveAttribute("data-value", "3");
       await expect(d.getByRole("radio", { name: "Page numbers" })).toBeChecked();
-      await d.getByLabel("Levels").selectOption({ label: "1–6" });
+      await choose(d.getByLabel("Levels"), { label: "1–6" });
     },
     read: entries,
   });
@@ -153,7 +153,7 @@ test("10.4 contents options: levels 1–6, page numbers with dotted leaders or l
     open: () => menu(page, "Insert", /^Contents options/),
     name: "Contents options",
     fill: async (d) => {
-      await expect(d.getByLabel("Levels")).toHaveValue("6");
+      await expect(d.getByLabel("Levels")).toHaveAttribute("data-value", "6");
       await d.getByRole("radio", { name: "Links" }).check();
     },
     read: entries,
@@ -162,7 +162,7 @@ test("10.4 contents options: levels 1–6, page numbers with dotted leaders or l
   await expect(toc.locator(".pd-toc-dots")).toHaveCount(0);
   await menu(page, "Insert", /^Contents options/);
   const d = page.getByRole("dialog", { name: "Contents options" });
-  await d.getByLabel("Levels").selectOption({ label: "1" });
+  await choose(d.getByLabel("Levels"), { label: "1" });
   await d.getByRole("button", { name: "Apply" }).click();
   await expect.poll(entries).toEqual(["Part A -", "Part B -"]);
   await toc.getByRole("link", { name: "Part B" }).click();

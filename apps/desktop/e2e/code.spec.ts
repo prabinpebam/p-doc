@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Page } from "@playwright/test";
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
-import { diskText, editor, expect, launch, PROMPTLY, quit, test } from "./helpers.ts";
+import { diskText, editor, expect, launch, PROMPTLY, quit, test, choose } from "./helpers.ts";
 
 async function menu(page: Page, top: string, ...path: RegExp[]): Promise<void> {
   await page.getByRole("menuitem", { name: top, exact: true }).click();
@@ -43,22 +43,22 @@ test("12.3 code blocks highlight by language, the picker changes it, and Markdow
 
   // The picker at the top right names the language; choosing another highlights the code again, and Undo puts it back.
   const pick = pre.getByRole("combobox", { name: "Code language" });
-  await expect(pick).toHaveValue("javascript");
-  await pick.selectOption({ label: "Python" });
+  await expect(pick).toHaveAttribute("data-value", "javascript");
+  await choose(pick, { label: "Python" });
   await expect(pre.locator("code")).toHaveClass("language-python");
   await expect(pre.locator(".hljs-keyword", { hasText: "const" })).toHaveCount(0);
   await expect.poll(() => diskText(dirs), PROMPTLY).toContain('"language":"python"');
   await page.keyboard.press("Control+z");
-  await expect(pick).toHaveValue("javascript");
+  await expect(pick).toHaveAttribute("data-value", "javascript");
   await expect(pre.locator(".hljs-keyword", { hasText: "const" })).toHaveCount(1);
   // Plain text has no colours; Automatic guesses the language.
-  await pick.selectOption({ label: "Plain text" });
+  await choose(pick, { label: "Plain text" });
   await expect(pre.locator("[class^=hljs]")).toHaveCount(0);
   await expect.poll(() => diskText(dirs), PROMPTLY).toContain('"language":"plaintext"');
-  await pick.selectOption({ label: "Automatic" });
+  await choose(pick, { label: "Automatic" });
   await expect(pre.locator(".hljs-string")).toHaveText('"done"');
   await expect.poll(() => diskText(dirs), PROMPTLY).toContain('"language":null');
-  await pick.selectOption({ label: "TypeScript" });
+  await choose(pick, { label: "TypeScript" });
   await expect(pre.locator(".hljs-keyword", { hasText: "const" })).toHaveCount(1);
   // The text itself is unchanged by the colours, and the caret still types into the block.
   await pre.locator(".hljs-string").click();

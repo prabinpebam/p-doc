@@ -2,7 +2,7 @@ import { mkdtempSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Page } from "@playwright/test";
-import { diskText, editor, expect, launch, quit, test } from "./helpers.ts";
+import { diskText, editor, expect, launch, quit, test, choose } from "./helpers.ts";
 
 const text = (page: Page) => editor(page).evaluate((el) => (el as HTMLElement).innerText.trim());
 const items = (page: Page) => page.getByTestId("review-item");
@@ -70,13 +70,13 @@ test("13.4 Compare documents makes a new private document whose accept all gives
   const dialog = await openCompare(page);
   const original = dialog.getByRole("combobox", { name: "Original" });
   const revised = dialog.getByRole("combobox", { name: "Revised" });
-  await expect(original.locator("option:checked")).toHaveText(/^Copy of /);
-  await expect(revised.locator("option:checked")).toHaveText(/^This document/);
-  const originalTitle = (await original.locator("option:checked").textContent())!;
+  await expect(original).toHaveText(/^Copy of /);
+  await expect(revised).toHaveText(/^This document/);
+  const originalTitle = (await original.textContent())!;
   // The same document on both sides can't be compared.
-  await original.selectOption({ label: (await revised.locator("option:checked").textContent())! });
+  await choose(original, { label: (await revised.textContent())! });
   await expect(dialog.getByRole("button", { name: "Compare" })).toBeDisabled();
-  await original.selectOption({ label: originalTitle });
+  await choose(original, { label: originalTitle });
   await page.screenshot({ path: test.info().outputPath("compare-dialog.png") });
   await dialog.getByRole("button", { name: "Compare" }).click();
 
@@ -138,8 +138,8 @@ test("13.4 Compare documents reads a file as the original without adding it to t
   const before = (await page.evaluate(() => (window as unknown as { __pdoc: { app: { get(): { docs: unknown[] } } } }).__pdoc.app.get().docs.length)) as number;
 
   const dialog = await openCompare(page);
-  await dialog.getByRole("combobox", { name: "Original" }).selectOption({ label: "A file…" });
-  await expect(dialog.getByRole("combobox", { name: "Original" }).locator("option:checked")).toHaveText("Older notes (file)");
+  await choose(dialog.getByRole("combobox", { name: "Original" }), { label: "A file…" });
+  await expect(dialog.getByRole("combobox", { name: "Original" })).toHaveText("Older notes (file)");
   await dialog.getByRole("button", { name: "Compare" }).click();
 
   await expect(page.getByText(/^Compared: \d+ differences?\.$/)).toBeVisible();
