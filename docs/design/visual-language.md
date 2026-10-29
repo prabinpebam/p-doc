@@ -5,6 +5,7 @@ The layout of Word and Google Docs (menus, one toolbar, a page on a canvas, side
 ## Decisions
 
 - **Density.** P-Doc is a desktop app used with a mouse and keyboard, so controls are compact: 32 px buttons and fields, 28 px toolbar and menu rows, 13 px interface text. This deliberately departs from 44 px touch targets; every control still has a visible focus ring and a full keyboard path.
+- **One row, one height.** Fields, selects and buttons all take `c.control.height`, so controls that share a row line up. A dense surface (the find bar) lowers that one token for everything inside it rather than resizing single controls. `e2e/alignment.spec.ts` checks every surface and dialog tab for it.
 - **Two blues.** `color.accent` is for text and icons (links, the active outline item, pressed toolbar buttons). `color.accent-fill` is for filled surfaces (primary buttons, the highlighted menu item, the chosen option), always with `color.on-accent` text. The two don't mix, which is what keeps dark mode legible.
 - **Highlight.** The item under the keyboard or pointer in a menu, a select or command search is filled with the accent, the way a design tool marks the current item; a selected-but-not-active row uses `color.selected`.
 - **Surfaces.** In both themes there are three steps: `canvas` behind the page, `bg`/`bg-raised` for chrome and popups, and `field` for input wells. Fields are filled, not outlined; buttons are outlined, not filled (except primary).

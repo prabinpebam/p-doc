@@ -201,7 +201,7 @@ textarea {
 
 /* Fields: a filled well with no outline until hovered; the focus ring is the accent. */
 .field {
-  height: var(--size-control-dense);
+  height: var(--c-control-height);
   padding: 0 var(--space-2);
   border: var(--border-hairline) solid transparent;
   border-radius: var(--radius-sm);
@@ -1274,6 +1274,8 @@ kbd {
   border-radius: var(--radius-md);
   background: var(--color-bg-raised);
   box-shadow: var(--shadow-popup);
+  /* A dense surface: its fields match its compact buttons. */
+  --c-control-height: var(--size-control-dense);
 }
 
 .find-row {

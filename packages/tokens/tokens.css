@@ -102,7 +102,8 @@
   --breakpoint-sm: 40rem;
   --breakpoint-md: 56rem;
   --breakpoint-lg: 72rem;
-  --c-button-height: var(--size-control);
+  --c-control-height: var(--size-control);
+  --c-button-height: var(--c-control-height);
   --c-button-padding-inline: var(--space-4);
   --c-button-radius: var(--radius-md);
   --c-toolbar-height: var(--size-toolbar);

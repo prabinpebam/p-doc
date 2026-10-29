@@ -6,7 +6,7 @@
   align-items: center;
   gap: var(--space-1);
   min-width: 0;
-  height: var(--size-control-dense);
+  height: var(--c-control-height);
   padding: 0 var(--space-1) 0 var(--space-2);
   border: var(--border-hairline) solid transparent;
   border-radius: var(--radius-sm);
@@ -17,6 +17,7 @@
 
 .select[data-variant="toolbar"] {
   flex: none;
+  height: var(--c-toolbar-button);
   background: transparent;
 }
 
