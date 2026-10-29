@@ -9,6 +9,7 @@ import { acceptAll } from "./suggestions.ts";
 import { nodeText } from "./outline.ts";
 import { noteLabelsOf, notesListOf, withNoteLabels } from "./notes.ts";
 import { equationsToMathml } from "./equations.ts";
+import { cleanListFormat, cleanStart, defaultListFormat, listMarker } from "./lists.ts";
 
 type Mark = NonNullable<JSONContent["marks"]>[number];
 
@@ -86,6 +87,36 @@ export function fromHTML(html: string): JSONContent {
 
 const mdEscape = (s: string) => s.replace(/([\\`*_[\]<>$])/g, "\\$1").replace(/^(\s*)([#>+-]|\d+\.)(\s)/, "$1\\$2$3");
 
+/** Resolve the same-kind nesting cycle used by page CSS before exporting without that CSS. */
+function explicitLists(n: JSONContent, ordered = 0, bullet = 0): JSONContent {
+  const kind = n.type;
+  const list = kind === "orderedList" || kind === "bulletList";
+  const attrs = list ? {
+    ...n.attrs,
+    listFormat: cleanListFormat(kind, n.attrs?.listFormat) ?? defaultListFormat(kind, kind === "orderedList" ? ordered : bullet),
+    ...(kind === "orderedList" ? { start: cleanStart(n.attrs?.start ?? 1) } : {}),
+  } : n.attrs;
+  return {
+    ...n, ...(attrs ? { attrs } : {}),
+    ...(n.content ? { content: n.content.map((c) => explicitLists(c, ordered + Number(kind === "orderedList"), bullet + Number(kind === "bulletList"))) } : {}),
+  };
+}
+
+function needsHtmlList(n: JSONContent): boolean {
+  return (n.type === "orderedList" && n.attrs?.listFormat !== "decimal")
+    || (n.type === "bulletList" && n.attrs?.listFormat !== "disc")
+    || (n.content ?? []).some((c, i, children) => needsHtmlList(c) || (i > 0 && isList(children[i - 1]!) && isList(c)));
+}
+
+const isList = (n: JSONContent) => n.type === "orderedList" || n.type === "bulletList" || n.type === "taskList";
+
+function blocksMd(nodes: JSONContent[]): string[] {
+  return nodes.flatMap((n, i) => [
+    ...(i > 0 && isList(nodes[i - 1]!) && isList(n) ? ["<!-- -->"] : []),
+    ...blockMd(n),
+  ]);
+}
+
 /** Markdown footnote names of the notes being written ([^1]); endnotes whose label a footnote has get an "e". */
 let mdNotes: Map<string, string> | null = null;
 
@@ -148,7 +179,7 @@ function blockMd(n: JSONContent, indent = ""): string[] {
       return [t];
     }
     case "blockquote":
-      return [(n.content ?? []).flatMap((c) => blockMd(c)).join("\n\n").split("\n").map((l) => `> ${l}`.trimEnd()).join("\n")];
+      return [blocksMd(n.content ?? []).join("\n\n").split("\n").map((l) => `> ${l}`.trimEnd()).join("\n")];
     case "codeBlock":
       return [`\`\`\`${String(n.attrs?.language ?? "")}\n${nodeText(n)}\n\`\`\``];
     case "horizontalRule":
@@ -169,6 +200,8 @@ function blockMd(n: JSONContent, indent = ""): string[] {
     case "bulletList":
     case "orderedList":
     case "taskList":
+      // Blank lines inside code or text must not end Markdown's raw HTML block.
+      if (needsHtmlList(n)) return [withNoteLabels(mdNotes ?? new Map(), () => generateHTML({ type: "doc", content: [n] }, extensions())).replace(/\n/g, "&#10;")];
       return [listMd(n, indent)];
     case "table":
       return [tableMd(n)];
@@ -185,7 +218,7 @@ function listMd(list: JSONContent, indent: string): string {
     const pad = `${indent}${" ".repeat(marker.length + 1)}`;
     let first = true;
     for (const child of item.content ?? []) {
-      if (child.type === "bulletList" || child.type === "orderedList" || child.type === "taskList") lines.push(listMd(child, pad));
+      if (isList(child)) lines.push(listMd(child, pad));
       else {
         const text = blockMd(child, pad).join("\n");
         lines.push(first ? `${indent}${marker} ${text}` : `${pad}${text}`);
@@ -223,15 +256,15 @@ function uniqueLabels(content: JSONContent): Map<string, string> {
 }
 
 export function toMarkdown(doc: PDocFile | JSONContent): string {
-  const content = finalContent(contentOf(doc));
+  const content = explicitLists(finalContent(contentOf(doc)));
   mdNotes = uniqueLabels(content);
   try {
-    const blocks = (content.content ?? []).filter((b) => b.type !== "notes").flatMap((b) => blockMd(b));
+    const blocks = blocksMd((content.content ?? []).filter((b) => b.type !== "notes"));
     // Notes as Markdown footnotes, in number order (footnotes, then endnotes).
     for (const n of notesListOf(content)) {
       const name = mdNotes.get(n.id);
       if (!name) continue;
-      const body = n.content.flatMap((c) => blockMd(c)).join("\n\n").replace(/\n/g, "\n    ");
+      const body = blocksMd(n.content).join("\n\n").replace(/\n/g, "\n    ");
       blocks.push(`[^${name}]: ${body}`);
     }
     return `${blocks.join("\n\n").replace(/\n{3,}/g, "\n\n").trim()}\n`;
@@ -284,9 +317,10 @@ function blockText(n: JSONContent, indent = ""): string[] {
     case "bulletList":
     case "orderedList":
     case "taskList": {
+      const kind = n.type;
       let k = Number(n.attrs?.start ?? 1);
       return (n.content ?? []).flatMap((item) => {
-        const marker = n.type === "orderedList" ? `${k++}.` : n.type === "taskList" ? (item.attrs?.checked ? "[x]" : "[ ]") : "•";
+        const marker = kind === "taskList" ? (item.attrs?.checked ? "[x]" : "[ ]") : listMarker(cleanListFormat(kind, n.attrs?.listFormat) ?? defaultListFormat(kind, 0), k++);
         const [first, ...rest] = item.content ?? [];
         return [`${indent}${marker} ${nodeText(first)}`, ...rest.flatMap((c) => blockText(c, `${indent}   `))];
       });
@@ -319,7 +353,7 @@ function refsAsText(n: JSONContent, labels: Map<string, string>): JSONContent {
 }
 
 export function toText(doc: PDocFile | JSONContent): string {
-  const content = finalContent(contentOf(doc));
+  const content = explicitLists(finalContent(contentOf(doc)));
   const labels = uniqueLabels(content);
   const lines = (content.content ?? []).filter((b) => b.type !== "notes").flatMap((b) => blockText(refsAsText(b, labels)));
   const notes = notesListOf(content).filter((n) => labels.has(n.id));

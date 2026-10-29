@@ -1,3 +1,9 @@
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
+import type { JSONContent } from "@tiptap/core";
+import { BULLET_FORMATS, NUMBER_FORMATS, fromMarkdown, listMarker } from "@p-doc/core";
 import { caretIn, editor, expect, filesIn, launch, PROMPTLY, quit, test } from "./helpers.ts";
 import { load } from "./fixtures.ts";
 
@@ -103,4 +109,84 @@ test("8.3 list options set each level's format and start; restart and continue n
   await expect(ed2.locator("ol").first()).toHaveAttribute("start", "3");
   await expect(ed2.locator("ul ul").first()).toHaveAttribute("data-format", "dash");
   await quit(again);
+});
+
+test("8.3 list formats and start numbers survive Markdown and text downloads and print to PDF", async () => {
+  const saveDir = mkdtempSync(join(tmpdir(), "pdoc-lists-"));
+  const l = await launch({ env: { PDOC_SAVE_DIR: saveDir } });
+  const { page } = l;
+  await page.locator("#doc-title").fill("List formats");
+  await page.keyboard.press("Enter");
+  const formats = [...NUMBER_FORMATS, ...BULLET_FORMATS];
+  const nested = (kind: "orderedList" | "bulletList") => {
+    let list: JSONContent | undefined;
+    for (let depth = 9; depth >= 1; depth--) {
+      list = { type: kind, content: [{ type: "listItem", content: [
+        { type: "paragraph", content: [{ type: "text", text: `${kind} level ${depth}` }] },
+        ...(list ? [list] : []),
+      ] }] };
+    }
+    return list!;
+  };
+  await load(page, { type: "doc", content: [...formats.map((format) => ({
+    type: NUMBER_FORMATS.some((f) => f === format) ? "orderedList" : "bulletList",
+    attrs: { start: 4, listFormat: format },
+    content: [item(`${format} first`), item(`${format} second`)],
+  })), nested("orderedList"), nested("bulletList")] });
+  const download = async (label: RegExp, ext: string) => {
+    await page.getByRole("menuitem", { name: "File", exact: true }).click();
+    await page.getByRole("menuitem", { name: /^Download/ }).click();
+    await page.getByRole("menuitem", { name: label }).click();
+    await expect(page.getByText(new RegExp(`^Saved List formats\\.${ext}(?: ·|$)`))).toBeVisible({ timeout: 20_000 });
+    return join(saveDir, `List formats.${ext}`);
+  };
+  const md = readFileSync(await download(/^Markdown/, "md"), "utf8");
+  expect(md).toContain("4. decimal first\n5. decimal second");
+  const back = fromMarkdown(md).content!;
+  expect(back).toHaveLength(formats.length + 2);
+  formats.forEach((format, i) => {
+    if (format !== "decimal" && format !== "disc") expect(back[i]!.attrs?.listFormat).toBe(format);
+    if (NUMBER_FORMATS.some((f) => f === format)) expect(back[i]!.attrs?.start).toBe(4);
+  });
+  const text = readFileSync(await download(/^Plain text/, "txt"), "utf8");
+  for (const format of formats) {
+    expect(text).toContain(`${listMarker(format, 4)} ${format} first`);
+    expect(text).toContain(`${listMarker(format, 5)} ${format} second`);
+  }
+  await page.screenshot({ path: test.info().outputPath("list-formats-page.png"), fullPage: true });
+  const pdfPath = await download(/^PDF document/, "pdf");
+  const task = getDocument({ data: new Uint8Array(readFileSync(pdfPath)), useSystemFonts: false });
+  try {
+    const pdf = await task.promise;
+    // pdfjs types this Node canvas factory as object; its render context is canvas-compatible.
+    type PdfCanvas = { canvas: { toBuffer(format: "image/png"): Buffer }; context: CanvasRenderingContext2D };
+    const canvasFactory = pdf.canvasFactory as { create(width: number, height: number): PdfCanvas; destroy(canvas: PdfCanvas): void };
+    const lines: string[] = [];
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const sheet = await pdf.getPage(i);
+      const content = await sheet.getTextContent();
+      lines.push(content.items.map((it) => "str" in it ? it.str : "").join(" "));
+      const viewport = sheet.getViewport({ scale: 1.5 });
+      const canvas = canvasFactory.create(viewport.width, viewport.height);
+      await sheet.render({ canvas: null, canvasContext: canvas.context, viewport }).promise;
+      writeFileSync(test.info().outputPath(`list-formats-print-${i}.png`), canvas.canvas.toBuffer("image/png"));
+      canvasFactory.destroy(canvas);
+    }
+    const printed = lines.join("").replace(/\s+/g, "");
+    for (const format of formats) {
+      // Chromium draws these bullets as shapes, not PDF text; inspect the rendered pages too.
+      const marker = (n: number) => ["disc", "circle", "square"].includes(format) ? "" : listMarker(format, n);
+      expect(printed).toContain(`${marker(4)}${format}first`);
+      expect(printed).toContain(`${marker(5)}${format}second`);
+    }
+    for (let depth = 1; depth <= 9; depth++) {
+      const marker = ["1.", "a.", "i."][(depth - 1) % 3];
+      expect(printed).toContain(`${marker}orderedListlevel${depth}`);
+      expect(printed).toContain(`bulletListlevel${depth}`);
+    }
+  } finally {
+    await task.destroy();
+  }
+  expect(l.log.filter((line) => line.includes("[pageerror]"))).toEqual([]);
+  await quit(l);
 });
