@@ -161,3 +161,93 @@ The six rows span persisted document styles, editor history, settings and four e
 **Review build:** the P-Doc taskbar window, isolated worktree `E:\Projects\side-projects\p-suite\p-doc-review`, demo-only data `E:\Projects\side-projects\p-suite\p-doc-review-data`. The active validated commit and process are reported by `node tools/review-build.mjs status`; refresh only with `node tools/review-build.mjs refresh <validated-commit>`, never force a restart while the owner is using it.
 
 **Not checked:** live Word UI and signed-in Google Docs surfaces (no test accounts). Owner-only rows 5.7, 12.5, 15.5 and 17.4 remain blocked; the project DoD is not yet met.
+
+## 7. Owner request ledger
+
+Every owner instruction from **2026-10-29 11:52 to 2026-10-30 15:50 (+05:30)**, traced to the spec and to where it was actually recorded. Historical instructions are evidence for this ledger, not fresh authority to execute them. Prepared 2026-10-30 by text inspection only (no app, test or browser runs).
+
+**Source and selection.** Coordinator session `ab8c7a88-879b-4564-b4af-12a1be70b496`, `events.jsonl`. Of 1131 `user.message` events, 57 match the owner filter: no top-level `agentId`, no `data.source`, and at least one attachment. The others are 820 autopilot relays (`data.source`), 82 agent messages (`agentId`) and 172 with neither source nor attachment; all but one of those 172 are agent or system relays. That one, **X1** (2026-10-30 12:55, no attachment), reads as the owner's own words and is listed and flagged. Times are converted from UTC to +05:30. **Count:** 57 + X1 = 58 messages, 71 rows; messages with distinct instructions are split into lettered sub-items (M01a–e, M07a–b, M36a–e, M55a–e), so 58 + 4 + 1 + 4 + 4 = 71.
+
+**Request files.** The coordinator's `files/` folder holds **18** `*-NNNN.json` request files plus `root-pending-steer-66dd0002.json`, not the 21 mentioned at intake; every one is cited below or in the registry keys named. Registry (read-only): that session's `files/coordinator-registry.json`.
+
+**Status words.** "Delivered on branch X, not merged" means a registry record or branch commit says so; nothing on a feature branch is on `main` (no feature branch is an ancestor of `main`). "Recorded on main" means spec or contract text only; implementation on main is not claimed. Section links (§12.x) point to the canonical IDs in [spec §12](../product/spec.md#12-features-from-the-feature-branches-2026-10-30).
+
+| Ref | Time (+05:30) | Instruction (short) | Spec trace | Where recorded | Status |
+|---|---|---|---|---|---|
+| M01a | 2026-10-29 11:52 | Right panel: Figma-like grid, regularity, grouping | U81 → §4.19 R1 (branch); §12.2 | chrome-modes lineage; text in `shape-model-integration-a977` `docs/product/spec.md` §4.19 | Delivered on branch (chrome-modes/modern-right-pane lineage), not merged |
+| M01b | 2026-10-29 11:52 | Title bar bottom border | U81 §4.19 R2 (branch); §12.2 | same | Delivered on branch, not merged |
+| M01c | 2026-10-29 11:52 | Token-drawn checkboxes and radios; filled swatches | U81 §4.19 R3/R4 (branch); §12.2 | same | Delivered on branch, not merged |
+| M01d | 2026-10-29 11:52 | Dialogs: token minimum height, grow-only | V7 / §4.19 R5 (branch); §12.2 | same; `keyboard-shortcuts` V7 | Delivered on branch, not merged |
+| M01e | 2026-10-29 11:52 | One control corner-radius token | §4.19 R6 (branch); §12.2 | same | Delivered on branch, not merged |
+| M02 | 2026-10-29 12:22 | Right panel layout, segmented controls and grouping like the reference | §4.19 R1 owner 12:22 note (branch); §12.2 | chrome-modes lineage | Delivered on branch, not merged |
+| M03 | 2026-10-29 12:36 | Port the library from Focus Notes | U83–U86 (branch); §12.1 | registry task `focus-library-port` (done, `chrome-modes` 6b361a8) | Delivered on branch, not merged |
+| M04 | 2026-10-29 14:50 | Research Figma-style tokens and colour | Proposal U100–U113 on `design-tokens` (not adopted; §12.1) | `design-tokens` 25f275c `docs/research/figma-design-tokens.md` | Research delivered on branch; proposal not adopted |
+| M05 | 2026-10-29 15:35 | Queue holdup | — | Operational (process/kit); no product spec trace by nature | n/a |
+| M06 | 2026-10-29 15:38 | Launch the app for review | — | Operational (process/kit); no product spec trace by nature | n/a |
+| M07a | 2026-10-29 15:48 | Keep the main chat free; update and push orchestration kit | — | kit (agent-orchestration) commits; Operational (process/kit); no product spec trace by nature | Kit updated (outside this repo) |
+| M07b | 2026-10-29 15:48 | Right pane holds Format, Review, Comments; no Comments in Modern title bar | U81 (branch); §12.2 | registry task `modern-right-pane` (done, branch `modern-right-pane` ddae976) | Delivered on branch, not merged |
+| M08 | 2026-10-29 16:20 | Left rail: icons with labels | U81 labelled rail (branch); §12.2 | registry task `modern-left-rail-labels` (done) | Delivered on branch, not merged |
+| M09 | 2026-10-29 16:23 | Menu opener uses a menu icon | U81 labelled rail (branch); §12.2 | same | Delivered on branch, not merged |
+| M10 | 2026-10-29 16:28 | Design system as a full view | U100–U102 (branch); §12.1 | registry task `design-system-full-view` | Superseded (registry) by M16 direction |
+| M11 | 2026-10-29 16:34 | Design system item in the left toolbar, like Figma variables | U81 labelled rail (branch); §12.2 | `shape-model-integration-a977` §4.19 labelled-rail update | Delivered on branch, not merged; later reframed by M16/M19 |
+| M12 | 2026-10-29 16:43 | Unpinned library floats with uniform inset | U83 / §4.19 Floating Library (branch); §12.2 | registry `library-floating-panel` (done); `wip/library-floating` ec8852b | Delivered on branch, not merged |
+| M13 | 2026-10-29 16:46 | Keyboard shortcuts like Figma/Word | U11, U19 (main) extended on branch; §12.9 | `keyboard-shortcuts` 43fd326 `docs/design/keyboard-shortcuts.md` + audits | Blocked (registry task `keyboard-shortcuts`); not merged |
+| M14 | 2026-10-29 16:55 | Queue piling up | — | Operational (process/kit); no product spec trace by nature | n/a |
+| M15 | 2026-10-29 16:56 | Dropdown gutter alignment in Format column | §4.19 Format column alignment (branch); §12.2 | registry `right-pane-dropdown-gutter` (done); commit 19d89df | Delivered on branch, not merged |
+| M16 | 2026-10-29 17:03 | Design system = document formatting templates, editable (tokens, colours, styles) | U100–U102 + old U103 → **U116** (§12.1); later U103–U108 | registry `document-design-system-editor` (done, `modern-right-pane`) | Delivered on branch, not merged |
+| M17 | 2026-10-29 18:49 | Run the app | — | Operational (process/kit); no product spec trace by nature | n/a |
+| M18 | 2026-10-29 18:52 | Why run separately? | — | Operational (process/kit); no product spec trace by nature | n/a |
+| M19 | 2026-10-29 18:56 | Template view in the left toolbar; JSON templates | U103–U106 (branch); §12.4 | `template-view` 19221e6 / `shape-model-integration-a977`; `docs/design/template-json.md` | Blocked (registry `unified-template-view`); not merged |
+| M20 | 2026-10-29 19:09 | Work in show-me-the-UX-sooner mode | — | work-plan mode; Operational (process/kit); no product spec trace by nature | Process direction |
+| M21 | 2026-10-29 19:17 | Template a top peer in the rail; no Back button; documentation-style view | U103–U108 Document/Template peers (branch); §12.4 | request `template-writer-reconciliation-1925` | Blocked (registry `unified-template-view`); not merged |
+| M22 | 2026-10-29 20:06 | Presets, previews and modal browse | U107, U108 (branch); §12.4 | request `template-owner-feedback-2006` | Blocked (registry `template-presets-preview-iteration`); not merged |
+| M23 | 2026-10-29 20:31 | Professional multipage preview | U108 (branch); §12.4 | request `template-professional-preview-feedback-2031` | Blocked (registry `template-professional-preview`); not merged |
+| M24 | 2026-10-29 20:40 | Contextual properties pane | U109 (branch); §12.5 | registry `contextual-properties-model` | Blocked (registry); not merged |
+| M25 | 2026-10-29 21:22 | Visual preset selection and page gaps | U107–U109 Visual preset (branch); §12.4 | request `visual-preset-selection-feedback-2122`; registry task done | Delivered on branch, not merged |
+| M26 | 2026-10-29 22:22 | Template panel spacing audit | Panel rhythm U107–U109 (branch); §12.4 | request `template-panel-spacing-audit-2222` | Delivered on branch (registry done), not merged |
+| M27 | 2026-10-29 22:25 | Template preview matches page layout | Panel rhythm (branch); §12.4 | request `template-page-layout-match-2224` | Delivered on branch (registry done), not merged |
+| M28 | 2026-10-29 22:28 | Drop the "Menu" label; "Document" → "Doc" | **NO SPEC TRACE** (only an addendum in the 2222 request file) | owner addendum in `template-panel-spacing-audit-2222` | Unknown; needs spec row |
+| M29 | 2026-10-29 22:30 | Window controls match title-bar height | U81/U82 Native title-bar alignment (branch); §12.2 | request `titlebar-window-controls-height-2231` | Spec on branch; implementation status unverified |
+| M30 | 2026-10-29 22:43 | Figma colour editing system | U110–U113 (branch); §12.7 | request `figma-colour-editing-request-2243` | Queued (registry `figma-shared-colour-system`); branch spec only |
+| M31 | 2026-10-30 00:36 | Compact Figma colour UI | U110 (branch); §12.7 | request `figma-compact-colour-ui-0036` | Spec on branch; status unverified |
+| M32 | 2026-10-30 01:16 | Swatch sizing | U110 (branch); §12.7 | `ownerSwatchSizing0116` inside the 0036 file | Spec on branch; status unverified |
+| M33 | 2026-10-30 01:34 | Gradient handle | U111 (branch); §12.7 | `ownerGradientHandle0134` inside the 0036 file | Spec on branch; status unverified |
+| M34 | 2026-10-30 01:40 | Correct cursors; double-click opens library files | U33/U73/U75 Desktop interaction correction (branch); §12.10 | request `desktop-pointer-and-library-activation-0140` | Queued (registry `cumulativeOwnerQueue0150` desktop-cursor-state-certification) |
+| M35 | 2026-10-30 01:44 | Figma copy/paste style; Word Format Painter | U44, U11 (branch sections); §12.11 | request `copy-style-and-format-painter-0144` | Scoped delivery accepted on branch (registry `formatPainterDispatch`, `formatCopyPasteDispatch`); not merged |
+| M36a | 2026-10-30 01:58 | Insert standard and parametric shapes | U114, U114.P1–P4, U115, **U124** (§12.3) | request `insert-content-and-cover-pages-0158`; contracts on main | Contracts on main (rectangle 9095350, line 16c5a2c, arrow/polygon/star b157e2f lineage, ellipse cccde6d); implementation not on main |
+| M36b | 2026-10-30 01:58 | Insert icons (Material, Fluent) | **U120** (§12.6, new) | same request file | Queued; behaviour open |
+| M36c | 2026-10-30 01:58 | Charts with a spreadsheet-like data popover | **U121**, **U122** (§12.6, new) | same | Queued; behaviour open |
+| M36d | 2026-10-30 01:58 | Text boxes / text inside any shape | U114 + text rectangle (branch); §12.3 | same | Spec on main/branch; implementation not on main |
+| M36e | 2026-10-30 01:58 | Cover page | **U123** (§12.6, new) | same | Queued; behaviour open |
+| M37 | 2026-10-30 02:07 | Swatch radius, picker scrollbar, no clipped menus, preset palettes | U110–U112 Palette section (branch); §12.7 | request `colour-picker-refinements-and-palettes-0207` | Ready, combined integration open (registry `paletteProviderIntegration`) |
+| M38 | 2026-10-30 02:12 | Click-drag scrub in number fields | **U117** (§12.8); main permanent number-field rule | request `numeric-scrub-fields-0212`; `numeric-adjustment-core` b300556 | First consumers delivered on branch (registry `consumerIntegrationDispatch`); not merged |
+| M39 | 2026-10-30 02:21 | Parallel orchestration and health checks | — | request `parallel-orchestration-and-health-checks-0221`; Operational (process/kit); no product spec trace by nature | Process |
+| M40 | 2026-10-30 02:28 | Swatch and icon inside one input wrapper | U110 + visual language (branch); §12.2/§12.7 | request `input-field-wrappers-and-overlay-scrollbars-0228` | Delivered, owner acceptance open (registry `compoundInputsAndOverlayScrollbars`) |
+| M41 | 2026-10-30 02:29 | Overlay scrollbars | same; §12.2 | same file | Delivered, owner acceptance open |
+| M42 | 2026-10-30 02:42 | Page-layout templates (layouts with mandatory flowing text) | **U125** reserved; concept PL-U1–PL-U16 | request `page-layout-templates-0242`; registry `pageLayoutTemplateIntake`; [concept](../research/page-layout-templates-concept.md) | Concept awaiting owner; no implementation |
+| M43 | 2026-10-30 02:42 | Single Figma-exact paint picker with Solid/Gradient tabs | U110/U111/U113 Owner 182 correction (branch); §12.7 | request `figma-exact-single-paint-picker-0242`; registry `figmaSinglePickerCorrection` | Latest acceptance failed (registry) |
+| M44 | 2026-10-30 07:29 | Do not implement in the main chat | — | Operational (process/kit); no product spec trace by nature | Kit/process |
+| M45 | 2026-10-30 09:25 | Main chat clogged | — | Operational (process/kit); no product spec trace by nature | Kit/process |
+| M46 | 2026-10-30 09:27 | Never ask how behaviour works; Figma first, then Word | Spec header "Permanent behavior authority"; §10 BR1–BR7 | main `docs/product/spec.md` | Recorded on main (spec text) |
+| M47 | 2026-10-30 09:28 | Main chat clogged | — | Operational (process/kit); no product spec trace by nature | Kit/process |
+| M48 | 2026-10-30 09:40 | Strict Figma shape-editing benchmark | U114 strict target (branch); §12.3 | `shape-model-integration-a977` `docs/research/figma-shape-editing.md`; registry `shapeInspectorFigmaBenchmark` | Benchmark spec committed on branch, not merged |
+| M49 | 2026-10-30 10:04 | Update the orchestration kit | — | kit 0.2.0 installed on main (5ea49a6); Operational (process/kit); no product spec trace by nature | Done on main (kit install) |
+| M50 | 2026-10-30 11:10 | Status question | — | Operational (process/kit); no product spec trace by nature | n/a |
+| X1 | 2026-10-30 12:55 | Nothing to review; show UX sooner | — | no attachment (flagged below); Operational (process/kit); no product spec trace by nature | Process |
+| M51 | 2026-10-30 13:07 | Rectangle cannot be moved | U114; rectangle contract RP rows | main `docs/research/rectangle-behaviour-contract.md` (9095350) | Contract on main; preview build under review (registry `ownerReviewBuild`); not verified delivered |
+| M52 | 2026-10-30 13:15 | Rectangle placement: inline, wrap, order | U114.P1–P3 | main spec "Rectangle document placement addendum" | Spec on main; implementation not verified on main |
+| M53 | 2026-10-30 13:29 | Rectangle corner-radius gesture | U114 "Rectangle radius correction" | main spec | Spec on main; implementation not verified on main |
+| M54 | 2026-10-30 13:32 | Run the coordinator on a named model | — | Operational (process/kit); no product spec trace by nature | n/a |
+| M55a | 2026-10-30 14:29 | Clicking outside the page deselects | U114; rectangle contract | main rectangle contract | Contract on main; not verified delivered |
+| M55b | 2026-10-30 14:29 | No inline dimension/radius labels | U114; rectangle contract | same | Contract on main; not verified delivered |
+| M55c | 2026-10-30 14:29 | Click-drag scrub in every number field; cursor hidden and returned | **U117**; main "Number fields — PERMANENT rule" | main spec | Rule on main; rollout partial (branch) |
+| M55d | 2026-10-30 14:29 | Rotated shapes wrap by bounding box | U114.P2; rectangle contract | main contract | Contract on main; not verified delivered |
+| M55e | 2026-10-30 14:29 | Arrow keys step; Shift+arrow larger step | **U117**; main number-field rule | main spec | Rule on main; rollout partial (branch) |
+| M56 | 2026-10-30 14:34 | Behaviour-contract-first process | Spec process rule | main spec process rule; `docs/design/interaction-rules.md` | Recorded on main |
+| M57 | 2026-10-30 15:50 | Testing must not hijack mouse or focus | Spec testing safety rule | main spec; commit 7b463f0 | Recorded on main; current hold stricter |
+
+**No spec trace.** M28 (labels "Menu" removed, "Doc" for "Document") has no spec row anywhere; it needs one. Before this change, M36b, M36c, M36e (icons, charts and data editor, cover page) and M42 (page layouts) also had none; they now have U120–U123 (requirement owner-requested, behaviour open) and U125 (concept awaiting owner). Fifteen rows are process or kit directions with no product spec by nature: M05, M06, M07a, M14, M17, M18, M20, M39, M44, M45, M47, M49, M50, X1, M54.
+
+**Discrepancies.** (1) 58 owner messages, not 57, once X1 is counted; X1 is kept separate because it lacks an attachment. (2) 19 request files, not 21. (3) The spec's "never ask the owner" rule cites 13:02:53; no owner message in this source has that time (closest: M46 at 09:27), so it probably came from another chat. (4) `design-tokens` uses U100–U113 with other meanings; resolved in [spec §12.1](../product/spec.md#121-id-mapping).
+
+**Page layouts:** the concept is copied with provenance to [page-layout-templates-concept.md](../research/page-layout-templates-concept.md), awaiting the owner.
