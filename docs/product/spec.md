@@ -163,6 +163,15 @@ Write and review real documents with the ease of Google Docs and the structure o
 | U79 | check a document for accessibility problems and go to each one to fix it | J17 | GD F-042, W Review |
 | U80 | export to EPUB, OpenDocument (.odt) and Rich Text (.rtf), and get PDFs with the heading outline and working links | J10 | GD F-033 |
 
+**Shapes** (numbered by the separate shape track; behaviour in §10 [Behavior reference decisions](#behavior-reference-decisions-2026-10-30) and the [rectangle placement addendum](#rectangle-document-placement-addendum-owner-root218-2026-10-30-1315); row-level acceptance in the [rectangle behaviour contract](../research/rectangle-behaviour-contract.md))
+
+| # | A person can… | Jobs | From |
+|---|---|---|---|
+| U114 | draw, resize and format text-bearing shapes without losing native paragraphs or authored dimensions | J3, J15 | Figma/FigJam shapes (BR1, BR2, BR5), owner root219 radius and number-field rules |
+| U114.P1 | insert a rectangle inline by default, move it between words as one character-like object, and keep typing before and after it without a free-canvas position | J3, J15 | Word Layout (In line with text), placement addendum DP1 |
+| U114.P2 | choose document wrapping, set floating coordinates against explicit references, choose Move with text or Fix on page, and see which paragraph anchors the object | J3, J15 | Word Layout (Text Wrapping, Position), placement addendum DP2–DP3 |
+| U114.P3 | change the order of overlapping floating rectangles without changing their text, dimensions or document position, and select a behind-text object again | J3, J15 | Figma layer order, placement addendum DP4 |
+
 ## 4. Task flows
 
 Waits name their class from the perceived-performance skill: *instant* (< 100 ms), *responsive* (< 300 ms), *in-flow* (< 1 s with a sign in place), *background* (any length, never blocks).
@@ -541,7 +550,8 @@ Trace: P3 → J1/J15 → U44/U11 for formatting; P1/P3/P4 → J3/J15
 for shape editing. The separate shape track calls its capability **U114**:
 a person can draw, resize and format text-bearing shapes without losing native
 paragraphs or authored dimensions. That track's fuller U114/SB3 requirements
-are not all integrated into this main copy.
+are not all integrated into this main copy; U114 and U114.P1–P3 are listed in
+§3 (2026-10-30).
 
 | Decision | Current official evidence | Target / fallback and implementation boundary |
 | --- | --- | --- |

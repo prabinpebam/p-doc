@@ -23,9 +23,14 @@ Figma/FigJam-first rule remains capability-scoped. No behavior questions to owne
 
 | Slice | Produces / serves | Delivery gate | State |
 | --- | --- | --- | --- |
-| RPD | Spec-first U114.P1–P3 and flows DP1–DP4; source-checked Word placement and Figma arrange | Docs diff check only | Documented, not implemented |
-| RPP | Real paragraph-page rectangle prototype: inline default/no object X/Y/alignment; six-mode wrap strip; floating references, anchor, distances and move/fix; second rectangle and four arrange commands | DoD RP1–RP4 automated interaction tests **plus independent visual check** on the exact build | Required fold-in; no implementation claim here |
-| RPR | Owner-facing replacement for rejected initial prototype, with exact location and passed evidence | RP5: both checks before delivery; unsupported controls omitted or honestly disabled, never inert replicas | Pending; source-only delivery prohibited |
+| RPD | Spec-first U114 and U114.P1–P3 (now in spec §3) and flows DP1–DP4; source-checked Word placement and Figma arrange; the [rectangle behaviour contract](../research/rectangle-behaviour-contract.md) (4265cd2: 386 rows, 342 in scope) | Docs diff check; contract critic | Done for rectangle; DoD RP1–RP13 resynced to attempt 16 (2026-10-30) |
+| RPP | Real paragraph-page rectangle prototype against the contract: placement (DoD RP1–RP4) and editing (RP6–RP13) | Every in-scope contract row passing a one-to-one headless test **plus contract-blind review** on the exact build | Partial: attempt 16 `rectangle-preview-review-attempt16.html` (sha256 `251da666…`): 442 passed / 0 failed; 300 of 342 rows tested (232 one-to-one, 68 shared, 42 not covered); blind review a16 PASS, 3 minor |
+| RPR | Owner-facing replacement for the rejected initial prototype, with exact location and evidence | RP5: both checks before delivery; unsupported controls omitted or honestly disabled, never inert replicas | Partial: attempt 16 delivered as a tested subset under the 45-minute rule; open defects RC-WP-13, RC-WP-09/39, RC-CLK-42, RC-WP-40 |
+| RPB17 | Builder attempt 17b: fix the four open defects (rewrite the older test that asserts disabled rounded Tight), cover the 42 rows, turn the 68 shared rows into one-to-one tests; Insert rectangle and in-shape text editing first | Headless suite with pre-flight 0 visible windows; contract-blind review; owner copy only if it passes | Next |
+| RPC | Contract fold-in of blind review a16 (pending: 388 rows, 344 in scope) and critic round 2; Pointer Lock exits T-PL-01–09 as contract rows; BR1 text overflow rows | Contract critic | Next (contract owner only) |
+| RPS | Behaviour contracts for polygon, star, line and arrow (spec process rule) | Docs only; contract critic | Next (docs only); any build waits for the owner's verdict on the rectangle |
+| RPE | Ellipse behaviour contract (BR5 aspect lock) | Docs only | Later |
+| RPA | App integration of the shape work: choose the base (`shape-model-integration-a977` vs `figma-integration-545`), port attempt 16 behaviour against the contract, app e2e of RP1–RP13 | App e2e on the same contract rows | Blocked: app automation paused until the owner lifts it |
 
 The docs worker does not run prototype tests or browser/app checks, make a
 production edit, refresh a review build, install dependencies or message root.
@@ -36,7 +41,7 @@ support. Preserve previous evidence, frozen copies and the production pause.
 How this work is carried out: the mode, the bounds, the increments and their evidence. What's worth building and what proves it comes from the [spec](../product/spec.md) and the [Definitions of Done](../product/definition-of-done.md); this plan cites them.
 
 > **TL;DR.**
-> - **Intent:** [spec](../product/spec.md) P1–P6, U1–U80; [Definitions of Done](../product/definition-of-done.md) PD1–PD9 and stages 1–17; [parity audit](../product/parity.md) (U39–U80).
+> - **Intent:** [spec](../product/spec.md) P1–P6, U1–U80, U114; [Definitions of Done](../product/definition-of-done.md) PD1–PD9, stages 1–17 and the rectangle gate RP1–RP13; [parity audit](../product/parity.md) (U39–U80).
 > - **Mode:** make this production-ready · keep going unattended
 > - **Status:** see §6.
 
