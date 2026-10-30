@@ -5,6 +5,7 @@ What success means for the [spec](spec.md): the project's Definition of Done, ma
 > **TL;DR.**
 > - **Success is:** a writer installs P-Doc, writes a structured document with the tools of Docs and Word they reach for (power ones included) that never loses a keystroke, prints it as seen, reviews it, goes back to any version, and keeps it private or public on their own GitHub, online or offline.
 > - **Stages:** 1 Write offline; 2 Pages and print; 3 Versions; 4 Review; 5 GitHub and first run; 6 Import and export; then the [parity](parity.md) stages 7 Images beside the document; 8 Styles and lists; 9 Paragraph layout; 10 References; 11 Sections and page layout; 12 Tables, code and equations; 13 Review power; 14 Citations, index and fields; 15 Navigation and windows; 16 Library, files and proofing; and last 17 Install.
+> - **Shapes:** each shape (rectangle, ellipse, line, arrow, polygon, star) passes an **owner review** stage first and a **certification** stage only after the owner approves it; see [Shape review gates](#shape-review-gates-owner-review-first-then-certification-2026-10-30).
 > - **Against the promise:** see §4.
 
 ## Rectangle prototype gate (2026-10-30, resynced to attempt 16)
@@ -55,17 +56,56 @@ authorized prototype track; native clipboard UNKNOWN. This documentation pass
 ran no test, browser or app; figures come from the attempt 16 receipt, coverage
 map and blind review report.
 
+> **Superseded review gate (annotated 2026-10-30, owner rule relayed by the coordinator, ROOT 21:31).** RP5 required both checks and, for a full delivery, 100% of in-scope rows passing *before* the owner saw a build. The owner now reviews the UI/UX **first** and approves it **before** hardening, extra critics, adversarial passes, certification and post-approval-only edge rows. So, from this date, RP1–RP13 keep their IDs, wording and recorded evidence unchanged but are the rectangle's **post-approval certification** rows (stage SC below); the gate a build must pass before the owner sees it is the review row SR-REC-1. The attempt 16 evidence above is historical and still the last passed owner copy. The spec text of this rule is being written by the spec track; until it lands, this note and the coordinator instruction are its only record.
+
 **Other shape contracts (docs only; every build waits for the owner's verdict on the rectangle).** Each traces
 to U114.P1–P3 / DP1–DP4 (now naming every shape) and to U114 (polygon), U114.P4 (star) or U115 (line, arrow), and has no build or test yet:
 
-| Contract | Committed | Working copy after spec batch CD-63A0 (2026-10-30, uncommitted) | Critic |
+| Contract | Committed | After spec batch CD-63A0 (2026-10-30; committed in b157e2f) | Critic |
 | --- | --- | --- | --- |
 | [Polygon](../research/polygon-behaviour-contract.md) (U114) | 5b44ca9: 446 rows, 390 in scope | 447 rows (81 PG + 366 inherited RC), 390 in, 57 out; inherits rectangle 9095350 incl. RC-OS-43; CPG4-01 and R7-07 folded in | joint r4: LOW only |
 | [Star](../research/star-behaviour-contract.md) (U114.P4) | bed8c82: 98 rows, 82 in scope | 99 ST rows (83 in, 16 out) plus 323 in-scope and 44 out-of-scope RC rows adopted; STC4-01…03 and R7-07 folded in | joint r4: LOW only |
 | [Line](../research/line-behaviour-contract.md) (U115) | 0d72adc, follow-up 16c5a2c: 383 rows, 343 in scope | 384 rows, 343 in, 40 out, 1 withdrawn (LN-OS-41 scope freeze); LN-FLD-07 no longer blocked (spec exception SG4); R5-01…04 folded in | r5: LOW only |
 | [Arrow](../research/arrow-behaviour-contract.md) (U115) | 6473367: 262 rows, 232 in scope | 263 rows, 232 in, 28 out, 3 withdrawn (AR-OS-30 scope freeze); CA5-01/02, R5-01/02 folded in | r5: LOW only |
+| [Ellipse](../research/ellipse-behaviour-contract.md) (U114) | cccde6d: 432 rows, 377 in scope (360 RC inherited, 20 replaced, 23 n/a) | written after the batch; inherits rectangle 9095350, CD-63A0-01 and CD-63A0-02 | r4: LOW only (E4-01 carried) |
 
-The working-copy changes go to an independent critic before they are committed.
+The CD-63A0 working-copy changes went to critic docs-batch r2 (0 high, 0 medium; carried LOW DB2-01, DB2-02) and were committed in b157e2f; the ellipse contract followed in cccde6d.
+
+## Shape review gates: owner review first, then certification (2026-10-30)
+
+Owner rule (relayed by the coordinator, ROOT 21:31, 2026-10-30; spec text pending from the spec track): **the owner reviews and approves a shape's UI/UX before any hardening.** Each of the six shapes therefore has two stages, in this order:
+
+1. **SR, owner can review the UI/UX.** A minimal, coherent review build of that shape, with a basic check that its *Try it* path works, shown to the owner with its exact path, sha256 and the list of what it does not do yet. It is not certified: no row of the contract closes in this stage.
+2. **SC, post-approval certification.** Only after the owner's recorded approval of SR: hardening, extra critics, the contract-blind adversarial pass on the exact hash, every in-scope contract row passing one-to-one (100%), and the post-approval-only edge rows. Parked until approval.
+
+Nothing here adds behaviour: every row cites user-can statements already in [spec §3](spec.md#3-what-a-person-can-do) and the committed contracts above; the stages only change *when* evidence is required. Shared to every SR row: the build is headless-checked under the spec's Testing safety rule (fresh temporary profile, 0 visible windows, no OS cursor or focus, no clipboard), and the owner's review takes place in a copy that is not their library, settings or GitHub.
+
+**Status of this increment (docs only).** Written with no test, build, browser or app run (the owner is away and execution is on hold). Every "current evidence" cell below comes from reading the committed contracts, this file and the coordinator's record; none is a runtime result, and nothing in this section is certified.
+
+### Stage SR: owner can review the UI/UX
+
+| # | Shape · trace | Owner can review (with *Try it*) | Evidence needed before it is shown | Current evidence (unexecuted, uncertified) |
+| --- | --- | --- | --- | --- |
+| SR-REC-1 | Rectangle · U114, U114.P1–P3; [contract](../research/rectangle-behaviour-contract.md) 9095350 | Insert, type in, resize, round, recolour, wrap, float and arrange a rectangle in a paragraph. *Try it:* insert a rectangle mid-sentence, type before and after it and inside it, drag a corner and a radius dot, change fill and stroke, step through the wrap modes, float it and bring a second one in front | The exact build path and sha256; a headless basic check of the *Try it* path on that hash with 0 visible windows; the known-defects and not-built list handed over with the link | Last passed owner copy: `rectangle-preview-review-attempt16.html`, sha256 `251da666…d1120da9`, unchanged (evidence in RP1–RP13). Attempt 20 STOPPED: no candidate build, its last patch untested. Stable path for the next review copy, **pending, not yet confirmed to exist**: `C:\Users\Prabin Pebam\.copilot\session-state\4b71e8bf-bfc9-4712-ba5c-6e1be1ef1fcd\files\rectangle-preview\rectangle-preview-review-latest.html`. Open defects RC-WP-13, RC-WP-09/39, RC-CLK-42, RC-WP-40 (see the rectangle gate) stay visible to the owner. Owner verdict on this stage: none recorded |
+| SR-ELL-1 | Ellipse · U114, U114.P1–P3, BR5; [contract](../research/ellipse-behaviour-contract.md) cccde6d | The rectangle's review path with an elliptical outline and no corners: no radius dots or corner fields, lock ratio for circles, text inside the inscribed area, Tight wrap on the outline. *Try it:* insert an ellipse inline, type inside it, Shift-drag a corner to a circle, turn Lock aspect ratio on and off, choose Tight with text beside it | As SR-REC-1, on an ellipse build | Contract only (cccde6d, critic r4 LOW only). No build, no check. Waits for the owner's verdict on the rectangle |
+| SR-LIN-1 | Line · U115, U114.P1–P3; [contract](../research/line-behaviour-contract.md) 16c5a2c, b157e2f | Insert a line inline, set its start and end on the page, its length and angle, stroke weight, colour and dash, and place it as a shape; H is disabled with a reason (SG4). *Try it:* insert a line between words, drag each endpoint with and without Shift, type a Length and a Rotation, pick a dash, float it and wrap text round it | As SR-REC-1, on a line build | Contract only. No build, no check. Waits for the rectangle verdict |
+| SR-ARR-1 | Arrow · U115, U114.P1–P3; [contract](../research/arrow-behaviour-contract.md) 6473367, b157e2f | The line's review path plus the style of each end. *Try it:* insert an arrow, drag its endpoints past each other, change the start and end styles, flip it, float it and arrange it over a rectangle | As SR-REC-1, on an arrow build | Contract only. No build, no check. Waits for the rectangle verdict |
+| SR-POL-1 | Polygon · U114, U114.P1–P3; [contract](../research/polygon-behaviour-contract.md) 5b44ca9, b157e2f | The rectangle's review path with a side Count and corner radius. *Try it:* insert a polygon, change Count from 3 to 8 in the pane, round its corners, select a 3- and an 8-sided polygon to see Mixed, wrap text round it | As SR-REC-1, on a polygon build | Contract only. No build, no check. Waits for the rectangle verdict |
+| SR-STA-1 | Star · U114.P4, U114.P1–P3; [contract](../research/star-behaviour-contract.md) bed8c82, b157e2f | Count, inner Ratio and corner radius from the pane and on the page, with the rectangle's placement, wrap and arrange. *Try it:* insert a star, change Count and Ratio in the pane and by dragging on the page, round it, float it behind text and select it again | As SR-REC-1, on a star build | Contract only. No build, no check. Waits for the rectangle verdict |
+| SR-ALL-2 | Every shape · the owner rule above | The owner's verdict is recorded before anything in stage SC starts for that shape. *Try it:* read this table: each shape with a verdict names its date and build hash | A verdict line (approve, change or reject) with the build sha256, in this table and the coordinator's record | None recorded for any shape. Negative case to hold: no SC work, extra critic or adversarial pass starts on a shape without a verdict (not verified by this docs pass) |
+
+### Stage SC: post-approval certification (parked until each shape's SR approval)
+
+| # | Shape | Done when | Evidence | Current |
+| --- | --- | --- | --- | --- |
+| SC-REC | Rectangle | RP1–RP13 above all close: every in-scope row of contract 9095350 (358) passes one-to-one on the exact hash, contract-blind adversarial review of that hash, independent visual check; then the app half by app e2e | As RP1–RP13 | Parked. RP1–RP13 historical evidence (attempt 16, measured against 4265cd2) kept, PARTIAL |
+| SC-ELL | Ellipse | Every in-scope row of the ellipse contract (377) passes one-to-one on the exact hash; contract-blind adversarial pass; visual check; app e2e | Test receipt, coverage map, blind review on that hash | Parked; no build |
+| SC-LIN | Line | Every in-scope row of the line contract (343) passes one-to-one; adversarial pass; visual check; app e2e | As SC-ELL | Parked; no build |
+| SC-ARR | Arrow | Every in-scope row of the arrow contract (232) passes one-to-one; adversarial pass; visual check; app e2e | As SC-ELL | Parked; no build |
+| SC-POL | Polygon | Every in-scope row of the polygon contract (390) passes one-to-one; adversarial pass; visual check; app e2e | As SC-ELL | Parked; no build |
+| SC-STA | Star | Every in-scope row of the star contract (83 ST plus 323 adopted RC) passes one-to-one; adversarial pass; visual check; app e2e | As SC-ELL | Parked; no build |
+
+**Dependencies.** The spec track owns the written owner-review rule and any new user-can statements; until it lands, the SR rows trace only to the existing U114, U114.P1–P4 and U115. Every SR build after the rectangle waits for the owner's rectangle verdict (decided above). Each build needs the owner's review-run authorisation, which is on hold while the owner is away.
 
 ## 1. Project Definition of Done
 
