@@ -682,12 +682,21 @@ and every later feature):
    contract; each difference becomes a new row, which is built, tested and
    reviewed again.
 5. **Delivery:** only then does the owner get a link with the row count, the
-   pass count and the out-of-scope list.
+   pass count and the out-of-scope list. *Superseded for the owner's first review by [Owner review first](#owner-review-first-permanent-top-priority-rule-owner-via-root-2026-10-30-2126-and-2131); this step now gates certification after approval.*
 
 If a cycle runs past about 45 minutes, deliver the tested subset with a "not
 yet covered" list. Fixes the owner points out go into the contract as rows;
 they are never patched on their own. Also recorded in
 [interaction-rules.md](../design/interaction-rules.md).
+
+#### Owner review first: permanent top-priority rule (owner via ROOT, 2026-10-30 21:26 and 21:31)
+
+Process decision relayed by the coordinator from the owner (ROOT 21:26 and the latest ROOT 21:31, 2026-10-30); no user-can ID, because it governs the workflow, not the product. It takes precedence over every other delivery gate in this spec, the work plan and the Definition of Done.
+
+1. **Owner approval first.** The owner sees and approves (or changes) a feature's UI/UX before any polish, hardening, extra critic rounds, certification, adversarial or contract-blind passes, or post-approval edge rows. Those steps start only after a recorded owner verdict on the exact build or concept.
+2. **Always something to try.** The newest working slice that has passed a basic check stays available at a stable HTML path, refreshed with every slice. A replacement never takes focus, raises a window, or touches the owner's documents, settings or GitHub.
+3. **Safety holds win.** An active safety hold (such as the hold on browsers, apps, tests and input) overrides any launch or refresh. Under the hold, only static source and docs checks of the HTML are allowed (ROOT 21:31); they are recorded as static checks, never as a runtime PASS.
+4. **Rigour is kept, not dropped.** The behaviour contract process above, the 45-minute rule and the testing safety rule still apply in full, after approval. Its step 5 (delivery only after 100% passing and adversarial review) now gates certification, not the owner's first review. Historical evidence and committed contracts are unchanged.
 
 **Testing safety — PERMANENT rule (owner, 2026-10-30 15:50):** "Do not hijack
 my mouse or window focus when you are testing."
