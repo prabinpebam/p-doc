@@ -592,6 +592,68 @@ the selected corner's pane value. Escape restores all pre-drag radii; arrows
 adjust by 10 (Shift: 100), Home/End reach the bounds, and Alt keeps keyboard
 edits individual too. Drawn W/H and document placement remain unchanged.
 
+**Number fields — PERMANENT rule (owner, 2026-10-30 14:29), applies to every
+number field, current and future:**
+
+- **Scrub by default.** Click-and-drag scrubbing is the default for **every**
+  number field: X, Y, W, H, rotation, opacity, every radius (including the four
+  independent-corner fields), stroke weight and wrap distances. Any exception
+  must be listed here with its reason; **there are none today**.
+- **Hidden cursor.** While scrubbing, the cursor is hidden (Pointer Lock) and
+  reappears where the drag started.
+- **Typing.** A plain click (no drag) focuses the field for typing; Enter
+  applies, Escape reverts.
+- **Arrow keys.** Up/Down change the value by 1; Shift+Up/Shift+Down by 10.
+  Values are clamped to each field's min and max, with units kept. From
+  "Mixed", the change applies to all the values it stands for.
+- **One component.** Every number field is built from one shared number-field
+  component; no field implements its own scrub or keys.
+- **Why it is enforced.** This instruction was missed once and had to be
+  repeated by the owner (2026-10-30 14:29), so it is checked by an automated
+  test for each field (scrub, Pointer Lock, click-to-type, Enter/Escape,
+  1/10 steps, clamping, units and Mixed).
+
+The canvas radius dots keep their own keyboard steps above (10, Shift 100);
+this rule governs the pane's number fields.
+
+Sources, retrieved 2026-10-30: [Figma — Adjust alignment, rotation, position,
+and dimensions](https://help.figma.com/hc/en-us/articles/360039956914-Adjust-alignment-rotation-position-and-dimensions),
+**Scrub fields** (drag to change position, dimension, rotation and other
+right-sidebar values; left decreases, right increases) and **Nudge layers**
+(arrow keys, small nudge 1 and Shift for big nudge 10). Adaptation by owner
+contract, not Figma parity: Figma scrubs from the field's label/icon (or Alt
+over the field) and its 1/10 steps are documented for layer nudging; P-Doc
+scrubs from the field itself and applies 1/10 to field values. Pointer Lock
+cursor hiding is an owner requirement, not stated on that page.
+
+**Behaviour contract process — PERMANENT rule (owner, 2026-10-30 14:34):**
+"It's not about me pointing out three things and you fixing those 3 things...
+It's about having a system where you go through a systematic, deliberate and
+thorough approach to addressing every aspect of the implementation... The
+interaction patterns are already established. Refer Figma and MS Word... Make
+sure no aspect about the UI, interaction, functionality and behaviour is
+missed." For every feature (rectangle first, then polygon, star, line, arrow
+and every later feature):
+
+1. **Contract:** `docs/research/<feature>-behaviour-contract.md`, with one row
+   per control × input or state, giving the expected behaviour, its Figma or
+   Word source and a test ID, plus an explicit out-of-scope list with reasons.
+2. **Completeness critic:** an independent critic checks the contract against
+   Figma and Word, section by section; the contract is complete only when the
+   critic finds no gaps.
+3. **Build and test 1:1:** one test per row; a coverage report shows 100% of
+   in-scope rows passing.
+4. **Adversarial review:** an independent reviewer who has not seen the
+   contract; each difference becomes a new row, which is built, tested and
+   reviewed again.
+5. **Delivery:** only then does the owner get a link with the row count, the
+   pass count and the out-of-scope list.
+
+If a cycle runs past about 45 minutes, deliver the tested subset with a "not
+yet covered" list. Fixes the owner points out go into the contract as rows;
+they are never patched on their own. Also recorded in
+[interaction-rules.md](../design/interaction-rules.md).
+
 **Scoped authority, superseding BR7's top-and-bottom-only target:** use current
 **Word for document placement and text flow**, because a Figma free canvas has
 no equivalent character position or paragraph anchor; retain Figma for shape
@@ -663,6 +725,16 @@ Existing `apps/desktop/src/renderer/editor/setup.ts` and `commands.ts` do not
 establish these flows; the sibling's top-and-bottom flow renderer is not proof
 of inline insertion, anchoring, contour reflow or Z-order. These are explicit
 implementation gaps, not permission to claim all surfaces consistent.
+
+**Owner review decisions (2026-10-30 14:29):**
+
+- **Deselect.** Clicking outside the page (the canvas or the margins)
+  deselects the rectangle.
+- **No on-canvas value labels.** No W × H or Radius labels on the canvas;
+  values show only in the pane. This supersedes the earlier Figma-style badges,
+  including the "Show live Radius N" part of the radius correction above.
+- **Rotated wrap.** A rotated shape wraps text around its axis-aligned rotated
+  bounding box plus the wrap distances (as Word does).
 
 ## 11. As built
 

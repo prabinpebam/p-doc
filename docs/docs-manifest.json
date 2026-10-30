@@ -6,7 +6,8 @@
     { "path": "product/definition-of-done.md", "title": "Definitions of Done", "group": "Product", "order": 2, "icon": "task_alt", "status": "wip", "updated": "2026-10-28" },
     { "path": "design/copy-glossary.md", "title": "Copy glossary", "group": "Product", "order": 3, "icon": "spellcheck", "status": "draft", "updated": "2026-10-28" },
     { "path": "design/tokens.md", "title": "Design tokens", "group": "Product", "order": 4, "icon": "palette", "status": "done", "updated": "2026-10-28" },
-    { "path": "work/work-plan.md", "title": "Work plan", "group": "Work", "order": 1, "icon": "checklist", "status": "wip", "updated": "2026-10-28" },
+        { "path": "design/interaction-rules.md", "title": "Interaction rules", "group": "Product", "order": 5, "icon": "rule", "status": "draft", "updated": "2026-10-30" },
+        { "path": "work/work-plan.md", "title": "Work plan", "group": "Work", "order": 1, "icon": "checklist", "status": "wip", "updated": "2026-10-28" },
     { "path": "research/index.md", "title": "Research", "group": "Research", "order": 1, "icon": "travel_explore", "status": "done", "updated": "2026-10-28" }
   ]
 }
