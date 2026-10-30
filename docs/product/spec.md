@@ -654,6 +654,27 @@ yet covered" list. Fixes the owner points out go into the contract as rows;
 they are never patched on their own. Also recorded in
 [interaction-rules.md](../design/interaction-rules.md).
 
+**Testing safety — PERMANENT rule (owner, 2026-10-30 15:50):** "Do not hijack
+my mouse or window focus when you are testing."
+
+1. **Headless only:** automated tests run with `headless: true`, a fresh
+   temporary profile and no visible window. They never move the OS cursor,
+   take focus or raise any window.
+2. **No visible browser tools:** the host editor's visible browser tools
+   (`openBrowserPage`, `clickElement`, `dragElement`, `hoverElement`,
+   `typeInPage` and the like) are banned for testing.
+3. **Pre-flight:** before every run the harness checks that no window
+   appears; if one does, the run fails. The result of the check is recorded
+   with the run.
+4. **Pointer Lock (number-field scrub), Figma's way:** request the lock only
+   after a drag passes about 3 px from the press; a plain click never locks.
+   Always release the lock on `pointerup`, Esc, `blur`, `visibilitychange`
+   and `pointercancel`. If a lock is granted after the drag has already
+   ended, release it at once. The lock is never left held, and the cursor
+   reappears where the drag started. Each exit has a test.
+
+Also recorded in [interaction-rules.md](../design/interaction-rules.md).
+
 **Scoped authority, superseding BR7's top-and-bottom-only target:** use current
 **Word for document placement and text flow**, because a Figma free canvas has
 no equivalent character position or paragraph anchor; retain Figma for shape
