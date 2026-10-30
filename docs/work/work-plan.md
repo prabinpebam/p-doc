@@ -13,27 +13,30 @@
 > is now REJECTED for quality; it is not an accepted owner-facing build.
 > Implementation gaps remain open, not passes.
 
-## Outline wrap request (owner ROOT 22:02, 2026-10-30)
+## Outline wrap request (owner ROOT 22:02, scope corrected 22:47, 2026-10-30)
 
 Show the UX sooner / work with me. The owner asked for text to wrap around a
 shape's actual outline instead of its bounding box, for any SVG shape, with a
-padding parameter (ledger M58). Order, each step gated on the one before:
+padding parameter (ledger M58). The 22:47 routing makes the scope every wrapping
+mode and every shape family; it supersedes the Tight-only first version
+(6bb7424). Order, each step gated on the one before:
 
-1. **Spec and DoD first (done in docs):** U114.P5 and decisions OW1–OW8 in the
-   [spec](../product/spec.md#outline-wrap-amendment-owner-root-2202-2026-10-30);
-   review rows OW-REC-1, OW-ELL-1 and deferred OW-ALL-1 in the
-   [Definition of Done](../product/definition-of-done.md). Tight is the outline
-   mode; Square, Top and bottom, In line (no X/Y), Behind and In front are
-   unchanged; Distance from text is the shared number field.
-2. **Next: rectangle, then ellipse static previews** at the stable HTML review
-   path, each with its sha256 and not-built list, for the owner's verdict.
+1. **Spec and DoD first (done in docs):** U114.P5 and owner override OW1–OW10 in
+   the [spec](../product/spec.md#outline-wrap-amendment-owner-root-2202-2026-10-30)
+   (Square and Tight both follow the outline and wrap the same; Top and bottom
+   clears the outline's height; In line, Behind and In front move no text; one
+   Distance from text, default 10 px, 0…200 px, shared number field); review
+   rows OW-REC-1, OW-ELL-1 and deferred OW-ALL-1 in the
+   [Definition of Done](../product/definition-of-done.md).
+2. **Next, as soon as possible: rectangle, then ellipse static previews** at the
+   stable HTML review path, each with its sha256 and not-built list, for the
+   owner's verdict. No broader code integration or hardening first.
 3. **Safety:** while the current hold lasts, evidence is static source and docs
-   checks only: no tests, scripts, builds, browsers, apps or input. Existing
-   rectangle and ellipse wrap evidence predates the request and is not proof.
-4. **Parked until the owner's verdict:** other shapes, icons and custom SVG
-   (OW-ALL-1); OW8's unknowns (flattening tolerance, performance on complex
-   paths, open or self-intersecting paths, page breaks, columns, .docx export);
-   contract rows, critic, 1:1 tests and the blind adversarial pass.
+   checks only: no tests, scripts, builds, browsers, apps or input. Earlier
+   rectangle and ellipse wrap evidence predates the request and is invalid for it.
+4. **Parked until the owner's verdict:** polygon, star, line and arrow, icons and
+   custom SVG (OW-ALL-1); OW10's unknowns; contract rows, critic, 1:1 tests and
+   the blind adversarial pass.
 ## Urgent rectangle placement fold-in (owner root218, 13:15)
 
 Goal: rectangle UX ASAP in the **same prototype**, within the owner-directed
@@ -262,11 +265,11 @@ Every owner instruction from **2026-10-29 11:52 to 2026-10-30 15:50 (+05:30)**, 
 | M55a | 2026-10-30 14:29 | Clicking outside the page deselects | U114; rectangle contract | main rectangle contract | Contract on main; not verified delivered |
 | M55b | 2026-10-30 14:29 | No inline dimension/radius labels | U114; rectangle contract | same | Contract on main; not verified delivered |
 | M55c | 2026-10-30 14:29 | Click-drag scrub in every number field; cursor hidden and returned | **U117**; main "Number fields — PERMANENT rule" | main spec | Rule on main; rollout partial (branch) |
-| M55d | 2026-10-30 14:29 | Rotated shapes wrap by bounding box | U114.P2; rectangle contract | main contract | Contract on main; not verified delivered. **Amended for Tight by M58** (spec OW4) |
+| M55d | 2026-10-30 14:29 | Rotated shapes wrap by bounding box | U114.P2; rectangle contract | main contract | Contract on main; not verified delivered. **Superseded by M58** for every wrapping mode (spec OW5; In line keeps it) |
 | M55e | 2026-10-30 14:29 | Arrow keys step; Shift+arrow larger step | **U117**; main number-field rule | main spec | Rule on main; rollout partial (branch) |
 | M56 | 2026-10-30 14:34 | Behaviour-contract-first process | Spec process rule | main spec process rule; `docs/design/interaction-rules.md` | Recorded on main |
 | M57 | 2026-10-30 15:50 | Testing must not hijack mouse or focus | Spec testing safety rule | main spec; commit 7b463f0 | Recorded on main; current hold stricter |
-| M58 | 2026-10-30 22:02 | Wrap text around the shape's actual outline, not its bounding box, for any SVG shape, with a padding parameter | **U114.P5**; spec "Outline wrap amendment" OW1–OW8; DoD OW-REC-1, OW-ELL-1, OW-ALL-1 | main spec, DoD, this plan; rectangle and ellipse contracts carry an amendment note | Spec and DoD on main; previews not built; certification parked |
+| M58 | 2026-10-30 22:02 (scope corrected 22:47) | Wrap text around the shape's actual outline, not its bounding box, in every wrapping mode, for any SVG shape, with a padding parameter | **U114.P5**; spec "Outline wrap amendment" OW1–OW10 (owner override); DoD OW-REC-1, OW-ELL-1, OW-ALL-1 | main spec, DoD, this plan; rectangle and ellipse contracts carry an amendment note | Spec and DoD on main; Tight-only first version 6bb7424 superseded; previews not built; certification parked |
 
 **No spec trace.** None remain. M28 (no "Menu" label; "Doc" for "Document") is now a U81 view decision in §12.2. Before this change, M36b, M36c, M36e (icons, charts and data editor, cover page) and M42 (page layouts) also had none; they now have U120–U123 (requirement owner-requested, behaviour open) and U125 (concept awaiting owner). Fifteen rows are process or kit directions with no product spec by nature: M05, M06, M07a, M14, M17, M18, M20, M39, M44, M45, M47, M49, M50, X1, M54.
 

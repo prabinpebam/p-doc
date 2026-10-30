@@ -174,7 +174,7 @@ Write and review real documents with the ease of Google Docs and the structure o
 | U114.P2 | choose document wrapping for a shape, set floating coordinates against explicit references, choose Move with text or Fix on page, and see which paragraph anchors the object | J3, J15 | Word Layout (Text Wrapping, Position), placement addendum DP2–DP3; SG1 |
 | U114.P3 | change the order of overlapping floating shapes without changing their text, dimensions or document position, and select a behind-text object again | J3, J15 | Figma layer order, placement addendum DP4; generalised from "rectangles" (SG1) |
 | U114.P4 | insert a star and change its number of points (Count), inner ratio and corner radius from the pane and on the page, with the same placement, wrap and arrange as a rectangle | J3, J15 | Figma Shape tools (Stars: Count, Ratio, corner radius), star behaviour contract (SG2) |
-| U114.P5 | wrap surrounding text around a floating shape's actual outline (the SVG path as drawn, not its rectangular frame), for every shape: rectangle, ellipse, polygon, star, icons and custom SVG shapes, and set one distance from text that text never comes inside | J3, J15 | Owner ROOT 22:02 (2026-10-30); Word Layout (Text Wrapping: Tight, Distance from the Text); [outline wrap amendment](#outline-wrap-amendment-owner-root-2202-2026-10-30) OW1–OW8 |
+| U114.P5 | wrap surrounding text around a floating shape's actual outline (the SVG path as drawn, never its rectangular frame) in every wrapping mode that moves text (Square, Tight, Top and bottom), for every shape: rounded rectangle, ellipse, polygon, star, line and arrow, icons and custom SVG shapes, and set one distance from text that text never comes inside | J3, J15 | Owner ROOT 22:02, scope corrected 22:47 (2026-10-30), owner override; Word Layout options (Tight, Through, Distance from the Text) for the vocabulary; [outline wrap amendment](#outline-wrap-amendment-owner-root-2202-2026-10-30) OW1–OW10 |
 | U115 | insert a straight line or an arrow inline by default, set where it starts and ends (its length and angle), its stroke weight, colour and dash and the style of each end, and place it with the same wrapping, anchoring and arrange as other shapes without losing its endpoints | J3, J15 | Figma Shape tools (Line, Arrow) and stroke end point caps, Word Insert > Shapes > Lines; line and arrow behaviour contracts (SG3) |
 
 **From the feature branches:** U81–U86, U100–U113, U116, U117 and U120–U126 are in [§12](#12-features-from-the-feature-branches-2026-10-30), with the mapping from old branch IDs.
@@ -751,7 +751,7 @@ authorized by this documentation addendum.
 | Source / exact section | Establishes | Limit / chosen adaptation |
 | --- | --- | --- |
 | [Word Layout options](https://support.microsoft.com/en-us/word/layout-options), **Position → Horizontal / Vertical / Options** | Applies to pictures **and shapes**. Horizontal references include Page, Margin, Column and Character; vertical references include Page, Margin, Paragraph and Line. Move object with text follows its anchored paragraph; Lock anchor prevents reassignment. Allow overlap uses Bring Forward / Send Backward for stacking. | Paragraph is a vertical reference, not an invented horizontal reference. This page does not establish a default mode or visible-anchor default; inline default and visible anchor are explicit owner requirements. |
-| Same page, **Text Wrapping → In line with text / Square / Tight / Top and Bottom / Behind Text / In Front of Text / Distance from the Text** | Inline behaves as a character. Square uses a bounding contour; Tight follows the shape edge. Top and Bottom leaves no text beside it. Behind/In Front do not wrap surrounding text. Top/bottom/left/right wrap distances are independent. | These sections were read from the official page's public HTML because simplified Markdown exposed only Position. For a sharp rectangle, Tight and Square can legitimately produce the same contour at equal distances; different labels must not fake different geometry. Rounded/other contours remain unsupported unless genuinely implemented. |
+| Same page, **Text Wrapping → In line with text / Square / Tight / Top and Bottom / Behind Text / In Front of Text / Distance from the Text** | Inline behaves as a character. Square uses a bounding contour; Tight follows the shape edge. Top and Bottom leaves no text beside it. Behind/In Front do not wrap surrounding text. Top/bottom/left/right wrap distances are independent. | These sections were read from the official page's public HTML because simplified Markdown exposed only Position. For a sharp rectangle, Tight and Square can legitimately produce the same contour at equal distances; different labels must not fake different geometry. Rounded/other contours remain unsupported unless genuinely implemented. *Superseded 22:02/22:47 by the owner override [OW1–OW7](#outline-wrap-amendment-owner-root-2202-2026-10-30): every wrapping mode follows the actual outline.* |
 | [Word Wrap text around a picture](https://support.microsoft.com/en-us/word/training/wrap-text-around-a-picture-in-word), **Position a picture in line with text / Ensure that a picture stays put** | Inline moves with surrounding characters; Fix Position on Page is a separate choice. | Picture evidence supplements the shape-applicable Layout page; it does not prove P-Doc pagination or anchor behavior. |
 | [Figma dimensions and layer order](https://help.figma.com/hc/en-us/articles/360039956914-Adjust-alignment-rotation-position-and-dimensions), **Change layer order → Keyboard shortcuts / Right-click menu** | Windows Ctrl+] forward, Ctrl+Shift+] front, Ctrl+[ backward, Ctrl+Shift+[ back. Mac Command+] / Command+Option+] / Command+[ / Command+Option+[ respectively. Context menu exposes all four actions. | Adopt for selected floating shapes only; text/input focus keeps writing shortcuts. Document stacking relative to text is governed by Word wrapping mode, not arbitrary Figma canvas Z. |
 
@@ -821,43 +821,63 @@ implementation gaps, not permission to claim all surfaces consistent.
   values show only in the pane. This supersedes the earlier Figma-style badges,
   including the "Show live Radius N" part of the radius correction above.
 - **Rotated wrap.** A rotated shape wraps text around its axis-aligned rotated
-  bounding box plus the wrap distances (as Word does). *Amended for **Tight**
-  by the owner at 22:02 ([OW4](#outline-wrap-amendment-owner-root-2202-2026-10-30)): Tight
-  follows the rotated outline itself; In line with text, Square and Top and
-  bottom keep this rule.*
+  bounding box plus the wrap distances (as Word does). *Superseded by the owner at 22:02 (scope corrected 22:47,
+  [OW5](#outline-wrap-amendment-owner-root-2202-2026-10-30)): in Square, Tight and Top and bottom
+  text follows the rotated outline itself, not a box. Only In line with text keeps
+  the rotated box, as the room the character takes in its line.*
 
 ### Outline wrap amendment (owner ROOT 22:02, 2026-10-30)
 
-Owner direction, relayed by the coordinator (ROOT 22:02, 2026-10-30), exact:
-"For text wrap around shape, let's make the text wrap around the actual outline
-of the shape rather than the bounding box. We should make this work for any svg
-shape. We shoulkd have a parameter to control the padding around the shape
-beyond which the text should not come in." It overrides every earlier
-bounding-box wrap statement it conflicts with (listed in OW4) and adds
-**U114.P5** (§3): P1/P3/P4 → J3/J15 → U114.P2 (choose wrapping) → U114.P5. Not
-a question for the owner: Figma's documented shapes sit on a free canvas with
-no surrounding text to wrap (BR7), so current **Word** governs the wrap modes;
-the outline-for-every-shape requirement and the single padding are the owner's.
-Sources: the Word Layout options row in the evidence table above (Square uses a
-bounding contour; Tight follows the shape edge; Distance from the Text), as
-read on 2026-10-30; this docs pass fetched nothing new and ran nothing.
+**Owner override**, relayed by the coordinator: ROOT 22:02, scope corrected
+22:47 (2026-10-30). Owner, exact: "For text wrap around shape, let's make the
+text wrap around the actual outline of the shape rather than the bounding box.
+We should make this work for any svg shape. We should have a parameter to
+control the padding around the shape beyond which the text should not come
+in." The 22:47 routing makes the scope explicit: **every wrapping mode** and
+**every SVG shape family**. This supersedes the first, Tight-only version of
+this section (commit 6bb7424) and every earlier bounding-box wrap statement it
+conflicts with (OW5). It adds **U114.P5** (§3): P1/P3/P4 → J3/J15 → U114.P2
+(choose wrapping) → U114.P5. Not a question for the owner: Figma's shapes sit on
+a free canvas with no surrounding text to wrap (BR7), so Word supplies the mode
+names and their non-wrap meanings, and the owner's direction overrides Word
+wherever Word wraps by a box.
 
-| Decision | Target and boundary |
+**Official source, re-read 2026-10-30 22:48 (web fetch of the public page, no
+browser):** [Word: Layout options](https://support.microsoft.com/en-us/word/layout-options),
+**Text Wrapping** tab. Square "wraps text around the picture or shape in a
+square pattern. If the picture tapers, like a triangle, the text on either side
+all has the same border." Tight: "Text wraps at a consistent distance between
+the edge of the picture or shape and the text. The text follows the shape."
+Through "acts much like Tight, except that you can change the wrap points so
+that text can fill in the spaces between elements in an image"; without spaces
+it works just like Tight. Top and Bottom "doesn't put any text along the edges,
+regardless of how narrow the picture." In line with text: "as if it were a
+character." Behind Text and In Front of Text: the text doesn't wrap. Wrap text:
+Both sides, Left only, Right only, Largest only. Distance from the Text: Top,
+Bottom, Left and Right "independently." [Word: Wrap text around a picture](https://support.microsoft.com/en-us/word/training/wrap-text-around-a-picture-in-word),
+**Use wrap points to adjust text flow around a shape**: Tight plus Edit Wrap
+Points. Not established by these pages: Word's default distances, and exactly
+how Tight computes its contour; neither is claimed.
+
+| Decision | Target, and whether it is Word or the owner |
 | --- | --- |
-| OW1 — Which mode follows the outline | **Tight** is the outline mode for every shape. **Square** stays the explicit bounding-box choice (Word's meaning), **Top and bottom** stays a full-width band, **In line with text** stays a character (no X/Y, no wrap distances), **Behind** and **In front** stay no-wrap. **Through** (Word: text also enters open gaps inside the shape) and Word's **Edit Wrap Points** stay not offered. No other flow changes: the six-mode strip, its order, anchors, references and arrange are unchanged (DP1–DP4). |
-| OW2 — The outline is the drawn SVG path | The contour is the same SVG path that paints the shape, in page coordinates: a rectangle with its radii, the ellipse (EL-CD-02), the polygon and star with Count, Ratio and radius, and for icons and custom SVG shapes the union of their filled and stroked subpaths. The outer edge of the visible stroke counts (the ellipse's EL-CD-12 offset); with no stroke, the fill edge; with no fill, the stroke still counts. A sharp rectangle's Tight outline equals its frame (Tight = Square at equal distances, as DP2 already says); every other outline differs and must really differ. |
-| OW3 — How text meets the outline | Each line of surrounding text excludes the horizontal span from the leftmost to the rightmost point of the padded outline within that line's height. Text fills on the allowed side or sides (the existing wrap-side rule, RC-WP-06) right up to that span, so it steps in along a curve or a slanted edge. Text never enters the inside of the shape, including notches between a star's points (that would be Through). The existing minimum-gap rule (RC-WP-38) still decides whether a narrow gap beside the outline receives text. Text inside the shape is unaffected. |
-| OW4 — Rotation and flip | In Tight, the outline rotates and flips with the shape; text follows the rotated outline, not the axis-aligned box. This supersedes, **for Tight only**, the 14:29 rotated-wrap rule (OD-ROT), RC-OS-24 and EL-OS-07 (out of scope → required) and the rotated-Tight parts of EL-CD-07 and EL-WP-04. In line with text, Square and Top and bottom keep OD-ROT. |
-| OW5 — Distance from text (the padding) | In Tight, one number field, **Distance from text**, grows the outline evenly in every direction (along its normal); text never comes inside it. It replaces the four side fields while Tight is chosen; the side fields stay for Square and Top and bottom (RC-FLD-20…23), and each mode keeps its own values when the person switches. It is the shared number field under the permanent rule: scrub by default with Pointer Lock, click to type, Enter/Escape, arrows 1 and Shift 10, Mixed across a selection, clamped to the existing wrap-distance range 0…200 px with units kept, starting from the existing default wrap distance in the supported model. Hidden in the modes that hide distances (RC-FLD-23). This even padding is the owner's requirement, not Word parity (Word's Tight uses left and right distances). |
-| OW6 — Scope by shape | Every shape with an outline (rectangle, rounded rectangle, ellipse, polygon, star, icons, custom SVG shapes, and lines and arrows by their stroked path with caps and heads) uses OW1–OW5. Review order follows the owner-review-first rule: **rectangle and ellipse** static review previews first (DoD OW-REC-1, OW-ELL-1); the other shapes, icons and custom SVG are deferred integration (OW-ALL-1). |
-| OW7 — Persistence and export | Stored with the shape like the other wrap values (the document format note in §6 governs any version change). Export of outline wraps to .docx and other formats is not specified here and stays parked; it must never lose the document. |
-| OW8 — Explicit unknowns, parked until after owner approval | Curve-flattening tolerance and the accuracy test threshold; a performance budget for complex custom SVG paths; self-intersecting or open custom paths and even-odd fill holes; how a shape that crosses a page break wraps on each page (inside CD-63A0-01's freeze); multi-column pages; the .docx wrap-polygon mapping. None is invented here; each becomes a contract row only after the owner's verdict on the previews. |
+| OW1 — The outline | The contour is the same SVG path that paints the shape, in page coordinates: a rectangle with its radii, the ellipse (EL-CD-02), the polygon and star with Count, Ratio and radius, a line or arrow by its stroked path with caps and heads, and for icons and custom SVG shapes the union of all their filled and stroked subpaths. The outer edge of the visible stroke counts (the ellipse's EL-CD-12 offset); with no stroke, the fill edge; with no fill, the stroke still counts. A sharp unrotated rectangle's outline is its frame, so it wraps exactly as before. Owner override for every non-rectangular or rounded shape. |
+| OW2 — Square and Tight | **Owner override, not Word parity:** both follow the padded outline (OW3), so for a P-Doc shape they wrap identically. Word's Square keeps "the same border" for a tapering shape; P-Doc's Square does not, by the owner's direction. Both labels stay in the six-mode strip (order unchanged, DP2) so a person's Word habit and .docx mapping still work; Square's accessible description says "Follows the shape's outline, like Tight." The two are never given fake different geometry. |
+| OW3 — How text meets the outline (both sides, concavity, holes) | Each line of surrounding text excludes the horizontal span from the leftmost to the rightmost point of the padded outline within that line's height. Text fills the allowed side or sides (the existing Both sides rule, RC-WP-06, from Word's Wrap text options) right up to that span, so it steps in along curves, slants and notches open to that side, such as between a star's points. Text never enters any gap inside that span: not between a shape's parts, not a hole (an even-odd or ring path), not a notch between two parts on the same line. That would be Word's **Through**, which stays not offered, as does **Edit Wrap Points**. The existing minimum-gap rule (RC-WP-38) still decides whether a narrow gap beside the outline receives text. Text inside the shape is unaffected. |
+| OW4 — Top and bottom | Word's meaning kept: no text beside the shape. **Owner override:** the band runs from the top to the bottom of the padded outline, not of the frame or a rotated box, so a rotated ellipse or a star clears only its real height plus the distance. |
+| OW5 — Rotation and flip | In Square, Tight and Top and bottom, the outline rotates and flips with the shape and text follows it. This supersedes, in those modes, the 14:29 rotated-wrap rule (OD-ROT), RC-WP-07, RC-OS-24, EL-OS-07 (out → required), EL-CD-07's frame for Square and Top and bottom and the rotated parts of EL-CD-07 and EL-WP-04. **In line with text** keeps OD-ROT: there the box is the room the character takes in its line, not a wrap. |
+| OW6 — Modes that move no text | **In line with text, Behind text, In front of text** are unchanged from Word: no exclusion around the shape, so no distance applies and the field stays hidden (RC-FLD-23); In line still shows no X/Y. |
+| OW7 — Distance from text: one padding | **Owner override of Word's four independent distances:** one number field, **Distance from text**, grows the outline evenly along its normal in Square, Tight and Top and bottom; text never comes inside it. It replaces the four side fields (RC-FLD-19…22 superseded). It is the shared number field under the permanent rule: scrub by default with Pointer Lock, click to type, Enter/Escape, arrows 1 and Shift 10, Mixed across a selection, units px, clamped 0…200 px (the existing wrap-distance range). **Default 10 px**, the value the rectangle and ellipse contracts' worked examples use (a P-Doc decision; Word's default is not established above). A shape stored with four side distances opens with the largest of them, so text never comes closer than before. Wrap side (Both sides and the rest) is unchanged. |
+| OW8 — Scope by shape and order of review | Every SVG family above uses OW1–OW7. Owner review first: **rectangle (rounded and rotated) and ellipse** static previews next (DoD OW-REC-1, OW-ELL-1); polygon, star, line and arrow, icons and custom SVG are deferred integration (OW-ALL-1) with the same intent. |
+| OW9 — Persistence and export | Stored with the shape like the other wrap values (the §6 format note governs any version change). Export of outline wraps to .docx and other formats is parked; it must never lose the document. |
+| OW10 — Explicit unknowns, parked until after the owner's verdict | Curve-flattening tolerance and the accuracy test threshold; a performance budget for complex custom paths; open or self-intersecting custom paths; how a shape crossing a page break wraps on each page (inside CD-63A0-01's freeze); multi-column pages; the .docx wrap-polygon mapping; Largest only, Left only and Right only with an outline. None is invented here. |
 
-Evidence status: the existing rectangle and ellipse contract rows and any pass
-recorded for them (RP2 "sharp Tight = Square", T-WP-07, T-WP-08, EL-WP-04) were
-written before this amendment; they are history, not proof of outline
-wrapping. No contract is re-certified by this note; certification of OW rows is
-parked behind the owner's review (Owner review first).
+Evidence status: the rectangle and ellipse contract rows and every pass
+recorded for wrapping (RP2 "sharp Tight = Square" and rounded Tight, T-WP-07,
+T-WP-08, EL-WP-02, EL-WP-04, the preview drafts) were written before this
+amendment and are invalid as evidence for it. No contract is re-certified;
+certification of OW rows is parked behind the owner's review (Owner review
+first).
 ### Shape generalisation decisions (2026-10-30, CD-63A0)
 
 Coordinator spec batch CD-63A0, folding in the proposals of the committed
