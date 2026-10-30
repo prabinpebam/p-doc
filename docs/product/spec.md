@@ -55,6 +55,8 @@ Write and review real documents with the ease of Google Docs and the structure o
 | J16 | exchange reviewed documents with Word users | their comments and tracked changes to come in and mine to go out | review across tools without losing a change | P5, P2 |
 | J17 | hand a document to readers who use assistive technology | find and fix what makes it hard to read | be sure everyone can read it | P3 |
 | J18 | proof-read a draft | hear it read back while I follow on the page | catch what my eyes skip | P3, P5 |
+| J19 | spend long hours writing, and am used to canvas tools like Figma | keep the page in the middle, tools at the edge and the properties of what I've selected beside it, in light or dark | write without a band of controls above the page, and still reach every command | P3 |
+| J20 | match a document's appearance | inspect, choose and reuse colours visually | format consistently without memorising values | P3, P4 |
 
 ## 3. What a person can do
 
@@ -174,7 +176,7 @@ Write and review real documents with the ease of Google Docs and the structure o
 | U114.P4 | insert a star and change its number of points (Count), inner ratio and corner radius from the pane and on the page, with the same placement, wrap and arrange as a rectangle | J3, J15 | Figma Shape tools (Stars: Count, Ratio, corner radius), star behaviour contract (SG2) |
 | U115 | insert a straight line or an arrow inline by default, set where it starts and ends (its length and angle), its stroke weight, colour and dash and the style of each end, and place it with the same wrapping, anchoring and arrange as other shapes without losing its endpoints | J3, J15 | Figma Shape tools (Line, Arrow) and stroke end point caps, Word Insert > Shapes > Lines; line and arrow behaviour contracts (SG3) |
 
-**From the feature branches:** U81–U86, U100–U113, U116, U117 and U120–U125 are in [§12](#12-features-from-the-feature-branches-2026-10-30), with the mapping from old branch IDs.
+**From the feature branches:** U81–U86, U100–U113, U116, U117 and U120–U126 are in [§12](#12-features-from-the-feature-branches-2026-10-30), with the mapping from old branch IDs.
 
 ## 4. Task flows
 
@@ -1123,16 +1125,20 @@ Main keeps its IDs and meanings. Branch IDs that do not collide keep their numbe
 | U81–U82 (`chrome-modes`, 6b361a8) | U81–U82 | Classic/Modern chrome; light/dark |
 | U83–U86 (`chrome-modes` lineage) | U83–U86 | Library: tree, backup state, external changes, visibility |
 | U100–U102 (`modern-right-pane`, ddae976) | U100–U102 | Embedded document design editor |
-| U103 "reuse a design via Make a copy" (`modern-right-pane`; repeated in a977 spec) | **U116** | Duplicate of U103; renumbered |
+| U103 "reuse an edited design through Make a copy" (`modern-right-pane` ddae976; a977 spec, design-editor table) | **U116** | Legacy U103 meaning 1; renumbered |
+| U103 "browse and apply a template" (`template-view` 19221e6; a977 spec, Template table) | U103 | Legacy U103 meaning 2; keeps the number |
 | U103–U108 (`template-view` @ 19221e6) | U103–U108 | Template browse, edit, JSON, personal templates, presets, previews |
 | U109 (`template-view`) | U109 | Contextual properties |
 | U110–U113 (a977) | U110–U113 | Shared colour editing |
 | U100–U113 (`design-tokens` @ 25f275c, proposal) | not adopted | Proposal-only meanings that collide with the rows above; kept as research. `design-tokens` reserves U100–U119, so U118–U119 stay unused |
 | — | **U117** | Number fields (shared scrub) |
 | — | **U120–U124** | Icons, charts, chart data, cover pages, remaining shape catalogue |
+| U33/U73/U75 cursor and activation text (a977 "Desktop interaction correction") | **U126** | Pointer and Library activation; U73 (more than one window) is not this behaviour |
 | PL-U1–PL-U16 (concept) | **U125** reserved | Page-layout templates (concept; PL IDs stay local to it) |
 
-**Jobs added** (from a977): J19 *spend long hours writing, and am used to canvas tools like Figma* → keep the page in the middle, tools at the edge and the selection's properties beside it, in light or dark (P3). J20 *match a document's appearance* → inspect, choose and reuse colours visually without memorising values (P3, P4).
+**Jobs added** (from a977): J19 and J20, now in the [jobs table](#2-scenarios-and-jobs-to-be-done).
+
+**Extends.** U82 is the title-bar entry to U20; system appearance stays available. U83–U86 extend U33 and U75. U103–U108 and U116 extend U77. DoD rows for an extending ID count against it, not as a second feature.
 
 | # | A person can… | Jobs | Status |
 |---|---|---|---|
@@ -1159,23 +1165,24 @@ Main keeps its IDs and meanings. Branch IDs that do not collide keep their numbe
 | U116 | reuse a document's design in another document through Make a copy and edit it independently | J15, J19 | Approved (was branch U103) |
 | U117 | change any number by typing, by arrow keys (1, Shift 10) or by dragging on the field, with units, limits and Mixed values handled the same everywhere | J3, J15 | Approved |
 | U120 | insert an icon from a licensed set (Material Symbols, Fluent) and size and colour it like a shape | J3 | Open |
-| U121 | insert a common chart (bar, column, line, pie and other popular types) that prints as it appears | J3 | Open |
+| U121 | insert a common chart (bar, column, line, pie and other popular types) that prints as it appears | J3 | Open (working default) |
 | U122 | edit a chart's data in a small built-in spreadsheet popover and see the chart update | J3 | Open |
-| U123 | add a cover page to a document | J3 | Open |
-| U124 | insert the remaining standard and parametric shapes beyond rectangle, ellipse, polygon, star, line and arrow | J3, J15 | Open |
+| U123 | add a cover page to a document, independent of page-layout templates | J3 | Open (working default) |
+| U124 | insert the remaining standard and parametric shapes beyond rectangle, ellipse, polygon, star, line and arrow | J3, J15 | Open (candidates pending contract) |
 | U125 | choose page layouts that combine a mandatory flowing text region with positioned elements (reserved) | J3 | Concept |
+| U126 | see an arrow over chrome and an I-beam over editable text, select a Library file with a single click and open it once with a double click or Enter | J1, J2 | Approved |
 
 ### 12.2 Window chrome and right pane (U81, U82, U83)
 
-**Promise → job:** P3 calm → J19. **Flow:** title-bar segmented **Classic | Modern** and a light/dark button; Modern shows a labelled left rail (Menu opener as a menu icon, Library, Template, Outline, Find, History, Sync, Help) and a right pane with Format, Review and Comments; Comments leaves the Modern title bar. An unpinned Library floats with a uniform inset. **View decisions** (§4.19 R1–R6 on a977): Figma-like property grid and grouping; title-bar hairline; token-drawn checkboxes and radios; one swatch filled edge to edge; dialogs with a token minimum height that only grow while open; one control radius token; window controls match the title-bar height; overlay scrollbars that take no width; icons and swatches inside one input wrapper. **Sources:** Figma UI3 as recorded in `chrome-modes:docs/design/chrome-modes.md @ 6b361a8` and `docs/design/visual-language.md` on a977. **Open:** M28's labels (no "Menu" label under the opener; "Doc" for "Document") conflict with the branch's labelled rail; the owner's later message wins once a contract records it.
+**Promise → job:** P3 calm → J19. **Flow:** title-bar segmented **Classic | Modern** and a light/dark button; Modern shows a left rail: the main-menu opener is a menu icon with no label (accessible name Main menu), then labelled Library, Template, Outline, Find, History, Sync, Help and a right pane with Format, Review and Comments; Comments leaves the Modern title bar. An unpinned Library floats with a uniform inset. **View decisions** (§4.19 R1–R6 on a977): Figma-like property grid and grouping; title-bar hairline; token-drawn checkboxes and radios; one swatch filled edge to edge; dialogs with a token minimum height that only grow while open; one control radius token; window controls match the title-bar height; overlay scrollbars that take no width; icons and swatches inside one input wrapper. **Sources:** Figma UI3 as recorded in `chrome-modes:docs/design/chrome-modes.md @ 6b361a8` and `docs/design/visual-language.md` on a977. **Labels (owner, 2026-10-29 22:28, later than the branch's labelled rail):** the opener shows its icon only, with no "Menu" label; the peer reads **Doc**, not "Document". The branch text that labels the opener "Menu" is superseded.
 
 ### 12.3 Shapes and text in shapes (U114, U114.P1–P4, U115, U124)
 
-**Promise → job:** P3/P4 → J3, J15. **Committed contracts:** [rectangle](../research/rectangle-behaviour-contract.md) (9095350), [line](../research/line-behaviour-contract.md) (16c5a2c), [arrow](../research/arrow-behaviour-contract.md), [polygon](../research/polygon-behaviour-contract.md) and [star](../research/star-behaviour-contract.md) (b157e2f lineage), [ellipse](../research/ellipse-behaviour-contract.md) (cccde6d). **Text in shapes:** any closed shape can hold native paragraphs that never clip (a977 "text rectangle" section). **Benchmark:** strict Figma shape-editing target in `shape-model-integration-a977:docs/research/figma-shape-editing.md @ a9958e4`. **Sources:** [Figma shape tools](https://help.figma.com/hc/en-us/articles/360040450133-Shape-tools); [Word layout options](https://support.microsoft.com/en-us/word/layout-options) for wrap. **Open (U124):** the remaining catalogue (rounded and parametric standard shapes) has no list or contract yet.
+**Promise → job:** P3/P4 → J3, J15. **Committed contracts:** [rectangle](../research/rectangle-behaviour-contract.md) (9095350), [line](../research/line-behaviour-contract.md) (16c5a2c), [arrow](../research/arrow-behaviour-contract.md), [polygon](../research/polygon-behaviour-contract.md) and [star](../research/star-behaviour-contract.md) (b157e2f lineage), [ellipse](../research/ellipse-behaviour-contract.md) (cccde6d). **Text in shapes:** any closed shape can hold native paragraphs that never clip (a977 "text rectangle" section). **Benchmark:** strict Figma shape-editing target in `shape-model-integration-a977:docs/research/figma-shape-editing.md @ a9958e4`. **Sources:** [Figma shape tools](https://help.figma.com/hc/en-us/articles/360040450133-Shape-tools); [Word layout options](https://support.microsoft.com/en-us/word/layout-options) for wrap. **U124 working default:** candidates come from Word's Insert > Shapes gallery and FigJam's shape list ([shapes with text](https://help.figma.com/hc/en-us/articles/1500004414382-Visualize-information-using-shapes-with-text)), each pending its own contract; no Word shapes page was fetched, so that list is unverified.
 
 ### 12.4 Templates and the document design system (U100–U108, U116)
 
-**Promise → job:** P1/P3 → J15, J19. **Flow:** Modern upper **Document / Template** peers (Classic: Format → Template) → browse presets with real previews → edit a snapshot (colour, typography, spacing, styles Normal to Caption) → save as a personal template or apply explicitly, undoable. No Back button; the template view reads like documentation. The design system formats the document, never the app chrome (owner, 2026-10-29 17:03). **Detail:** `template-view:docs/product/spec.md @ 19221e6` (Template, Visual preset, Panel rhythm sections) and `docs/design/template-json.md`. **Sources:** [Figma styles](https://help.figma.com/hc/en-us/articles/360040316193-Apply-styles-to-layers-and-objects); Word templates as cited on the branch. **Open:** the `design-tokens` proposal (collections, aliases, versioned templates) stays research until the owner chooses it.
+**Promise → job:** P1/P3 → J15, J19. **Flow:** Modern upper **Doc / Template** peers (Classic: Format → Template) → browse presets with real previews → edit a snapshot (colour, typography, spacing, styles Normal to Caption) → save as a personal template or apply explicitly, undoable. No Back button; the template view reads like documentation. The design system formats the document, never the app chrome (owner, 2026-10-29 17:03). **Detail:** `template-view:docs/product/spec.md @ 19221e6` (Template, Visual preset, Panel rhythm sections) and `docs/design/template-json.md`. **Sources:** [Figma styles](https://help.figma.com/hc/en-us/articles/360040316193-Apply-styles-to-layers-and-objects); Word templates as cited on the branch. **Open:** the `design-tokens` proposal (collections, aliases, versioned templates) stays research until the owner chooses it.
 
 ### 12.5 Contextual properties (U109)
 
@@ -1183,11 +1190,11 @@ Main keeps its IDs and meanings. Branch IDs that do not collide keep their numbe
 
 ### 12.6 Insert: icons, charts and data, cover pages (U120–U123)
 
-**Promise → job:** P3/P4 → J3. **Owner request (2026-10-30 01:58):** Material and Fluent icons (Apache-2.0 / MIT); popular charts with a spreadsheet popover for data, as in Word; a cover page. **Sources to start from:** [Insert icons (Microsoft 365)](https://support.microsoft.com/en-us/powerpoint/insert-icons-in-microsoft-365); [Create a chart](https://support.microsoft.com/en-us/excel/get-started/create-a-chart-from-start-to-finish). **Open:** no behaviour contract, chart list, data format, cover-page model or official cover-page source yet; icon licences need checking per set before bundling (rule 6). Cover pages may become a page-layout (U125).
+**Promise → job:** P3/P4 → J3. **Owner request (2026-10-30 01:58):** Material and Fluent icons (Apache-2.0 / MIT); popular charts with a spreadsheet popover for data, as in Word; a cover page. **Sources to start from:** [Insert icons (Microsoft 365)](https://support.microsoft.com/en-us/powerpoint/insert-icons-in-microsoft-365); [Create a chart](https://support.microsoft.com/en-us/excel/get-started/create-a-chart-from-start-to-finish). **Working defaults:** U121 starts from the chart types Word offers ([Available chart types in Office](https://support.microsoft.com/en-us/excel/available-chart-types-in-office)); U122 follows Word's chart data sheet; U123 follows Word's Insert > Cover Page (a gallery of cover pages inserted as the first page, replaced when another is chosen) and does not depend on the U125 concept. **Blockers before a contract:** no fetched official cover-page source (official page not reachable on 2026-10-30, so the Word behaviour above is unverified); no chart list, data format or chart print path; icons have no chosen set version, licence check (rule 6), picker or size/colour model, so U120 is not implementation-ready.
 
 ### 12.7 Shared colour and palettes (U110–U113)
 
-**Flow:** one property trigger opens one capability-driven picker; Solid and Gradient are tabs only when the target supports both; selecting a gradient stop retargets the same picker; the parent's Apply/Cancel is the only save boundary. Swatches share the control radius; the scrollbar overlays; menus are never clipped by the picker; preset palettes cover the theme colour and all hues. **Detail:** a977 spec "Shared colour editing" and "Palette", `docs/design/shared-colour-system.md`, `builtin-colour-palettes-contract.md`. **Status:** single-picker correction's latest acceptance failed (registry). **Open:** whether Figma edits a gradient stop in place or in a child picker is unresolved on the branch.
+**Flow:** one property trigger opens one capability-driven picker; Solid and Gradient are tabs only when the target supports both; selecting a gradient stop retargets the same picker; the parent's Apply/Cancel is the only save boundary. Swatches share the control radius; the scrollbar overlays; menus are never clipped by the picker; preset palettes cover the theme colour and all hues. **Detail:** a977 spec "Shared colour editing" and "Palette", `docs/design/shared-colour-system.md`, `builtin-colour-palettes-contract.md`. **Working default:** one picker; selecting a gradient stop retargets that same picker (no child picker). **Status:** single-picker correction's latest acceptance failed (registry). **Assumption to verify:** that current Figma help shows stop editing in the same picker; if it does not, the contract records the difference before building.
 
 ### 12.8 Number fields (U117)
 
@@ -1195,13 +1202,13 @@ The permanent number-field rule in [Behavior reference decisions](#behavior-refe
 
 ### 12.9 Keyboard shortcuts (U11, U19)
 
-**Decisions** (`keyboard-shortcuts:docs/design/keyboard-shortcuts.md @ 43fd326`): never lose typing or input-method text; respect the platform; familiar writing keys first (Ctrl+K is Link); every command discoverable (Ctrl+Shift+P command search, Alt+/ alias); Ctrl+wheel zooms the paper 25–300%; non-printing characters move to Ctrl+Shift+\\. **Sources:** the branch's dated research and audits. **Status:** blocked (registry).
+**Proposed decisions, not adopted** (`keyboard-shortcuts:docs/design/keyboard-shortcuts.md @ 43fd326`): never lose typing or input-method text; respect the platform; familiar writing keys first (Ctrl+K is Link); every command discoverable (Ctrl+Shift+P command search, Alt+/ alias); Ctrl+wheel zooms the paper 25–300%; non-printing characters move to Ctrl+Shift+\\. **Sources:** the branch's dated research and audits. **Status: BLOCKED PROPOSAL.** These bindings change main's meanings: main's U11 keeps Alt+/ as the command finder, and U49's non-printing characters keep Ctrl+Shift+P. Main stays canonical until a keyboard behaviour contract deliberately replaces those bindings and updates U11, U49 and their flows in the same change.
 
-### 12.10 Cursors and opening documents (U33, U73, U75)
+### 12.10 Cursors and opening documents (U126)
 
-Single click selects in the Library; double click or Enter opens once; chrome uses arrows, real text uses an I-beam. **Detail:** a977 "Desktop interaction correction". **Open:** Windows evidence needed; macOS and screen readers unproven.
+U126 extends U33/U75 browsing. Single click selects in the Library; double click or Enter opens the document once (in its existing window if already open); chrome, labels and menus use the arrow; editable text uses the I-beam; links and resize handles keep their own cursors. **Detail:** a977 "Desktop interaction correction". **Open:** Windows evidence needed; macOS and screen readers unproven.
 
-### 12.11 Copy style and Format Painter (U44, U11)
+### 12.11 Copy style and Format Painter (U44)
 
 **Flow:** select uniform text → Paint formatting → drag or select the target → one undoable transaction; Paint repeatedly is explicit; Esc cancels. Copy/paste properties follows Figma. **Detail:** a977 spec "Copy/paste formatting" and "Format Painter increment". **Sources:** [Figma copy and paste properties](https://help.figma.com/hc/en-us/articles/4412765442967-Copy-and-paste-properties-between-layers); [Word Format Painter](https://support.microsoft.com/en-us/word/use-the-format-painter).
 
