@@ -13,6 +13,11 @@ P-Doc is a desktop word processor (Electron, Windows first) for people who write
 
 Research behind this spec: [Google Docs KB](../research/index.md) (observed with Stagehand: EV-001 to EV-003; 42 features, 10 rules) and [Microsoft Word KB](../research/index.md) (documentation: 30 features, 10 rules). References use `GD F-###` / `W F-###` for features and `GD R-###` / `W R-###` for rules.
 
+**Permanent behavior authority:** current Figma, including FigJam, first; Word only
+where no equivalent is established. Never ask the owner how behavior works.
+The [decision notes](#behavior-reference-decisions-2026-10-30) distinguish current
+official evidence, working fallbacks and implementation gaps.
+
 ## 1. The customer promise
 
 Write and review real documents with the ease of Google Docs and the structure of Word, in files you own, with every version kept, online or not.
@@ -513,6 +518,151 @@ Failure words: "Couldn't save. Retrying…"; "P-Doc can't write to *folder*. You
 | O11 | GitHub sign-in | Own OAuth app · Git's helper (GCM/gh) · token | Git's helper or a pasted token, as Focus Notes (no client secret in the app) | Git's helper + token |
 
 Execution choices (research rig, test isolation) are working defaults W1–W8 in the [work plan](../work/work-plan.md).
+
+### Behavior reference decisions (2026-10-30)
+
+**Permanent rule, owner direction 13:02:53 +05:30:** never ask the owner how a
+behavior works. Check current official Figma documentation or product, including
+FigJam, first; use Microsoft Word only where there is no equivalent. Record the
+precise source and section beside each decision, its actual retrieval date, what
+it establishes and what remains inference. If evidence is inaccessible or
+insufficient, name that limit and retain a provisional fallback; do not fabricate
+parity or turn it into an owner question. Carry this rule in **every handoff**.
+Root receives only something ready to try, safety blockers and owner-only
+licence, real-GitHub or deletion decisions, never routine worker notices.
+This does not reopen unrelated licence decisions.
+
+This is bounded decision support, not another geometry milestone or permission
+to delay the delivered prototype. Sources below were retrieved **2026-10-30**
+through public documentation only, not product interaction. These are access
+dates, not publisher update dates. No browser, app, clipboard or print was tested.
+
+Trace: P3 → J1/J15 → U44/U11 for formatting; P1/P3/P4 → J3/J15
+for shape editing. The separate shape track calls its capability **U114**:
+a person can draw, resize and format text-bearing shapes without losing native
+paragraphs or authored dimensions. That track's fuller U114/SB3 requirements
+are not all integrated into this main copy.
+
+| Decision | Current official evidence | Target / fallback and implementation boundary |
+| --- | --- | --- |
+| BR1 — Shape text fit | [FigJam: Resize, rotate, and flip objects](https://help.figma.com/hc/en-us/articles/1500006206242-Resize-rotate-and-flip-objects-in-FigJam), **Manual resizing**, **Resizing by object type**: shapes with text support resizing, not scaling or automatic resizing; resizing can truncate text, revealed in editing mode using the blue arrow below the shape. [Shapes with text](https://help.figma.com/hc/en-us/articles/1500004414382-Visualize-information-using-shapes-with-text), **Edit shapes → Size**: resizing changes available text space, not font size. | An equivalent exists: keep authored W/H, no automatic growth or text shrinking. Adopt the documented truncation-with-explicit-reveal interaction as the reference target, preserving all underlying text. This supersedes visible overflow as the eventual parity target, **not** by silently clipping today's implementation. Until a reachable reveal/edit interaction exists, retain the reversible visible-overflow fallback: wrap between words; no clipping, shrinking or within-word split. Exact word-breaking, inset geometry and editing-mode reveal layout are not established by these pages. |
+| BR2 — Do not borrow standalone text growth | [FigJam: Create text and links](https://help.figma.com/hc/en-us/articles/1500004291281-Create-text-and-links-in-FigJam), **Create a text object → Single click / Click and drag**: point text grows horizontally; drawn area text has fixed width and grows vertically. BR1's object-type table explicitly distinguishes standalone text from shapes with text. | Shape text does **not** inherit area-text auto-height. No default growth, minimum-height reinterpretation or migration. “Resize shape to fit text” remains out of slice; the retrieved shape documentation does not require adding it. |
+| BR3 — Copy/paste formatting shortcuts | [Figma: Copy and paste properties between layers](https://help.figma.com/hc/en-us/articles/4412765442967-Copy-and-paste-properties-between-layers), **Copy and paste all properties → Tip**: Windows Ctrl+Alt+C / Ctrl+Alt+V; Mac Option+Command+C / Option+Command+V. [Word: Use the Format Painter](https://support.microsoft.com/en-us/word/use-the-format-painter), **step 4 → Tip**, independently documents Windows Alt+Ctrl+C / Alt+Ctrl+V and repeated paste without a brush cursor. | Windows target is Ctrl+Alt+C to copy formatting and Ctrl+Alt+V to paste it; these are not brush-arming shortcuts. §4.10 already names them. A code-block collision is an implementation gap to resolve in the same future keymap change, not grounds to omit the documented keys or ask the owner. Native Copy/Paste remain distinct and untouched. No Mac implementation parity is claimed. |
+| BR4 — Double-click keeps painter on | Figma's BR3 equivalent documents repeatable copy/paste actions, not a brush lock. The bounded official [Format Painter search](https://help.figma.com/hc/en-us/search?query=%22format%20painter%22) returned navigation rather than usable behavior evidence; it does not prove absence. [Word: Use the Format Painter](https://support.microsoft.com/en-us/word/use-the-format-painter), **steps 2–5**: single use, double-click for multiple selections, Esc to stop. | With no equivalent brush-lock behavior established in the inspected Figma/FigJam material, use Word: click once paints once; double-click keeps the painter armed; Esc cancels. An explicit “Paint repeatedly” action may remain as an accessible alternative, not a replacement for double-click. Supersedes the separate track's “instead of double-click locking” and “does not add double-click repeat” working choices; no code was changed. |
+| BR5 — Circle / ellipse aspect lock | [Figma: Adjust alignment, rotation, position, and dimensions](https://help.figma.com/hc/en-us/articles/360039956914-Adjust-alignment-rotation-position-and-dimensions), **Dimensions → Lock aspect ratio**: lock preserves W:H for canvas and numeric edits; changing one field updates the other. Shift temporarily enables an unlocked ratio; Control temporarily disables a locked ratio. [FigJam resizing](https://help.figma.com/hc/en-us/articles/1500006206242-Resize-rotate-and-flip-objects-in-FigJam), **Resizing tips**, also documents Shift and opposite-edge/corner anchoring. | Preserve the current ratio, not force every ellipse to 1:1; a circle remains circular when its 1:1 ratio is locked. Toggling lock must not rewrite W/H. Adopt Figma's Shift-enable / Control-disable modifiers. New and missing/null lock states remain provisionally unlocked: these sources do not establish an insertion default. FigJam's shape page describes proportional corners while its general page describes Shift; use Figma Design's explicit lock contract, not an invented universal corner rule. Existing flow anchoring is not free-canvas parity. |
+| BR6 — Caret paste and paragraph capture | Figma BR3, **When pasting text properties**, applies to selected text or, at a caret, surrounding text sharing that property. Word BR4, **Note**, distinguishes partial text from a full paragraph including its paragraph mark. | Caret paste should target the corresponding surrounding formatting run rather than require an explicit selection. Preserve text and protected links/comments/suggestions; unsupported transfer must remain explicit, never destructively approximated. Whole-paragraph capture includes paragraph formatting; treating its complete text as the boundary where P-Doc has no selectable paragraph mark is a named adaptation, not observed Word behavior. Existing selection-only refusal is an implementation gap. |
+| BR7 — In-flow versus page-fixed placement | Figma is a free canvas and does not establish a document paragraph anchor. [Word: Wrap text around a picture](https://support.microsoft.com/en-us/word/training/wrap-text-around-a-picture-in-word), **Position a picture in line with text / Ensure that a picture stays put**, distinguishes moving with surrounding text from Fix Position on Page. This is picture evidence, not shape-text overflow evidence. | Retain the shape track's explicit in-flow/top-and-bottom working adaptation; free Y, page-fixed and square-wrap shape behavior are still unsupported, not questions for the owner. The Word page does not freshly verify the inherited visible-overflow/word-boundary fallback in BR1. |
+
+**Source-to-implementation ledger (static inspection only).** Main
+`apps/desktop/src/renderer/commands.ts` and `editor/setup.ts` still expose the
+older command/editor set; this docs pass imports no shape or painter code.
+The read-only `p-doc-shape-model-integration-a977` sibling was inspected for
+related existing policy/research and implementation, not adopted:
+
+| Target | Inspected source in that sibling | Gap / retained evidence boundary |
+| --- | --- | --- |
+| BR1–BR2 | `packages/core/src/text-rectangle.ts`, `SHAPE_NATIVE_TEXT_STYLE` / `rectangleStyle`; `apps/desktop/src/renderer/editor/text-rectangle.ts`; spec's opening fixed-size working decision and work plan's opening STOP ledger | Core emits authored height and visible overflow; renderer adaptation is stopped at missing desktop dependencies. No truncate/reveal interaction or safe adoption is proved. The former policy was a reversible root working decision, not fresh Figma parity. Preserve old tests, commits, growth measurements and frozen WIP as historical evidence. |
+| BR3–BR4, BR6 | `apps/desktop/src/renderer/commands.ts`, `edit.copyFormatting` / `edit.pasteFormatting` / `format.painterRepeat`; `editor/format-painter.ts`, `arm` / `apply`; spec's final formatting increments | Copy/paste commands have no keys; repeat mode exists, but that spec explicitly excludes double-click. No shortcut dispatch, double-click UI or caret-run change is delivered or tested here. Existing typed-buffer and protected-content safeguards remain. |
+| BR5 | `apps/desktop/src/renderer/editor/text-rectangle.ts`, `resizeRectangle` / pointer `preserve`; `packages/core/src/text-rectangle.ts`, `rectangleSizeEdit` | Pointer code uses stored lock OR Shift, without Control override. Numeric paired sizing exists; initial lock policy remains a working default. No new geometry, model/schema, history or persistence change. |
+| BR7 | Sibling spec, **Text rectangle working slice**; renderer's north-handle “top follows text” contract | In-flow is intentional adaptation, not proven Word shape-anchor equivalence. Collision/pagination, live history, serialization/reopen, UI and print remain separately gated. |
+
+The sibling's `docs/research/figma-shape-editing.md` (nine-original benchmark)
+and `docs/research/keyboard-shortcuts.md` were read as existing evidence; neither
+was rewritten or re-benchmarked. Screenshots cannot establish hidden interaction
+defaults. Unmeasured radii/limits and unsupported shape controls remain explicit
+evidence gaps, not invitations to invent parity or expand this research slice.
+Production/app testing remains paused; native clipboard **UNKNOWN**. The
+initial fake-local-HTML preview was source-checked only and is now **REJECTED**
+for quality (owner root218, 13:15); source-only delivery is not acceptance.
+No current browser check, app try-it, review refresh or all-surfaces-consistent
+claim is made here.
+
+### Rectangle document placement addendum (owner root218, 2026-10-30 13:15)
+
+**Rectangle radius correction — actual owner root219, 13:29, relayed 13:40:**
+this owner contract supersedes the prototype's curved cursor and horizontal
+radius scrub gesture; it is not fresh official Figma parity evidence. All four
+radius dots retain the default **arrow** cursor at rest, hover, focus and drag;
+hover/focus grows and fills the dot without changing shape geometry. Project
+pointer movement onto that corner's inward diagonal: inward increases radius,
+outward decreases, oblique movement uses the projection, clamped to
+0…half the shorter drawn side. Default edits update all four corners; Alt edits
+only the dragged corner and preserves the other three. Show live Radius N and
+the selected corner's pane value. Escape restores all pre-drag radii; arrows
+adjust by 10 (Shift: 100), Home/End reach the bounds, and Alt keeps keyboard
+edits individual too. Drawn W/H and document placement remain unchanged.
+
+**Scoped authority, superseding BR7's top-and-bottom-only target:** use current
+**Word for document placement and text flow**, because a Figma free canvas has
+no equivalent character position or paragraph anchor; retain Figma for shape
+editing and arrange interactions. This is the permanent Figma/FigJam-first rule
+applied by capability, not abandoned. Rectangle UX comes first; fold this into
+the same prototype, not another geometry/research milestone. The owner-specified
+prototype window ends around **13:45 +05:30**. No production implementation is
+authorized by this documentation addendum.
+
+**Current official evidence, retrieved 2026-10-30:**
+
+| Source / exact section | Establishes | Limit / chosen adaptation |
+| --- | --- | --- |
+| [Word Layout options](https://support.microsoft.com/en-us/word/layout-options), **Position → Horizontal / Vertical / Options** | Applies to pictures **and shapes**. Horizontal references include Page, Margin, Column and Character; vertical references include Page, Margin, Paragraph and Line. Move object with text follows its anchored paragraph; Lock anchor prevents reassignment. Allow overlap uses Bring Forward / Send Backward for stacking. | Paragraph is a vertical reference, not an invented horizontal reference. This page does not establish a default mode or visible-anchor default; inline default and visible anchor are explicit owner requirements. |
+| Same page, **Text Wrapping → In line with text / Square / Tight / Top and Bottom / Behind Text / In Front of Text / Distance from the Text** | Inline behaves as a character. Square uses a bounding contour; Tight follows the shape edge. Top and Bottom leaves no text beside it. Behind/In Front do not wrap surrounding text. Top/bottom/left/right wrap distances are independent. | These sections were read from the official page's public HTML because simplified Markdown exposed only Position. For a sharp rectangle, Tight and Square can legitimately produce the same contour at equal distances; different labels must not fake different geometry. Rounded/other contours remain unsupported unless genuinely implemented. |
+| [Word Wrap text around a picture](https://support.microsoft.com/en-us/word/training/wrap-text-around-a-picture-in-word), **Position a picture in line with text / Ensure that a picture stays put** | Inline moves with surrounding characters; Fix Position on Page is a separate choice. | Picture evidence supplements the shape-applicable Layout page; it does not prove P-Doc pagination or anchor behavior. |
+| [Figma dimensions and layer order](https://help.figma.com/hc/en-us/articles/360039956914-Adjust-alignment-rotation-position-and-dimensions), **Change layer order → Keyboard shortcuts / Right-click menu** | Windows Ctrl+] forward, Ctrl+Shift+] front, Ctrl+[ backward, Ctrl+Shift+[ back. Mac Command+] / Command+Option+] / Command+[ / Command+Option+[ respectively. Context menu exposes all four actions. | Adopt for selected floating shapes only; text/input focus keeps writing shortcuts. Document stacking relative to text is governed by Word wrapping mode, not arbitrary Figma canvas Z. |
+
+P1/P3/P4 → J3/J15 → U114 (native editable rectangle) now includes:
+
+| User-can | Observable capability |
+| --- | --- |
+| U114.P1 | A person can insert a rectangle **inline by default**, move it between words as one character-like object, and keep typing before and after it without a free-canvas position. |
+| U114.P2 | A person can choose document wrapping, set floating coordinates against explicit references, choose Move with text or Fix on page, and see which paragraph anchors the object. |
+| U114.P3 | A person can change the order of overlapping floating rectangles without changing their text, dimensions or document position, and select a behind-text object again. |
+
+Flows before controls:
+
+1. **DP1 — Insert and edit inline.** Place caret between words → insert rectangle
+   → it occupies an actual inline position and surrounding text reflows → edit
+   its native paragraphs → leave editing and drag the object to another
+   character boundary. Show insertion feedback, not arbitrary page X/Y.
+   Inline exposes **no object X/Y or object-alignment controls**; ordinary
+   paragraph formatting remains ordinary paragraph formatting.
+2. **DP2 — Float and wrap.** Select rectangle → top wrap icon strip, in order
+   **Inline, Square, Tight, TopBottom, Behind, InFront**, with accessible full
+   names → selected mode changes actual page paragraph layout. Square/Tight
+   reserve contour plus applicable distances; TopBottom reserves a full-width
+   band; Behind/InFront keep the text flow unchanged and paint on the appropriate
+   side of text. Sharp-rectangle Tight uses its actual rectangular contour, equal
+   to Square at equal distances, not a secretly unimplemented alias.
+3. **DP3 — Position and anchor.** In a floating mode → show horizontal/vertical
+   coordinates with explicit Page/Margin and applicable Character/Paragraph
+   references → edit or drag → the visible paragraph-anchor marker identifies
+   ownership → choose **Move with text** or **Fix on page** → insert text before
+   the anchor and observe movement or stable page coordinates respectively.
+   Fix on page does not delete the paragraph association. Show independent
+   wrap distances only where applicable. Returning Inline restores a character
+   position and removes floating-only controls. Selecting an anchor/reference
+   must not discard rectangle content or silently change its dimensions.
+4. **DP4 — Arrange two rectangles.** Add a second rectangle → float and overlap
+   them → **Bring to front / Bring forward / Send backward / Send to back** in
+   both the pane and context menu, with the Figma shortcuts above. The two
+   immediate sibling-order commands step one level; front/back go to the
+   relevant stacking extreme. Behind/InFront choose the text plane; arrange
+   orders objects within that plane, without silently changing wrapping.
+   Provide a reachable object selection list for behind-text objects. Boundary
+   actions are honestly disabled; no unsupported inert controls pretending work.
+
+**Prototype evidence gate, not implemented:** use a real document page with
+paragraph text that actually reflows and a second editable rectangle for order,
+not absolute overlays over a screenshot. Every owner-facing build must pass
+automated interaction tests covering DP1–DP4 **and an independent visual check**
+before delivery. The initial prototype is rejected; source inspection alone is
+insufficient. Record failures and withheld controls, not a pass by resemblance.
+No tests, browser, app, clipboard, persistence or print validation occurred in
+this docs-only assignment; the production/app-testing pause remains intact.
+Existing `apps/desktop/src/renderer/editor/setup.ts` and `commands.ts` do not
+establish these flows; the sibling's top-and-bottom flow renderer is not proof
+of inline insertion, anchoring, contour reflow or Z-order. These are explicit
+implementation gaps, not permission to claim all surfaces consistent.
 
 ## 11. As built
 

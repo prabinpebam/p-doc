@@ -1,5 +1,38 @@
 # P-Doc: work plan
 
+> **Active behavior-decision boundary (2026-10-30):** show the UX sooner /
+> work with me; bounded docs-only support, not a new geometry milestone.
+> [Spec BR1–BR7](../product/spec.md#behavior-reference-decisions-2026-10-30)
+> applies the permanent rule: never ask the owner how behavior works; current
+> Figma **including FigJam** first, Word only where no equivalent is established;
+> source each decision and carry this rule in every handoff. Root receives only
+> ready-to-try work, safety and owner-only licence/real-GitHub/deletion decisions.
+> The historical production plan below does not authorize resuming paused app
+> testing. Native clipboard UNKNOWN; no build, browser, runtime or review refresh
+> in this pass. The initial fake-local-HTML preview was source-checked only and
+> is now REJECTED for quality; it is not an accepted owner-facing build.
+> Implementation gaps remain open, not passes.
+
+## Urgent rectangle placement fold-in (owner root218, 13:15)
+
+Goal: rectangle UX ASAP in the **same prototype**, within the owner-directed
+30-minute window ending around 13:45 +05:30, not another geometry milestone.
+The [placement addendum](../product/spec.md#rectangle-document-placement-addendum-owner-root218-2026-10-30-1315)
+is authority: Word for document placement, Figma for editing/arrange; permanent
+Figma/FigJam-first rule remains capability-scoped. No behavior questions to owner.
+
+| Slice | Produces / serves | Delivery gate | State |
+| --- | --- | --- | --- |
+| RPD | Spec-first U114.P1–P3 and flows DP1–DP4; source-checked Word placement and Figma arrange | Docs diff check only | Documented, not implemented |
+| RPP | Real paragraph-page rectangle prototype: inline default/no object X/Y/alignment; six-mode wrap strip; floating references, anchor, distances and move/fix; second rectangle and four arrange commands | DoD RP1–RP4 automated interaction tests **plus independent visual check** on the exact build | Required fold-in; no implementation claim here |
+| RPR | Owner-facing replacement for rejected initial prototype, with exact location and passed evidence | RP5: both checks before delivery; unsupported controls omitted or honestly disabled, never inert replicas | Pending; source-only delivery prohibited |
+
+The docs worker does not run prototype tests or browser/app checks, make a
+production edit, refresh a review build, install dependencies or message root.
+The builder must record any withheld behavior and precise evidence gaps;
+Tight/Square equivalence for a sharp rectangle is explicit, not fake contour
+support. Preserve previous evidence, frozen copies and the production pause.
+
 How this work is carried out: the mode, the bounds, the increments and their evidence. What's worth building and what proves it comes from the [spec](../product/spec.md) and the [Definitions of Done](../product/definition-of-done.md); this plan cites them.
 
 > **TL;DR.**
