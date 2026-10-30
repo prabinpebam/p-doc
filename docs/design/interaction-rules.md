@@ -14,7 +14,7 @@ This applies to every feature: the rectangle first, then polygon, star, line, ar
 2. **Completeness critic.** An independent critic checks the contract against Figma and Word, section by section, and lists the gaps. The contract is complete only when the critic finds no gaps.
 3. **Build and test 1:1.** One test per contract row. A coverage report shows that 100% of in-scope rows pass.
 4. **Adversarial review.** An independent reviewer tries the build without seeing the contract. Each difference they find becomes a new row, which is built, tested and reviewed again.
-5. **Delivery.** Only then does the owner get a link, with the row count, the pass count and the out-of-scope list.
+5. **Certification.** Only then is a feature certified, with the row count, the pass count and the out-of-scope list. This step gates certification after the owner's approval, not the owner's first link: under [Owner review first](../product/spec.md#owner-review-first-permanent-top-priority-rule-owner-via-root-2026-10-30-2126-and-2131), the newest slice that has passed a basic check stays available at a stable path for the owner to try first, and steps 2–5 (with polish, hardening, extra critic rounds and post-approval edge rows) run in full after a recorded owner verdict. An active safety hold still wins: under it only static source and docs checks are allowed, recorded as static checks, never as a runtime pass.
 
 **Time box.** If a cycle runs past about 45 minutes, deliver the tested subset with a "not yet covered" list.
 
