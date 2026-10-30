@@ -10,9 +10,17 @@ What success means for the [spec](spec.md): the project's Definition of Done, ma
 ## Rectangle prototype gate (2026-10-30, resynced to attempt 16)
 
 [Placement spec](spec.md#rectangle-document-placement-addendum-owner-root218-2026-10-30-1315):
-P1/P3/P4 → J3/J15 → U114 and U114.P1–P3 ([spec §3](spec.md#3-what-a-person-can-do)).
-Row-level acceptance is the [rectangle behaviour contract](../research/rectangle-behaviour-contract.md)
-(commit 4265cd2: 386 rows, 342 in scope); RP1–RP5 cover its placement section (9), RP6–RP13
+P1/P3/P4 → J3/J15 → U114 and U114.P1–P3 ([spec §3](spec.md#3-what-a-person-can-do); generalised to every shape on 2026-10-30, with U114.P4 for the star and U115 for lines and arrows, spec SG1–SG3).
+Row-level acceptance is the [rectangle behaviour contract](../research/rectangle-behaviour-contract.md),
+now **committed in 9095350: 404 rows, 358 in scope, 45 out of scope, 1 withdrawn** (critic r14: 0 high, 0 medium, 0 low).
+The evidence below was measured against the earlier commit 4265cd2 (386 rows, 342 in scope), so its coverage
+counts are out of 342. The 16 in-scope rows added since (RC-CAN-38…40, RC-PL-01…10, RC-COL-22/23, RC-UR-38) are not
+in that coverage (attempt 16 ran tests T-PL-01–09 before they were contract rows), and many existing rows were
+tightened in critic rounds r2–r14, so the attempt 16 results are re-run against 9095350 before any row closes.
+**Scope freeze CD-63A0-01 (coordinator, 2026-10-30):** for the preview, anchoring to a paragraph that spans a page
+break is limited to RC-WP-13, 14, 16, 17, 18, 20, 22 and RC-CAN-01, 02 (and the rows that refer to them); every other
+cross-page anchoring case is out (RC-OS-43, overflow-only pagination) and waits for app integration.
+RP1–RP5 cover its placement section (9), RP6–RP13
 its editing sections (1–8, 10–12). The initial prototype was rejected 2026-10-30; attempt 9
 (`e55c1877`, 129 tests, before the contract and the permanent number-field, process and
 testing-safety rules) is superseded and no longer counts as evidence.
@@ -33,7 +41,7 @@ testing-safety rules) is superseded and no longer counts as evidence.
 | RP6 | Cursors: every part of a rectangle (body, edges, corners, rotation zone, radius dots) shows its own cursor, and the cursor matches the drag it starts (contract §1, RC-PTR). *Try it:* hover each part of a selected and an unselected rectangle | Every §1 row passes a one-to-one headless test on the exact build; contract-blind review of cursors | PROTOTYPE PARTIAL: build `251da666`; 18 of 21 rows tested (10 one-to-one, 8 shared); not covered RC-PTR-09/12/20. App: OPEN |
 | RP7 | Clicks and drags: move, resize from each edge and corner (with Shift, Alt), rotate, and drag the radius dots with the pointer exactly (contract §2, RC-CLK). *Try it:* resize from every handle with and without Shift/Alt, rotate with Shift, drag a radius dot diagonally and press Esc mid-drag | Every §2 row passes a one-to-one headless test; contract-blind review of drags including the radius dot | PROTOTYPE PARTIAL: build `251da666`; 38 of 42 rows tested (31 one-to-one, 7 shared); not covered RC-CLK-03/36/37/42. Open defect RC-CLK-42: radius drag moves about 1.41× the pointer travel; blind review a16 did not check radius drag. App: OPEN |
 | RP8 | Selection and canvas editing: select, deselect, multi-select, duplicate, delete and edit the native paragraphs inside a rectangle without losing them (contract §3–4, RC-SEL, RC-CAN). *Try it:* insert a rectangle, type two paragraphs in it, click out and back, Shift-click a second, Ctrl+D, Delete | Every §3–4 row passes a one-to-one headless test; contract-blind review of selection and in-shape text | PROTOTYPE PARTIAL: build `251da666`; selection 16 of 22 rows tested (15 one-to-one, 1 shared; not covered RC-SEL-01/11/17/19/21/22, including the Insert rectangle command); canvas 33 of 36 (23 one-to-one, 10 shared; not covered RC-CAN-02/12/30, including editing native paragraphs inside). App: OPEN |
-| RP9 | Number fields: every pane field scrubs (Pointer Lock, hidden cursor), takes typing, Enter/Esc, steps 1/10, clamps, takes units and shows Mixed, through one component (contract §5–6, RC-NF, RC-FLD; spec number-field permanent rule). *Try it:* scrub, type and arrow-key every field, with Shift, an out-of-range value and a unit; select two different rectangles to see Mixed | Every shared §5 row and every per-field §6 row passes a one-to-one headless test, with each field tested for every facet of the rule; Pointer Lock exits tested | PROTOTYPE PARTIAL: build `251da666`; shared behaviour 34 of 34 rows tested (22 one-to-one, 12 shared); fields 24 of 25 one-to-one (not covered RC-FLD-17, stroke opacity field absent); Pointer Lock exits pass (T-PL-01–09, not yet contract rows); blind review a16 PASS on scrub, lock, keys and Mixed. A field × facet matrix is not yet demonstrable. App: OPEN |
+| RP9 | Number fields: every pane field scrubs (Pointer Lock, hidden cursor), takes typing, Enter/Esc, steps 1/10, clamps, takes units and shows Mixed, through one component (contract §5–6, RC-NF, RC-PL, RC-FLD; spec number-field permanent rule and Testing safety rule 4). *Try it:* scrub, type and arrow-key every field, with Shift, an out-of-range value and a unit; select two different rectangles to see Mixed | Every shared §5 row and every per-field §6 row passes a one-to-one headless test, with each field tested for every facet of the rule; Pointer Lock exits tested | PROTOTYPE PARTIAL: build `251da666`; shared behaviour 34 of 34 rows tested (22 one-to-one, 12 shared); fields 24 of 25 one-to-one (not covered RC-FLD-17, stroke opacity field absent); Pointer Lock exits pass in attempt 16 (T-PL-01–09). Since then the exits are contract rows RC-PL-01…10 (commit 9095350): RC-PL-08 ignores the `lostpointercapture` caused by the lock engaging and RC-PL-10 settles a lock released by the browser itself (keep on focus loss or hidden page, otherwise revert as Esc); both are new behaviour, not yet built or tested, and spec Testing safety rule 4 now lists every exit (SG5). Section 5 is 44 rows (RC-NF-01…34, RC-PL-01…10). The rule's only exception, H on a line or arrow (SG4), does not apply to rectangles; blind review a16 PASS on scrub, lock, keys and Mixed. A field × facet matrix is not yet demonstrable. App: OPEN |
 | RP10 | Pane buttons, fill, stroke and colour: every pane button and toggle acts or is honestly disabled with a reason; fill and stroke colours, opacity and the colour picker work (contract §7–8, RC-BTN, RC-COL). *Try it:* use every pane button, change fill and stroke, open the colour picker, turn on forced colours | Every §7–8 row passes a one-to-one headless test; contract-blind review of the pane | PROTOTYPE PARTIAL: build `251da666`; buttons 26 of 28 rows tested (16 one-to-one, 10 shared; not covered RC-BTN-15/24); colour 12 of 19 (10 one-to-one, 2 shared; not covered RC-COL-01–05/13/21, the colour picker). Blind finding A16-03 (swatches in forced colours) pending in the contract. App: OPEN |
 | RP11 | Undo and redo: every shape edit undoes and redoes as one step, with the selection restored (contract §10, RC-UR). *Try it:* resize, recolour, wrap, delete, then Ctrl+Z and Ctrl+Y through all of it | Every §10 row passes a one-to-one headless test | PROTOTYPE PARTIAL: build `251da666`; 34 of 37 rows one-to-one; not covered RC-UR-01/26/29. Blind finding A16-02 (no reselect after undoing Delete) pending in the contract. App: OPEN |
 | RP12 | Keyboard and accessibility: everything above works from the keyboard, with names, focus order and disabled reasons a screen reader can reach, in light, dark, contrast and forced colours (contract §11, RC-KB). *Try it:* do RP6–RP11 by keyboard only, with a screen reader and in contrast mode | Every §11 row passes a one-to-one headless test; accessibility check of the pane and canvas | PROTOTYPE PARTIAL: build `251da666`; 18 of 23 rows one-to-one; not covered RC-KB-01/02/05/15/19. Blind finding A16-01 (disabled tooltip target) pending in the contract. App: OPEN |
@@ -46,6 +54,18 @@ same rows. Production/app testing remains paused outside the explicitly
 authorized prototype track; native clipboard UNKNOWN. This documentation pass
 ran no test, browser or app; figures come from the attempt 16 receipt, coverage
 map and blind review report.
+
+**Other shape contracts (docs only; every build waits for the owner's verdict on the rectangle).** Each traces
+to U114.P1–P3 / DP1–DP4 (now naming every shape) and to U114 (polygon), U114.P4 (star) or U115 (line, arrow), and has no build or test yet:
+
+| Contract | Committed | Working copy after spec batch CD-63A0 (2026-10-30, uncommitted) | Critic |
+| --- | --- | --- | --- |
+| [Polygon](../research/polygon-behaviour-contract.md) (U114) | 5b44ca9: 446 rows, 390 in scope | 447 rows (81 PG + 366 inherited RC), 390 in, 57 out; inherits rectangle 9095350 incl. RC-OS-43; CPG4-01 and R7-07 folded in | joint r4: LOW only |
+| [Star](../research/star-behaviour-contract.md) (U114.P4) | bed8c82: 98 rows, 82 in scope | 99 ST rows (83 in, 16 out) plus 323 in-scope and 44 out-of-scope RC rows adopted; STC4-01…03 and R7-07 folded in | joint r4: LOW only |
+| [Line](../research/line-behaviour-contract.md) (U115) | 0d72adc, follow-up 16c5a2c: 383 rows, 343 in scope | 384 rows, 343 in, 40 out, 1 withdrawn (LN-OS-41 scope freeze); LN-FLD-07 no longer blocked (spec exception SG4); R5-01…04 folded in | r5: LOW only |
+| [Arrow](../research/arrow-behaviour-contract.md) (U115) | 6473367: 262 rows, 232 in scope | 263 rows, 232 in, 28 out, 3 withdrawn (AR-OS-30 scope freeze); CA5-01/02, R5-01/02 folded in | r5: LOW only |
+
+The working-copy changes go to an independent critic before they are committed.
 
 ## 1. Project Definition of Done
 

@@ -163,14 +163,16 @@ Write and review real documents with the ease of Google Docs and the structure o
 | U79 | check a document for accessibility problems and go to each one to fix it | J17 | GD F-042, W Review |
 | U80 | export to EPUB, OpenDocument (.odt) and Rich Text (.rtf), and get PDFs with the heading outline and working links | J10 | GD F-033 |
 
-**Shapes** (numbered by the separate shape track; behaviour in §10 [Behavior reference decisions](#behavior-reference-decisions-2026-10-30) and the [rectangle placement addendum](#rectangle-document-placement-addendum-owner-root218-2026-10-30-1315); row-level acceptance in the [rectangle behaviour contract](../research/rectangle-behaviour-contract.md))
+**Shapes** (numbered by the separate shape track; behaviour in §10 [Behavior reference decisions](#behavior-reference-decisions-2026-10-30), the [rectangle placement addendum](#rectangle-document-placement-addendum-owner-root218-2026-10-30-1315) and the [shape generalisation decisions](#shape-generalisation-decisions-2026-10-30-cd-63a0); row-level acceptance in the [rectangle](../research/rectangle-behaviour-contract.md), [polygon](../research/polygon-behaviour-contract.md), [star](../research/star-behaviour-contract.md), [line](../research/line-behaviour-contract.md) and [arrow](../research/arrow-behaviour-contract.md) behaviour contracts). "Shape" means any of rectangle, ellipse, polygon, star, line and arrow (SG1).
 
 | # | A person can… | Jobs | From |
 |---|---|---|---|
 | U114 | draw, resize and format text-bearing shapes without losing native paragraphs or authored dimensions | J3, J15 | Figma/FigJam shapes (BR1, BR2, BR5), owner root219 radius and number-field rules |
-| U114.P1 | insert a rectangle inline by default, move it between words as one character-like object, and keep typing before and after it without a free-canvas position | J3, J15 | Word Layout (In line with text), placement addendum DP1 |
-| U114.P2 | choose document wrapping, set floating coordinates against explicit references, choose Move with text or Fix on page, and see which paragraph anchors the object | J3, J15 | Word Layout (Text Wrapping, Position), placement addendum DP2–DP3 |
-| U114.P3 | change the order of overlapping floating rectangles without changing their text, dimensions or document position, and select a behind-text object again | J3, J15 | Figma layer order, placement addendum DP4 |
+| U114.P1 | insert a shape inline by default, move it between words as one character-like object, and keep typing before and after it without a free-canvas position | J3, J15 | Word Layout (In line with text), placement addendum DP1; generalised from "rectangle" (SG1) |
+| U114.P2 | choose document wrapping for a shape, set floating coordinates against explicit references, choose Move with text or Fix on page, and see which paragraph anchors the object | J3, J15 | Word Layout (Text Wrapping, Position), placement addendum DP2–DP3; SG1 |
+| U114.P3 | change the order of overlapping floating shapes without changing their text, dimensions or document position, and select a behind-text object again | J3, J15 | Figma layer order, placement addendum DP4; generalised from "rectangles" (SG1) |
+| U114.P4 | insert a star and change its number of points (Count), inner ratio and corner radius from the pane and on the page, with the same placement, wrap and arrange as a rectangle | J3, J15 | Figma Shape tools (Stars: Count, Ratio, corner radius), star behaviour contract (SG2) |
+| U115 | insert a straight line or an arrow inline by default, set where it starts and ends (its length and angle), its stroke weight, colour and dash and the style of each end, and place it with the same wrapping, anchoring and arrange as other shapes without losing its endpoints | J3, J15 | Figma Shape tools (Line, Arrow) and stroke end point caps, Word Insert > Shapes > Lines; line and arrow behaviour contracts (SG3) |
 
 ## 4. Task flows
 
@@ -258,7 +260,7 @@ Waits name their class from the perceived-performance skill: *instant* (< 100 ms
 
 ### 4.8 Import (U18)
 
-1. **File > Open from file** (Ctrl+Shift+O) accepts .docx, .md, .html, .txt and .pdoc.json, or drop a file on the window → a new Private document with the content and the file name as its title. *(in-flow; "Importing…")* Unsupported .docx parts give "Imported. Some parts (text boxes, embedded objects) were left out."
+1. **File > Open from file** (Ctrl+Shift+O) accepts .docx, .md, .html, .txt and .pdoc.json, or drop a file on the window → a new Private document with the content and the file name as its title. *(in-flow; "Importing…")* Unsupported .docx parts give "Imported. Some parts (text boxes, embedded objects) were left out." From the line or arrow stage (whichever lands first), Word lines, arrows and other preset shapes without text are named "shapes", in the fixed order text boxes, shapes, embedded objects, some images, each label once (e.g. "Imported. Some parts (text boxes, shapes) were left out."; AR-INS-12, LN-PER-04, SG3).
 
 ### 4.9 Images beside the document (U39, U40)
 
@@ -438,7 +440,7 @@ packages/tokens       DTCG design tokens → CSS variables (light and dark)
 apps/desktop/src/cli  `pdoc` command line over core and the library (shares main's Electron-free modules)
 ```
 
-- **Document format** (`*.pdoc.json`, UTF-8, pretty-printed so Git diffs read well): `{ format: "p-doc", version: 1, id, title, created, page: { mode, size, orientation, margins, color, textWidth, header, footer, differentFirstPage }, styles: { normal, title, subtitle, heading1..4 }, content: <ProseMirror JSON>, comments: [ { id, author, created, body, resolved, replies[] } ] }`. Suggestions are marks in `content` (`insertion`, `deletion`, with id, author, time); comment anchors are `comment` marks with the thread id. Version 1 (stages 1–6) embedded images as data URLs up to 2 MB each. **From stage 7, version 2:** images are files in the repository's `assets/` folder named by the SHA-256 of their bytes, and an image's `src` is that path relative to the repository root (`assets/<sha256>.png`), so a file and its history store each picture once (A6). Asset files are never changed and never deleted by P-Doc while any version may refer to them; a document's commit includes the assets it refers to. A document with a higher `version` than the build knows opens read-only and is never rewritten (A18). Later stages add to the format, each with a test that reads the version before and a test that unknown attributes survive a load and save: `styles` gains Heading 5–6, own styles and list formats (8); paragraph attributes for indents, tabs, breaks, borders and direction (9); `notes`, bookmarks, captions and references (10); `sections` (11); `sources`, `variables` and `details` (14, 16).
+- **Document format** (`*.pdoc.json`, UTF-8, pretty-printed so Git diffs read well): `{ format: "p-doc", version: 1, id, title, created, page: { mode, size, orientation, margins, color, textWidth, header, footer, differentFirstPage }, styles: { normal, title, subtitle, heading1..4 }, content: <ProseMirror JSON>, comments: [ { id, author, created, body, resolved, replies[] } ] }`. Suggestions are marks in `content` (`insertion`, `deletion`, with id, author, time); comment anchors are `comment` marks with the thread id. Version 1 (stages 1–6) embedded images as data URLs up to 2 MB each. **From stage 7, version 2:** images are files in the repository's `assets/` folder named by the SHA-256 of their bytes, and an image's `src` is that path relative to the repository root (`assets/<sha256>.png`), so a file and its history store each picture once (A6). Asset files are never changed and never deleted by P-Doc while any version may refer to them; a document's commit includes the assets it refers to. A document with a higher `version` than the build knows opens read-only and is never rewritten (A18). **From the line stage, version 3:** the line build raises `FORMAT_VERSION` from 2 to 3 (`packages/core/src/format.ts`) because lines and arrows are a new object kind an older build would drop; a version-2 build refuses a version-3 document with `NewerFormatError` ("Made with a newer P-Doc. Update to edit it.") and with `allowNewer` shows it read-only and never writes it (LN-PER-03, SG6). Later stages add to the format, each with a test that reads the version before and a test that unknown attributes survive a load and save: `styles` gains Heading 5–6, own styles and list formats (8); paragraph attributes for indents, tabs, breaks, borders and direction (9); `notes`, bookmarks, captions and references (10); `sections` (11); `sources`, `variables` and `details` (14, 16).
 - **Library**: `<root>/private` and `<root>/public`, each a Git repository on `main` with documents at `docs/<slug>-<id8>.pdoc.json`, a `.bin/` folder and a `README.md`. App state (recent, settings, setup progress) lives in the app data folder, never in the repositories.
 - **Saving**: the renderer debounces 800 ms and sends the document to main; main writes atomically (temp file + rename, retried for up to about 2 s while Windows reports the file busy). A recovery copy of unsaved state goes to the app data folder 300 ms after each change while dirty, and once more on close if the last save failed.
 - **Versions**: one commit queue per repository; history from `git log --follow`; content from `git show`; named versions as annotated tags `pdoc/<file stem>/<sha12>` (the stem ends with the document's id8); restore writes old content and commits "Restore …"; diff is a word diff per block in core.
@@ -550,8 +552,9 @@ Trace: P3 → J1/J15 → U44/U11 for formatting; P1/P3/P4 → J3/J15
 for shape editing. The separate shape track calls its capability **U114**:
 a person can draw, resize and format text-bearing shapes without losing native
 paragraphs or authored dimensions. That track's fuller U114/SB3 requirements
-are not all integrated into this main copy; U114 and U114.P1–P3 are listed in
-§3 (2026-10-30).
+are not all integrated into this main copy; U114, U114.P1–P4 and U115 are listed in
+§3 (2026-10-30; U114.P1–P3 generalised to every shape and U114.P4 and U115 added by
+the [shape generalisation decisions](#shape-generalisation-decisions-2026-10-30-cd-63a0)).
 
 | Decision | Current official evidence | Target / fallback and implementation boundary |
 | --- | --- | --- |
@@ -608,7 +611,25 @@ number field, current and future:**
 - **Scrub by default.** Click-and-drag scrubbing is the default for **every**
   number field: X, Y, W, H, rotation, opacity, every radius (including the four
   independent-corner fields), stroke weight and wrap distances. Any exception
-  must be listed here with its reason; **there are none today**.
+  must be listed here with its reason (there were none on 14:29). **Exceptions
+  (2026-10-30, SG4):**
+  1. **H on a line or arrow** (LN-FLD-07, AR-FLD-06): always `0`, permanently
+     disabled for that object kind, exactly as any disabled field (focusable
+     with `aria-disabled`, in the Tab order between W and Opacity, the reason
+     tooltip and accessible description on focus or hover, wording following
+     the kind: "A line has no height. Change its length or angle.", "An arrow
+     has no height. Change its length or angle.", "Lines have no height. Change
+     their length or angle.", "Arrows have no height. Change their length or
+     angle.", "Lines and arrows have no height. Change their length or
+     angle."); no scrub, no Pointer Lock, no typing and no value change from
+     any key. Reason: a straight line has no height (Figma shows H 0 for a
+     line); its length and angle are W and Rotation.
+
+  Not exceptions: a field disabled by the current state (a wrap distance in
+  Top and bottom) is the normal disabled state; whole-number fields (polygon
+  and star Count, rounding half away from zero) and percentage fields (star
+  Ratio, 1–100 %) are settings of the shared component and follow every other
+  part of this rule.
 - **Hidden cursor.** While scrubbing, the cursor is hidden (Pointer Lock) and
   reappears where the drag started.
 - **Typing.** A plain click (no drag) focuses the field for typing; Enter
@@ -682,6 +703,23 @@ my mouse or window focus when you are testing."
    and `pointercancel`. If a lock is granted after the drag has already
    ended, release it at once. The lock is never left held, and the cursor
    reappears where the drag started. Each exit has a test.
+   **Exits added 2026-10-30 (SG5, from the rectangle contract RC-PL-03…10 and
+   its conflict 27):** `pointerup`, `blur`, `visibilitychange` to hidden and
+   `pointercancel` end the scrub **keeping** the value reached as one undo step
+   (no step when it equals the pre-scrub value); only Esc reverts.
+   `lostpointercapture` is also an exit, except the one caused by the lock
+   engaging (applying a lock releases pointer capture), which is ignored while
+   a lock request is pending or the lock is held; with no lock held or pending
+   (the lock was refused and the scrub runs unlocked) it ends the scrub keeping
+   the value; if capture was lost while the request was pending and the lock
+   is then refused, the scrub ends at the refusal, keeping the value
+   (RC-PL-08). A lock **released by the browser itself** (its Esc
+   unlock gesture, focus loss, the page hidden), not by P-Doc, ends the scrub
+   at once and is settled within one 50 ms window: focus lost or the page
+   hidden keeps the value as one undo step; with the page still focused and
+   visible it is treated as Esc and reverts (RC-PL-10). Headless tests drive
+   these through a lock stub and real event sequences, never the owner's
+   pointer.
 
 Also recorded in [interaction-rules.md](../design/interaction-rules.md).
 
@@ -703,15 +741,19 @@ authorized by this documentation addendum.
 | [Word Wrap text around a picture](https://support.microsoft.com/en-us/word/training/wrap-text-around-a-picture-in-word), **Position a picture in line with text / Ensure that a picture stays put** | Inline moves with surrounding characters; Fix Position on Page is a separate choice. | Picture evidence supplements the shape-applicable Layout page; it does not prove P-Doc pagination or anchor behavior. |
 | [Figma dimensions and layer order](https://help.figma.com/hc/en-us/articles/360039956914-Adjust-alignment-rotation-position-and-dimensions), **Change layer order → Keyboard shortcuts / Right-click menu** | Windows Ctrl+] forward, Ctrl+Shift+] front, Ctrl+[ backward, Ctrl+Shift+[ back. Mac Command+] / Command+Option+] / Command+[ / Command+Option+[ respectively. Context menu exposes all four actions. | Adopt for selected floating shapes only; text/input focus keeps writing shortcuts. Document stacking relative to text is governed by Word wrapping mode, not arbitrary Figma canvas Z. |
 
-P1/P3/P4 → J3/J15 → U114 (native editable rectangle) now includes:
+P1/P3/P4 → J3/J15 → U114 (native editable rectangle) now includes (generalised
+from "rectangle" to every shape on 2026-10-30, SG1; the star adds U114.P4 and
+lines and arrows U115, listed in §3):
 
 | User-can | Observable capability |
 | --- | --- |
-| U114.P1 | A person can insert a rectangle **inline by default**, move it between words as one character-like object, and keep typing before and after it without a free-canvas position. |
-| U114.P2 | A person can choose document wrapping, set floating coordinates against explicit references, choose Move with text or Fix on page, and see which paragraph anchors the object. |
-| U114.P3 | A person can change the order of overlapping floating rectangles without changing their text, dimensions or document position, and select a behind-text object again. |
+| U114.P1 | A person can insert a shape **inline by default**, move it between words as one character-like object, and keep typing before and after it without a free-canvas position. |
+| U114.P2 | A person can choose document wrapping for a shape, set floating coordinates against explicit references, choose Move with text or Fix on page, and see which paragraph anchors the object. |
+| U114.P3 | A person can change the order of overlapping floating shapes without changing their text, dimensions or document position, and select a behind-text object again. |
 
-Flows before controls:
+Flows before controls (written for the rectangle, which comes first; from
+2026-10-30 each flow applies to every shape, reading "rectangle" as "shape",
+with a shape's own insert command, SG1):
 
 1. **DP1 — Insert and edit inline.** Place caret between words → insert rectangle
    → it occupies an actual inline position and surrounding text reflows → edit
@@ -766,6 +808,37 @@ implementation gaps, not permission to claim all surfaces consistent.
   including the "Show live Radius N" part of the radius correction above.
 - **Rotated wrap.** A rotated shape wraps text around its axis-aligned rotated
   bounding box plus the wrap distances (as Word does).
+
+### Shape generalisation decisions (2026-10-30, CD-63A0)
+
+Coordinator spec batch CD-63A0, folding in the proposals of the committed
+polygon (5b44ca9), star (bed8c82), line (0d72adc, follow-up 16c5a2c) and arrow
+(6473367) contracts and the rectangle contract at 9095350. Permanent authority
+applied: Figma first, Word only where Figma has no equivalent; no owner
+question. Sources were retrieved by those contracts on 2026-10-30 (access
+dates, not publisher dates); this docs pass fetched nothing new and ran no
+browser, app or test. No behaviour row changes meaning: each decision only
+names, in the spec, what the committed contracts already require.
+
+| Decision | Current official evidence | Target, trace and boundary |
+| --- | --- | --- |
+| SG1 — Every shape follows U114.P1–P3 and DP1–DP4 | [Figma: Shape tools](https://help.figma.com/hc/en-us/articles/360040450133-Shape-tools): rectangle, line, arrow, ellipse, polygon and star are one family of shape layers with the same selection, transform and layer-order behaviour. [Word: Layout options](https://support.microsoft.com/en-us/word/layout-options), **Position / Text Wrapping**: applies to pictures **and shapes**, not rectangles only. | U114.P1–P3 and DP1–DP4 read "shape" for "rectangle" (§3 and the placement addendum). The polygon, star, line and arrow contracts trace placement rows to U114.P1–P3 directly instead of by contract decision; the ellipse contract (in progress) is to do the same. U114 itself keeps "text-bearing"; lines and arrows carry no text and trace their editing rows to U115. |
+| SG2 — U114.P4 star | [Figma: Shape tools, Stars](https://help.figma.com/hc/en-us/articles/360040450133-Shape-tools#stars): a star has a point **Count**, an inner **Ratio** and a corner radius, edited in the properties panel and on the canvas. Word's star presets have no count or ratio field, so Figma governs. | U114.P4 (§3). Star-only rows (Count, Ratio, radius on the outer tips) trace to it ([star contract](../research/star-behaviour-contract.md): decisions ST-CD-03…08 and ST-CD-10 and the rows ST-PTR-01/02, ST-CLK-04…12, ST-SEL-05, ST-CAN-03…08, ST-CAN-12, ST-NF-01/02, ST-FLD-01…05, ST-BTN-02, ST-WP-05, ST-UR-02…04, ST-KB-02…05, ST-FB-01/02, listed in its header); placement rows to U114.P1–P3. |
+| SG3 — U115 lines and arrows, one object kind | [Figma: Shape tools](https://help.figma.com/hc/en-us/articles/360040450133-Shape-tools) (Line tool, Arrow tool: the same two-endpoint path with different end caps); [Figma: Apply and adjust stroke properties](https://help.figma.com/hc/en-us/articles/360049283914-Apply-and-adjust-stroke-properties) (a path with two end points has Start and End point caps; Round is the default; lines default to a centre stroke). [Word: Draw or delete a line or connector](https://support.microsoft.com/en-us/powerpoint/draw-or-delete-a-line-or-connector) (Insert > Shapes > Lines; arrowheads through the outline's Arrows). | U115 (§3). One two-point kind (coordinator CD-SH-10): named **Arrow** when either end has an arrowhead style, otherwise **Line**; inserting a line gives Round / Round caps (LN-CD-07, LN-COL-01, LN-BTN-16), inserting an arrow None / Line arrow (AR-INS-01, AR-CD-03). Inline by default (OD-INL) instead of Word's floating drawn line. Until a shape export/import slice exists, .docx, Markdown, HTML and text export of a document with lines or arrows is refused with exactly "This document has lines or arrows that can't be exported yet. Your P-Doc document is unchanged." (CLI exit 4; PDF and print not refused) and .docx import names left-out drawings "shapes" (§4.8); both built once, in whichever of the line and arrow stages lands first (AR-INS-12/13, LN-PER-04/05; real export and import out: AR-OS-27, LN-OS-40). |
+| SG4 — Number-field exception: H on a line or arrow | [Figma: Shape tools](https://help.figma.com/hc/en-us/articles/360040450133-Shape-tools) and the owner's arrow pane screenshot (S9): a straight line's H is 0. The number-field rule requires exceptions to be listed. | Listed in the rule above (exception 1; LN-FLD-07, AR-FLD-06, LN-CD-09). LN-FLD-07 is no longer blocked. |
+| SG5 — Pointer Lock exits | No Figma or Word page documents scrub exits (browser-platform behaviour). [Pointer Events 3, §9 Pointer capture](https://www.w3.org/TR/pointerevents3/#pointer-capture): a granted lock releases capture, so `lostpointercapture` fires as the lock engages, in no fixed order against `pointerlockchange`. [Pointer Lock 2.0](https://www.w3.org/TR/pointerlock-2/): a default unlock gesture (Esc recommended) must always exist and the lock ends when the window loses focus; `pointerlockchange` carries no reason. | Testing safety rule 4 lists the added exits (above). Rows: RC-PL-03…10 (rectangle contract, conflict 27), adopted by every shape (LN-NF-35…44, AR-NF-18, polygon section 5, ST-NF-REF). The owner's original list is kept; the additions only say keep or revert for each exit. |
+| SG6 — Format version 3 for lines | `packages/core/src/format.ts`: `FORMAT_VERSION` 2, `NewerFormatError`, `parseDocument` `allowNewer`; A18 (an older build never damages a newer file). Not a Figma or Word behaviour. | §6 Document format: the line build writes version 3; a version-2 build opens it read-only and never writes it (LN-PER-03). |
+
+**Scope freeze CD-63A0-01 (coordinator, 2026-10-30).** For the preview stage,
+anchoring to a paragraph that spans a page break is limited to the rectangle
+contract's rows as they stood after critic r11 (RC-WP-13, 14, 16, 17, 18, 20,
+22, RC-CAN-01, 02 and the rows that refer to them); every other cross-page
+anchoring interaction is out (RC-OS-43: the preview paginates by overflow
+only, with no manual page breaks, Keep with next / Keep lines together,
+widow / orphan control or sections). Every shape inherits the freeze
+(polygon and star by RC-OS-43, line LN-OS-41, arrow AR-OS-30). Source:
+[Word VBA: Shape.Anchor](https://learn.microsoft.com/en-us/office/vba/api/word.shape.anchor)
+and Word Layout options (Lock anchor), as cited by RC-OS-43.
 
 ## 11. As built
 
