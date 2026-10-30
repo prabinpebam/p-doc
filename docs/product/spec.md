@@ -174,6 +174,7 @@ Write and review real documents with the ease of Google Docs and the structure o
 | U114.P2 | choose document wrapping for a shape, set floating coordinates against explicit references, choose Move with text or Fix on page, and see which paragraph anchors the object | J3, J15 | Word Layout (Text Wrapping, Position), placement addendum DP2–DP3; SG1 |
 | U114.P3 | change the order of overlapping floating shapes without changing their text, dimensions or document position, and select a behind-text object again | J3, J15 | Figma layer order, placement addendum DP4; generalised from "rectangles" (SG1) |
 | U114.P4 | insert a star and change its number of points (Count), inner ratio and corner radius from the pane and on the page, with the same placement, wrap and arrange as a rectangle | J3, J15 | Figma Shape tools (Stars: Count, Ratio, corner radius), star behaviour contract (SG2) |
+| U114.P5 | wrap surrounding text around a floating shape's actual outline (the SVG path as drawn, not its rectangular frame), for every shape: rectangle, ellipse, polygon, star, icons and custom SVG shapes, and set one distance from text that text never comes inside | J3, J15 | Owner ROOT 22:02 (2026-10-30); Word Layout (Text Wrapping: Tight, Distance from the Text); [outline wrap amendment](#outline-wrap-amendment-owner-root-2202-2026-10-30) OW1–OW8 |
 | U115 | insert a straight line or an arrow inline by default, set where it starts and ends (its length and angle), its stroke weight, colour and dash and the style of each end, and place it with the same wrapping, anchoring and arrange as other shapes without losing its endpoints | J3, J15 | Figma Shape tools (Line, Arrow) and stroke end point caps, Word Insert > Shapes > Lines; line and arrow behaviour contracts (SG3) |
 
 **From the feature branches:** U81–U86, U100–U113, U116, U117 and U120–U126 are in [§12](#12-features-from-the-feature-branches-2026-10-30), with the mapping from old branch IDs.
@@ -820,8 +821,43 @@ implementation gaps, not permission to claim all surfaces consistent.
   values show only in the pane. This supersedes the earlier Figma-style badges,
   including the "Show live Radius N" part of the radius correction above.
 - **Rotated wrap.** A rotated shape wraps text around its axis-aligned rotated
-  bounding box plus the wrap distances (as Word does).
+  bounding box plus the wrap distances (as Word does). *Amended for **Tight**
+  by the owner at 22:02 ([OW4](#outline-wrap-amendment-owner-root-2202-2026-10-30)): Tight
+  follows the rotated outline itself; In line with text, Square and Top and
+  bottom keep this rule.*
 
+### Outline wrap amendment (owner ROOT 22:02, 2026-10-30)
+
+Owner direction, relayed by the coordinator (ROOT 22:02, 2026-10-30), exact:
+"For text wrap around shape, let's make the text wrap around the actual outline
+of the shape rather than the bounding box. We should make this work for any svg
+shape. We shoulkd have a parameter to control the padding around the shape
+beyond which the text should not come in." It overrides every earlier
+bounding-box wrap statement it conflicts with (listed in OW4) and adds
+**U114.P5** (§3): P1/P3/P4 → J3/J15 → U114.P2 (choose wrapping) → U114.P5. Not
+a question for the owner: Figma's documented shapes sit on a free canvas with
+no surrounding text to wrap (BR7), so current **Word** governs the wrap modes;
+the outline-for-every-shape requirement and the single padding are the owner's.
+Sources: the Word Layout options row in the evidence table above (Square uses a
+bounding contour; Tight follows the shape edge; Distance from the Text), as
+read on 2026-10-30; this docs pass fetched nothing new and ran nothing.
+
+| Decision | Target and boundary |
+| --- | --- |
+| OW1 — Which mode follows the outline | **Tight** is the outline mode for every shape. **Square** stays the explicit bounding-box choice (Word's meaning), **Top and bottom** stays a full-width band, **In line with text** stays a character (no X/Y, no wrap distances), **Behind** and **In front** stay no-wrap. **Through** (Word: text also enters open gaps inside the shape) and Word's **Edit Wrap Points** stay not offered. No other flow changes: the six-mode strip, its order, anchors, references and arrange are unchanged (DP1–DP4). |
+| OW2 — The outline is the drawn SVG path | The contour is the same SVG path that paints the shape, in page coordinates: a rectangle with its radii, the ellipse (EL-CD-02), the polygon and star with Count, Ratio and radius, and for icons and custom SVG shapes the union of their filled and stroked subpaths. The outer edge of the visible stroke counts (the ellipse's EL-CD-12 offset); with no stroke, the fill edge; with no fill, the stroke still counts. A sharp rectangle's Tight outline equals its frame (Tight = Square at equal distances, as DP2 already says); every other outline differs and must really differ. |
+| OW3 — How text meets the outline | Each line of surrounding text excludes the horizontal span from the leftmost to the rightmost point of the padded outline within that line's height. Text fills on the allowed side or sides (the existing wrap-side rule, RC-WP-06) right up to that span, so it steps in along a curve or a slanted edge. Text never enters the inside of the shape, including notches between a star's points (that would be Through). The existing minimum-gap rule (RC-WP-38) still decides whether a narrow gap beside the outline receives text. Text inside the shape is unaffected. |
+| OW4 — Rotation and flip | In Tight, the outline rotates and flips with the shape; text follows the rotated outline, not the axis-aligned box. This supersedes, **for Tight only**, the 14:29 rotated-wrap rule (OD-ROT), RC-OS-24 and EL-OS-07 (out of scope → required) and the rotated-Tight parts of EL-CD-07 and EL-WP-04. In line with text, Square and Top and bottom keep OD-ROT. |
+| OW5 — Distance from text (the padding) | In Tight, one number field, **Distance from text**, grows the outline evenly in every direction (along its normal); text never comes inside it. It replaces the four side fields while Tight is chosen; the side fields stay for Square and Top and bottom (RC-FLD-20…23), and each mode keeps its own values when the person switches. It is the shared number field under the permanent rule: scrub by default with Pointer Lock, click to type, Enter/Escape, arrows 1 and Shift 10, Mixed across a selection, clamped to the existing wrap-distance range 0…200 px with units kept, starting from the existing default wrap distance in the supported model. Hidden in the modes that hide distances (RC-FLD-23). This even padding is the owner's requirement, not Word parity (Word's Tight uses left and right distances). |
+| OW6 — Scope by shape | Every shape with an outline (rectangle, rounded rectangle, ellipse, polygon, star, icons, custom SVG shapes, and lines and arrows by their stroked path with caps and heads) uses OW1–OW5. Review order follows the owner-review-first rule: **rectangle and ellipse** static review previews first (DoD OW-REC-1, OW-ELL-1); the other shapes, icons and custom SVG are deferred integration (OW-ALL-1). |
+| OW7 — Persistence and export | Stored with the shape like the other wrap values (the document format note in §6 governs any version change). Export of outline wraps to .docx and other formats is not specified here and stays parked; it must never lose the document. |
+| OW8 — Explicit unknowns, parked until after owner approval | Curve-flattening tolerance and the accuracy test threshold; a performance budget for complex custom SVG paths; self-intersecting or open custom paths and even-odd fill holes; how a shape that crosses a page break wraps on each page (inside CD-63A0-01's freeze); multi-column pages; the .docx wrap-polygon mapping. None is invented here; each becomes a contract row only after the owner's verdict on the previews. |
+
+Evidence status: the existing rectangle and ellipse contract rows and any pass
+recorded for them (RP2 "sharp Tight = Square", T-WP-07, T-WP-08, EL-WP-04) were
+written before this amendment; they are history, not proof of outline
+wrapping. No contract is re-certified by this note; certification of OW rows is
+parked behind the owner's review (Owner review first).
 ### Shape generalisation decisions (2026-10-30, CD-63A0)
 
 Coordinator spec batch CD-63A0, folding in the proposals of the committed
